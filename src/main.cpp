@@ -1,7 +1,13 @@
+#include "Console.hpp"
 #include "ProjFile.hpp"
 #include <iostream>
 
 int main() {
+	Console::set_fg(ConsoleColor::Blue);
+	Console::set_bg(ConsoleColor::Green);
+
+	std::cout << "hello\n";
+
 	ProjFile::load("F:\\gcc\\bgnu\\test.txt");
 
 	ProjVar var = 312.41F;
