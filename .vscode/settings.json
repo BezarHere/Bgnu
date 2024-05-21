@@ -1,0 +1,18 @@
+{
+	"cSpell.words": [
+		"Typeless"
+	],
+	"files.associations": {
+		"*.json": "jsonc",
+		"*.args": "makefile",
+		"*.h": "c",
+		"array": "cpp",
+		"*.tcc": "cpp",
+		"deque": "cpp",
+		"string": "cpp",
+		"unordered_map": "cpp",
+		"vector": "cpp",
+		"string_view": "cpp",
+		"initializer_list": "cpp"
+	}
+}
