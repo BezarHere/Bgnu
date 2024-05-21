@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <cstdint>
 
 #define HAS_FLAG(field, flag) (((field) & (flag)) == (flag))
 
