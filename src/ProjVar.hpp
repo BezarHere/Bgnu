@@ -20,7 +20,7 @@ public:
 	using VarArray = vector<ProjVar>;
 	using VarDict = std::unordered_map<VarString, ProjVar>;
 
-	inline ProjVar(ProjVarType type);
+	inline ProjVar(ProjVarType type = ProjVarType::Null);
 
 	inline ProjVar(bool boolean) : m_type{ProjVarType::Boolean}, m_bool{boolean} {}
 	inline ProjVar(float number) : m_type{ProjVarType::Number}, m_number{number} {}
