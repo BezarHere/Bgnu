@@ -3,8 +3,8 @@
 #include <iostream>
 
 int main() {
-	Console::set_fg(ConsoleColor::Blue);
-	Console::set_bg(ConsoleColor::Green);
+	// Console::set_fg(ConsoleColor::IntenseBlue);
+	// Console::set_bg(ConsoleColor::Green);
 
 	std::cout << "hello\n";
 

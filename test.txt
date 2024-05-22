@@ -1,1 +1,13 @@
-name: yard there!
+name: "yard sale"
+owner: "the joker"
+day: sunday
+"sale discount": -10
+items: {
+	"old tv": 20,
+	"old photo": 10,
+	"old guy": 0 # free, just take him!
+}
+
+signs: [
+	"ye ole sale!", "we are selling chris", "old photo is OLD! BUY IT!"
+]
