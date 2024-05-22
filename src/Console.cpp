@@ -1,5 +1,15 @@
 #include "Console.hpp"
 
+struct ColorResetter
+{
+	~ColorResetter() {
+		Console::set_bg(ConsoleColor::Black);
+		Console::set_fg(ConsoleColor::White);
+	}
+};
+
+static ColorResetter __clr_resetter{};
+
 ConsoleColor Console::s_bg = ConsoleColor::Black;
 ConsoleColor Console::s_fg = ConsoleColor::White;
 
