@@ -3,10 +3,30 @@
 #include <fstream>
 #include <string.h>
 
-enum class TokenType : uint8_t
+inline static bool is_identifier_char(char c) {
+	return isalnum(c) || c == '_' || c == '.';
+}
+
+inline static bool is_number_identifier(const char *str, size_t len) {
+	if (len == 0)
+		return false;
+
+	// skip the minus or plus signs, if there are any
+	if (*str == '-' || *str == '+')
+	{
+		++str;
+		--len;
+	}
+
+	return isdigit(*str);
+}
+
+#pragma region(tokenizer)
+enum class TKType : uint8_t
 {
 	Unknown,
 	Invalid,
+	Comment,
 	Eof,
 
 	Whitespace,
@@ -35,7 +55,7 @@ struct TKPos
 
 struct Token
 {
-	TokenType type;
+	TKType type;
 
 	const char *str;
 	size_t length;
@@ -50,30 +70,22 @@ enum StringParseFlags : uint8_t
 	eStrPFlag_Literal = 0x02,
 };
 
-inline static bool is_identifier_char(char c) {
-	return isalnum(c) || c == '_' || c == '.';
-}
-
-inline static bool is_number_identifier(const char *str, const size_t len) {
-	(void)len;
-	return isdigit(*str);
-}
-
-#pragma region(tokenizer)
 class Tokenizer
 {
 public:
-	inline Tokenizer(const char *p_source, size_t p_length) : source{p_source}, length{p_length} {}
+	static constexpr char CommentChar = '#';
+
+	inline Tokenizer(const char *p_source, size_t p_length) : m_source{p_source}, m_length{p_length} {}
 
 	inline Token get_next();
 
 	inline void put_all(vector<Token> &output) {
 		const size_t old_index = index;
 
-		while (index < length)
+		while (index < m_length)
 		{
 			output.emplace_back(get_next());
-			if (output.back().type == TokenType::Eof)
+			if (output.back().type == TKType::Eof)
 				break;
 		}
 
@@ -85,27 +97,28 @@ public:
 	size_t index = 0;
 	uint16_t line = 0;
 	size_t line_start = 0;
-	const char *const source;
-	const size_t length;
+
 
 private:
-	inline const char *_get_current_str() const { return source + index; }
+	inline const char *_get_current_str() const { return m_source + index; }
 
 	template <typename Pred>
 	inline size_t _get_length(Pred &&pred) const {
-		for (size_t i = index; i < length; ++i)
+		for (size_t i = index; i < m_length; ++i)
 		{
-			if (!pred(source[i]))
+			if (!pred(m_source[i]))
 				return i - index;
 		}
-		return length - index;
+		return m_length - index;
 	}
 
 	template <typename Pred>
-	inline Token _tk_span(TokenType type, Pred &&pred) const {
+	inline Token _tk_span(TKType type, Pred &&pred) const {
 		const size_t length = _get_length(pred);
 		return {type, _get_current_str(), length, get_pos()};
 	}
+
+	Token _read_comment() const;
 
 	Token _tk_string(StringParseFlags flags) const;
 	Token _tk_other() const;
@@ -116,7 +129,9 @@ private:
 
 	inline Token _read_tk() const;
 
-
+private:
+	const char *const m_source;
+	const size_t m_length;
 };
 
 inline Token Tokenizer::get_next() {
@@ -127,9 +142,17 @@ inline Token Tokenizer::get_next() {
 		//? should be an error here?
 		++index;
 	}
+
+	// advance by the tokens length
 	index += token.length;
 
-	if (token.type == TokenType::Newline)
+	// skip comments, return the next thing
+	if (token.type == TKType::Comment)
+	{
+		return get_next();
+	}
+
+	if (token.type == TKType::Newline)
 	{
 		line += token.length;
 		line_start = index;
@@ -138,20 +161,34 @@ inline Token Tokenizer::get_next() {
 	return token;
 }
 
+Token Tokenizer::_read_comment() const {
+	size_t end = m_length;
+	for (size_t i = index; i < m_length; i++)
+	{
+		if (m_source[i] == '\n')
+		{
+			end = i;
+			break;
+		}
+	}
+
+	return {TKType::Comment, _get_current_str(), end - index, get_pos()};
+}
+
 Token Tokenizer::_tk_string(const StringParseFlags flags) const {
-	const char start = source[index];
+	const char start = m_source[index];
 
 	size_t end_index = 0;
 
-	for (size_t i = index + 1; i < length; ++i)
+	for (size_t i = index + 1; i < m_length; ++i)
 	{
-		if (!HAS_FLAG(flags, eStrPFlag_Literal) && source[i] == '\\')
+		if (!HAS_FLAG(flags, eStrPFlag_Literal) && m_source[i] == '\\')
 		{
 			++i;
 			continue;
 		}
 
-		if (source[i] == '\n' || source[i] == '\r')
+		if (m_source[i] == '\n' || m_source[i] == '\r')
 		{
 			if (HAS_FLAG(flags, eStrPFlag_Multiline))
 				continue;
@@ -161,7 +198,7 @@ Token Tokenizer::_tk_string(const StringParseFlags flags) const {
 			break;
 		}
 
-		if (source[i] == start)
+		if (m_source[i] == start)
 		{
 			end_index = i;
 			break;
@@ -169,53 +206,55 @@ Token Tokenizer::_tk_string(const StringParseFlags flags) const {
 
 	}
 
-	return {TokenType::String, _get_current_str(), (end_index + 1) - index, get_pos()};
+	return {TKType::String, _get_current_str(), (end_index + 1) - index, get_pos()};
 }
 
 Token Tokenizer::_tk_identifier() const {
-	if (!is_identifier_char(source[index]))
-		return {TokenType::Unknown, _get_current_str(), 1, get_pos()};
+	if (!is_identifier_char(m_source[index]))
+		return {TKType::Unknown, _get_current_str(), 1, get_pos()};
 
-	size_t result_end = length;
+	size_t result_end = m_length;
 
-	for (size_t i = index; i < length; ++i)
+	for (size_t i = index; i < m_length; ++i)
 	{
-		if (is_identifier_char(source[i]))
+		if (is_identifier_char(m_source[i]))
 			continue;
 
 		result_end = i;
 		break;
 	}
 
-	return {TokenType::Identifier, _get_current_str(), result_end - index, get_pos()};
+	return {TKType::Identifier, _get_current_str(), result_end - index, get_pos()};
 }
 
 inline Token Tokenizer::_read_tk() const {
-	std::cout << index << ' ' << length << '\n';
-	if (index >= length)
+	if (index >= m_length)
 	{
-		return {TokenType::Eof, _get_current_str(), 1, get_pos()};
+		return {TKType::Eof, _get_current_str(), 1, get_pos()};
 	}
 
-	switch (source[index])
+	switch (m_source[index])
 	{
 	case '\n':
 	case '\r':
-		return _tk_span(TokenType::Newline, [](char c) { return c == '\n' || c == '\r'; });
+		return _tk_span(TKType::Newline, [](char c) { return c == '\n' || c == '\r'; });
 	case '\t':
 	case ' ':
-		return _tk_span(TokenType::Whitespace, [](char c) { return c == ' ' || c == '\t'; });
+		return _tk_span(TKType::Whitespace, [](char c) { return c == ' ' || c == '\t'; });
+
+	case CommentChar:
+		return _read_comment();
 
 	case '"':
 		return _tk_string(eStrPFlag_None);
 
 #define MATCH_SPAN_CHAR(match_char, type) case match_char: return _tk_span(type, [](char val) { return val == (match_char); } )
-		MATCH_SPAN_CHAR('{', TokenType::Open_CurlyBracket);
-		MATCH_SPAN_CHAR('}', TokenType::Close_CurlyBracket);
-		MATCH_SPAN_CHAR('[', TokenType::Open_SqBracket);
-		MATCH_SPAN_CHAR(']', TokenType::Close_SqBracket);
-		MATCH_SPAN_CHAR(':', TokenType::Column);
-		MATCH_SPAN_CHAR(',', TokenType::Comma);
+		MATCH_SPAN_CHAR('{', TKType::Open_CurlyBracket);
+		MATCH_SPAN_CHAR('}', TKType::Close_CurlyBracket);
+		MATCH_SPAN_CHAR('[', TKType::Open_SqBracket);
+		MATCH_SPAN_CHAR(']', TKType::Close_SqBracket);
+		MATCH_SPAN_CHAR(':', TKType::Column);
+		MATCH_SPAN_CHAR(',', TKType::Comma);
 #undef MATCH_SPAN_CHAR
 
 	default:
@@ -247,11 +286,11 @@ public:
 			return true;
 		}
 
-		return token.type == TokenType::Whitespace || token.type == TokenType::Unknown;
+		return token.type == TKType::Whitespace || token.type == TKType::Unknown;
 	}
 
 	static bool is_empty_token(const Token &token) {
-		return is_useless_token(token) || token.type == TokenType::Newline;
+		return is_useless_token(token) || token.type == TKType::Newline;
 	}
 
 	// current ptr
@@ -331,7 +370,7 @@ private:
 };
 
 ProjVar::VarString Parser::_parse_var_string() const {
-	if (get_tk().type != TokenType::String)
+	if (get_tk().type != TKType::String)
 	{
 		return {get_tk().str, get_tk().length};
 	}
@@ -379,7 +418,7 @@ ProjVar::VarNumber Parser::_parse_var_number() const {
 ProjVar Parser::_parse_var_simple() {
 	_skip_useless();
 
-	if (get_tk().type == TokenType::String)
+	if (get_tk().type == TKType::String)
 		return _parse_var_string();
 
 	if (is_number_identifier(get_tk().str, get_tk().length))
@@ -392,7 +431,7 @@ ProjVar::VarDict Parser::_parse_var_dict(const bool body_dict) {
 	_skip_useless();
 
 	// skip starting '{' for non-body dicts
-	if (!body_dict && get_tk().type == TokenType::Open_CurlyBracket)
+	if (!body_dict && get_tk().type == TKType::Open_CurlyBracket)
 	{
 		_advance_tk();
 	}
@@ -407,7 +446,7 @@ ProjVar::VarDict Parser::_parse_var_dict(const bool body_dict) {
 		dict.emplace(_parse_var_kv());
 
 		_skip_empty();
-		const bool has_leading_comma = get_tk().type == TokenType::Comma;
+		const bool has_leading_comma = get_tk().type == TKType::Comma;
 
 		// did we hit a comma after value? then skip it
 		if (has_leading_comma)
@@ -419,7 +458,7 @@ ProjVar::VarDict Parser::_parse_var_dict(const bool body_dict) {
 		if (body_dict)
 		{
 			// for body dicts, we close on EOF
-			if (get_tk().type == TokenType::Eof)
+			if (get_tk().type == TKType::Eof)
 			{
 				break;
 			}
@@ -430,7 +469,7 @@ ProjVar::VarDict Parser::_parse_var_dict(const bool body_dict) {
 
 			// did we hit the closing bracket? skip it (to mark it read) and break
 			// if we didn't hit a closing bracket, then there *must be a next value*
-			if (get_tk().type == TokenType::Close_CurlyBracket)
+			if (get_tk().type == TKType::Close_CurlyBracket)
 			{
 				_advance_tk();
 				break;
@@ -452,7 +491,7 @@ ProjVar::VarDict Parser::_parse_var_dict(const bool body_dict) {
 ProjVar::VarArray Parser::_parse_var_array() {
 	_skip_useless();
 
-	if (get_tk().type == TokenType::Open_SqBracket)
+	if (get_tk().type == TKType::Open_SqBracket)
 	{
 		_advance_tk();
 	}
@@ -466,7 +505,7 @@ ProjVar::VarArray Parser::_parse_var_array() {
 		array.emplace_back(_parse_var());
 
 		_skip_empty();
-		const bool has_leading_comma = get_tk().type == TokenType::Comma;
+		const bool has_leading_comma = get_tk().type == TKType::Comma;
 
 		// did we hit a comma after value? then skip it
 		if (has_leading_comma)
@@ -477,7 +516,7 @@ ProjVar::VarArray Parser::_parse_var_array() {
 
 		// did we hit the closing bracket? skip it (to mark it read) and break
 		// if we didn't hit a closing bracket, then there must be a next value
-		if (get_tk().type == TokenType::Close_SqBracket)
+		if (get_tk().type == TKType::Close_SqBracket)
 		{
 			_advance_tk();
 			break;
@@ -500,12 +539,12 @@ ProjVar Parser::_parse_var() {
 
 	switch (get_tk().type)
 	{
-	case TokenType::Identifier:
-	case TokenType::String:
+	case TKType::Identifier:
+	case TKType::String:
 		return _parse_var_simple();
-	case TokenType::Open_CurlyBracket:
+	case TKType::Open_CurlyBracket:
 		return ProjVar(_parse_var_dict());
-	case TokenType::Open_SqBracket:
+	case TKType::Open_SqBracket:
 		return ProjVar(_parse_var_array());
 
 	default:
@@ -523,7 +562,7 @@ std::pair<ProjVar::VarString, ProjVar> Parser::_parse_var_kv() {
 
 	_skip_empty();
 
-	if (get_tk().type != TokenType::Column)
+	if (get_tk().type != TKType::Column)
 	{
 		_XUnexpectedToken(string(1, ValueAssignOp));
 	}
