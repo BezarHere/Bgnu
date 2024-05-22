@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <sstream>
 #include <cstdint>
 
 // Intense: Bright or Bold (implementation dependent)
@@ -51,3 +52,23 @@ private:
 	static ConsoleColor s_bg;
 	static ConsoleColor s_fg;
 };
+
+
+template <typename T>
+static inline void _format_join(std::ostringstream &stream, const T &value) {
+	stream << value;
+}
+
+template <typename T1, typename T2, typename... VArgs>
+static inline void _format_join(std::ostringstream &stream, const T1 &value1, const T2 &value2, const VArgs &... args) {
+	stream << value1;
+	return _format_join(stream, value2, args...);
+}
+
+template <typename... VArgs>
+static inline std::string format_join(const VArgs &... args) {
+	std::ostringstream ss{};
+	_format_join(ss, args...);
+	return ss.str();
+}
+
