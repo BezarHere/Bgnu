@@ -17,5 +17,8 @@
 		"initializer_list": "cpp",
 		"iosfwd": "cpp",
 		"stdexcept": "cpp"
-	}
+	},
+	"C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
+		"readability-implicit-bool-conversion"
+	]
 }

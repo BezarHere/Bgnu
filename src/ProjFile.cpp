@@ -1,5 +1,6 @@
 #include "ProjFile.hpp"
 #include <fstream>
+#include <string.h>
 
 enum class TokenType : uint8_t
 {
@@ -18,18 +19,27 @@ enum class TokenType : uint8_t
 	Open_CurlyBracket,
 	Close_CurlyBracket,
 
-	// can be a number, a hex number, a boolean, null or anything
+	// can be a number, a boolean, null or anything
 	Identifier,
 	String,
+};
+
+struct TKPos
+{
+	inline TKPos() {}
+	inline TKPos(uint16_t p_line, uint16_t p_column) : line{p_line}, column{p_column} {}
+
+	uint16_t line = 0, column = 0;
 };
 
 struct Token
 {
 	TokenType type;
-	size_t start;
+
+	const char *str;
 	size_t length;
-	uint16_t line;
-	uint16_t column;
+
+	TKPos pos;
 };
 
 enum StringParseFlags : uint8_t
@@ -41,6 +51,11 @@ enum StringParseFlags : uint8_t
 
 inline static bool is_identifier_char(char c) {
 	return isalnum(c) || c == '_' || c == '.';
+}
+
+inline static bool is_number_identifier(const char *str, const size_t len) {
+	(void)len;
+	return isdigit(*str);
 }
 
 #pragma region(tokenizer)
@@ -64,8 +79,7 @@ public:
 		index = old_index;
 	}
 
-	inline uint16_t get_line() const noexcept { return line; }
-	inline uint16_t get_column() const noexcept { return uint16_t(index - line_start); }
+	inline TKPos get_pos() const noexcept { return {line, uint16_t(index - line_start)}; }
 
 	size_t index = 0;
 	uint16_t line = 0;
@@ -74,6 +88,8 @@ public:
 	const size_t length;
 
 private:
+	inline const char *_get_current_str() const { return source + index; }
+
 	template <typename Pred>
 	inline size_t _get_length(Pred &&pred) const {
 		for (size_t i = index; i < length; ++i)
@@ -87,7 +103,7 @@ private:
 	template <typename Pred>
 	inline Token _tk_span(TokenType type, Pred &&pred) const {
 		const size_t length = _get_length(pred);
-		return {type, index, length, line, get_column()};
+		return {type, _get_current_str(), length, get_pos()};
 	}
 
 	Token _tk_string(StringParseFlags flags) const;
@@ -152,12 +168,12 @@ Token Tokenizer::_tk_string(const StringParseFlags flags) const {
 
 	}
 
-	return {TokenType::String, index, (end_index + 1) - index, line, get_column()};
+	return {TokenType::String, _get_current_str(), (end_index + 1) - index, get_pos()};
 }
 
 Token Tokenizer::_tk_identifier() const {
 	if (!is_identifier_char(source[index]))
-		return {TokenType::Unknown, index, 1, line, get_column()};
+		return {TokenType::Unknown, _get_current_str(), 1, get_pos()};
 
 	size_t result_end = length;
 
@@ -170,14 +186,14 @@ Token Tokenizer::_tk_identifier() const {
 		break;
 	}
 
-	return {TokenType::Identifier, index, result_end - index, line, get_column()};
+	return {TokenType::Identifier, _get_current_str(), result_end - index, get_pos()};
 }
 
 inline Token Tokenizer::_read_tk() const {
 	std::cout << index << ' ' << length << '\n';
 	if (index >= length)
 	{
-		return {TokenType::Eof, index, 1, line, get_column()};
+		return {TokenType::Eof, _get_current_str(), 1, get_pos()};
 	}
 
 	switch (source[index])
@@ -241,14 +257,17 @@ public:
 private:
 	void _skip_useless();
 
-	ProjVar _parse_var_as_string(bool trim);
+	ProjVar _get_var();
+	std::pair<ProjVar::VarString, ProjVar> _get_kv();
+
+
+	ProjVar _parse_var_string(bool trim);
+	ProjVar _parse_var_identifier();
+	ProjVar _parse_var_number();
+
 	ProjVar _parse_var_simple();
 	ProjVar _parse_var_dict();
 	ProjVar _parse_var_array();
-
-
-	ProjVar _get_var();
-	std::pair<ProjVar::VarString, ProjVar> _get_kv();
 
 
 private:
@@ -265,12 +284,52 @@ void Parser::_skip_useless() {
 	}
 }
 
+
+ProjVar Parser::_parse_var_string(bool trim) {
+	return ProjVar();
+}
+
+ProjVar Parser::_parse_var_identifier() {
+	const char *token_str = m_source + get_current().start;
+	constexpr const char null_str[] = "null";
+	constexpr const char true_str[] = "true";
+	constexpr const char false_str[] = "false";
+
+	if (strncmp(token_str, null_str, std::size(null_str) - 1) == 0)
+		return ProjVar(ProjVarType::Null);
+
+	if (strncmp(token_str, true_str, std::size(true_str) - 1) == 0)
+		return ProjVar(true);
+
+	if (strncmp(token_str, false_str, std::size(false_str) - 1) == 0)
+		return ProjVar(false);
+
+	return ProjVar::VarString(token_str, get_current().length);
+}
+
+ProjVar Parser::_parse_var_number() {
+	// TODO: error detection
+
+	float val = strtof(m_source + get_current().start, nullptr);
+
+	return ProjVar(val);
+}
+
 ProjVar Parser::_parse_var_simple() {
 	if (get_current().type == TokenType::String)
-		return _parse_var_as_string(true);
+		return _parse_var_string(true);
 
+	if (isdigit(m_source[get_current().start]) == 0)
+		return _parse_var_number();
 
+	return _parse_var_identifier();
+}
 
+ProjVar Parser::_parse_var_dict() {
+	return ProjVar();
+}
+
+ProjVar Parser::_parse_var_array() {
 	return ProjVar();
 }
 
@@ -296,6 +355,10 @@ ProjVar Parser::_get_var() {
 }
 
 std::pair<ProjVar::VarString, ProjVar> Parser::_get_kv() {
+	_skip_useless();
+
+
+
 	return std::pair<ProjVar::VarString, ProjVar>();
 }
 
@@ -327,6 +390,8 @@ ProjVar ProjFile::read(const char *source, size_t length) {
 
 	tokenizer.put_all(tokens);
 
-	return ProjVar(parse_tokens(tokens.data(), tokens.size()));
+	Parser parser{source, length, tokens.data(), tokens.size()};
+
+	return ProjVar(parser.parse());
 }
 
