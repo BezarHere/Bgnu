@@ -25,7 +25,7 @@ public:
 
 	inline ProjVar(ProjVarType type = ProjVarType::Null);
 
-	inline ProjVar(VarNull) : m_type{ProjVarType::Null} {}
+	inline explicit ProjVar(VarNull) : m_type{ProjVarType::Null} {}
 	inline ProjVar(VarBool boolean) : m_type{ProjVarType::Boolean}, m_bool{boolean} {}
 	inline ProjVar(VarNumber number) : m_type{ProjVarType::Number}, m_number{number} {}
 	inline ProjVar(const VarString &string) : m_type{ProjVarType::String}, m_string{string} {}
