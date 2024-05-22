@@ -4,7 +4,7 @@
 #include <string.h>
 
 inline static bool is_identifier_char(char c) {
-	return isalnum(c) || c == '_' || c == '.';
+	return isalnum(c) || c == '_' || c == '.' || c == '-' || c == '+';
 }
 
 inline static bool is_number_identifier(const char *str, size_t len) {
@@ -121,10 +121,7 @@ private:
 	Token _read_comment() const;
 
 	Token _tk_string(StringParseFlags flags) const;
-	Token _tk_other() const;
 
-	Token _tk_number() const;
-	Token _tk_hex() const;
 	Token _tk_identifier() const;
 
 	inline Token _read_tk() const;
@@ -235,6 +232,8 @@ inline Token Tokenizer::_read_tk() const {
 
 	switch (m_source[index])
 	{
+	case '\0':
+		return {TKType::Eof, _get_current_str(), 1, get_pos()};
 	case '\n':
 	case '\r':
 		return _tk_span(TKType::Newline, [](char c) { return c == '\n' || c == '\r'; });
@@ -262,6 +261,17 @@ inline Token Tokenizer::_read_tk() const {
 	}
 
 	return Token();
+}
+
+namespace std
+{
+	ostream &operator<<(ostream &stream, const TKPos &pos) {
+		return stream << pos.line << ':' << pos.column;
+	}
+
+	ostream &operator<<(ostream &stream, const Token &tk) {
+		return stream << "TK('" << string(tk.str, tk.length) << "' [" << tk.length << "], " << tk.pos << ", " << (int)tk.type << ')';
+	}
 }
 
 #pragma endregion
@@ -300,7 +310,7 @@ public:
 	inline size_t size() const noexcept { return m_size; }
 	inline const Token *data() const noexcept { return m_tokens; }
 
-	size_t current_index;
+	size_t current_index = 0;
 
 private:
 	ALWAYS_INLINE void _advance_tk() {
@@ -338,12 +348,12 @@ private:
 	std::pair<ProjVar::VarString, ProjVar> _parse_var_kv();
 
 
-	ProjVar::VarString _parse_var_string() const;
-	ProjVar::VarNumber _parse_var_number() const;
+	ProjVar::VarString _parse_var_string();
+	ProjVar::VarNumber _parse_var_number();
 	ProjVar::VarArray _parse_var_array();
 	ProjVar::VarDict _parse_var_dict(const bool body_dict = false);
 
-	ProjVar _parse_var_identifier() const;
+	ProjVar _parse_var_identifier();
 	ProjVar _parse_var_simple();
 
 	NORETURN void _XUnexpectedToken(const string &expected = "") const {
@@ -369,22 +379,28 @@ private:
 	const size_t m_size;
 };
 
-ProjVar::VarString Parser::_parse_var_string() const {
-	if (get_tk().type != TKType::String)
+ProjVar::VarString Parser::_parse_var_string() {
+	const Token &tk = get_tk();
+	_advance_tk();
+
+	if (tk.type != TKType::String)
 	{
-		return {get_tk().str, get_tk().length};
+		return {tk.str, tk.length};
 	}
 
-	if (get_tk().length < 2)
+	if (tk.length < 2)
 	{
 		return {};
 	}
 
-	return {get_tk().str + 1, get_tk().length - 2};
+	return {tk.str + 1, tk.length - 2};
 }
 
-ProjVar Parser::_parse_var_identifier() const {
-	const char *token_str = get_tk().str;
+ProjVar Parser::_parse_var_identifier() {
+	const Token &token = get_tk();
+	_advance_tk();
+
+	const char *token_str = token.str;
 	constexpr const char null_str[] = "null";
 	constexpr const char true_str[] = "true";
 	constexpr const char false_str[] = "false";
@@ -404,13 +420,16 @@ ProjVar Parser::_parse_var_identifier() const {
 		return false;
 	}
 
-	return ProjVar::VarString(token_str, get_tk().length);
+	return ProjVar::VarString(token_str, token.length);
 }
 
-ProjVar::VarNumber Parser::_parse_var_number() const {
+ProjVar::VarNumber Parser::_parse_var_number() {
 	// TODO: error detection
 
 	float val = strtof(get_tk().str, nullptr);
+
+	// read this token, now we advance
+	_advance_tk();
 
 	return val;
 }
@@ -438,22 +457,31 @@ ProjVar::VarDict Parser::_parse_var_dict(const bool body_dict) {
 
 	ProjVar::VarDict dict{};
 
+	std::cout << "can read? " << _can_read() << ' ' << current_index << ' ' << m_size << '\n';
+
 	while (_can_read())
 	{
 		_skip_empty();
 
-		// parse next tokens as value and added to the constructed array
+		std::cout << "1: " << get_tk() << '\n';
+
+		// parse next tokens as value key pairs to the constructed dict
 		dict.emplace(_parse_var_kv());
 
-		_skip_empty();
-		const bool has_leading_comma = get_tk().type == TKType::Comma;
+
+		std::cout << "2: " << get_tk() << '\n';
+
+		_skip_useless();
+		const bool has_kv_separator = get_tk().type == TKType::Comma || get_tk().type == TKType::Newline;
 
 		// did we hit a comma after value? then skip it
-		if (has_leading_comma)
+		if (has_kv_separator)
 		{
 			_advance_tk();
 			_skip_empty();
 		}
+
+		std::cout << "3: " << get_tk() << '\n';
 
 		if (body_dict)
 		{
@@ -476,9 +504,9 @@ ProjVar::VarDict Parser::_parse_var_dict(const bool body_dict) {
 			}
 		}
 
-		// the list has a next value with no comma separating them
-		// if it didn't have a next value, then it would have had stoped above
-		if (!has_leading_comma)
+		// the dict has no key-value separator, but we expecting the next kv
+		// if we didn't have a next kv, then it would have had stoped above
+		if (!has_kv_separator)
 		{
 			_XUnexpectedToken(format_join('\'', ValueSeparateOp, "' or '}'"));
 		}
@@ -501,9 +529,13 @@ ProjVar::VarArray Parser::_parse_var_array() {
 	{
 		_skip_empty();
 
+		std::cout << "A1: " << get_tk() << '\n';
+
 		// parse next tokens as value and added to the constructed array
 		array.emplace_back(_parse_var());
 
+
+		std::cout << "A2: " << get_tk() << '\n';
 		_skip_empty();
 		const bool has_leading_comma = get_tk().type == TKType::Comma;
 
@@ -513,6 +545,9 @@ ProjVar::VarArray Parser::_parse_var_array() {
 			_advance_tk();
 			_skip_empty();
 		}
+
+
+		std::cout << "A3: " << get_tk() << '\n';
 
 		// did we hit the closing bracket? skip it (to mark it read) and break
 		// if we didn't hit a closing bracket, then there must be a next value
@@ -558,6 +593,7 @@ ProjVar Parser::_parse_var() {
 std::pair<ProjVar::VarString, ProjVar> Parser::_parse_var_kv() {
 
 	_skip_useless();
+
 	ProjVar::VarString key = _parse_var_string();
 
 	_skip_empty();
@@ -590,6 +626,7 @@ ProjVar ProjFile::load(const string &filepath) {
 	string text;
 	text.resize(size);
 	file.read(text.data(), size);
+	text.resize(size);
 
 	return read(text.c_str(), text.length());
 }
@@ -600,6 +637,11 @@ ProjVar ProjFile::read(const char *source, size_t length) {
 	vector<Token> tokens{};
 
 	tokenizer.put_all(tokens);
+
+	// for (const auto &tk : tokens)
+	// {
+	// 	std::cout << tk << '\n';
+	// }
 
 	Parser parser{tokens.data(), tokens.size()};
 
