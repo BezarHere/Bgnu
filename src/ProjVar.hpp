@@ -16,14 +16,18 @@ enum class ProjVarType : char
 struct ProjVar
 {
 public:
+	using VarNull = std::nullptr_t;
+	using VarBool = bool;
+	using VarNumber = float;
 	using VarString = string;
 	using VarArray = vector<ProjVar>;
 	using VarDict = std::unordered_map<VarString, ProjVar>;
 
 	inline ProjVar(ProjVarType type = ProjVarType::Null);
 
-	inline ProjVar(bool boolean) : m_type{ProjVarType::Boolean}, m_bool{boolean} {}
-	inline ProjVar(float number) : m_type{ProjVarType::Number}, m_number{number} {}
+	inline ProjVar(VarNull) : m_type{ProjVarType::Null} {}
+	inline ProjVar(VarBool boolean) : m_type{ProjVarType::Boolean}, m_bool{boolean} {}
+	inline ProjVar(VarNumber number) : m_type{ProjVarType::Number}, m_number{number} {}
 	inline ProjVar(const VarString &string) : m_type{ProjVarType::String}, m_string{string} {}
 	inline explicit ProjVar(const VarArray &array) : m_type{ProjVarType::Array}, m_array{array} { std::cout << this << '\n'; }
 	inline explicit ProjVar(const VarDict &dict) : m_type{ProjVarType::Dict}, m_dict{dict} {}
@@ -37,8 +41,8 @@ public:
 
 	inline ProjVarType get_type() const noexcept { return m_type; }
 
-	inline bool get_bool() const noexcept { return m_bool; }
-	inline float get_number() const noexcept { return m_number; }
+	inline VarBool get_bool() const noexcept { return m_bool; }
+	inline VarNumber get_number() const noexcept { return m_number; }
 	inline const VarString &get_string() const noexcept { return m_string; }
 	inline const VarArray &get_array() const noexcept { return m_array; }
 	inline const VarDict &get_dict() const noexcept { return m_dict; }
@@ -74,8 +78,8 @@ private:
 
 	union
 	{
-		bool m_bool;
-		float m_number;
+		VarBool m_bool;
+		VarNumber m_number;
 		VarString m_string;
 		VarArray m_array;
 		VarDict m_dict;
