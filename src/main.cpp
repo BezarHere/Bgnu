@@ -11,6 +11,9 @@ int main() {
 	ProjVar loaded_file = ProjFile::load("F:\\gcc\\bgnu\\test.txt");
 	std::cout << loaded_file << '\n';
 
+	ProjFile::dump("F:\\gcc\\bgnu\\dump.txt", loaded_file.get_dict());
+
+
 	// ProjVar var = 312.41F;
 	// ProjVar var2 = false;
 	// ProjVar var3 = "yeah baby!";

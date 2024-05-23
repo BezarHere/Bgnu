@@ -1,0 +1,60 @@
+{
+	build_configurations: {
+		release: {
+			preprocessor_args: []
+			linker_args: []
+			assembler_args: []
+			lib_names: []
+			lib_dirs: []
+			predefines: {
+				_RELEASE: null
+				NDEBUG: null
+			}
+			exit_on_errors: true
+			optimization_lvl: extreme
+			warning_pedantic: false
+			standard: c++20
+			warning_level: all
+			print_stats: true
+			print_includes: false
+			simd_type: sse
+			include_dirs: []
+			optimization_type: speed
+			catch_typos: true
+			dynamically_linkable: true
+		}
+		debug: {
+			preprocessor_args: []
+			linker_args: []
+			assembler_args: []
+			lib_names: []
+			lib_dirs: []
+			predefines: {
+				_DEBUG: null
+			}
+			exit_on_errors: true
+			optimization_lvl: high
+			warning_pedantic: false
+			standard: c++20
+			warning_level: all
+			print_stats: true
+			print_includes: false
+			simd_type: sse
+			include_dirs: []
+			optimization_type: debug
+			catch_typos: true
+			dynamically_linkable: true
+		}
+	}
+	output_name: output
+	source_selectors: ["**/*.c", "**/*.cpp", "**/*.cc", "**/*.cxx", ]
+	output_cache_dir: "F:\\gcc\\bgnu\\output\\cache"
+	output_dir: "F:\\gcc\\bgnu\\output"
+	funny_dict3: {
+		h: [s, ]
+	}
+	funny_dict2: {
+	}
+	funny_dict: {
+	}
+}

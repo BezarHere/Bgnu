@@ -22,6 +22,7 @@ inline static bool is_number_identifier(const char *str, size_t len) {
 }
 
 #pragma region(tokenizer)
+
 enum class TKType : uint8_t
 {
 	Unknown,
@@ -284,6 +285,13 @@ public:
 	static constexpr char ValueAssignOp = ':';
 	static constexpr char ValueSeparateOp = ',';
 
+	enum class SkipType
+	{
+		None,
+		Useless,
+		Empty
+	};
+
 	inline Parser(const Token *tks, const size_t count)
 		: m_tokens{tks}, m_size{count} {
 	}
@@ -344,6 +352,15 @@ private:
 		}
 	}
 
+	inline void _push_index() {
+		m_indicies_stack.push_back(current_index);
+	}
+
+	inline void _pop_index() {
+		current_index = m_indicies_stack.back();
+		m_indicies_stack.pop_back();
+	}
+
 	ProjVar _parse_var();
 	std::pair<ProjVar::VarString, ProjVar> _parse_var_kv();
 
@@ -351,32 +368,28 @@ private:
 	ProjVar::VarString _parse_var_string();
 	ProjVar::VarNumber _parse_var_number();
 	ProjVar::VarArray _parse_var_array();
-	ProjVar::VarDict _parse_var_dict(const bool body_dict = false);
+	ProjVar::VarDict _parse_var_dict(bool body_dict = false);
 
 	ProjVar _parse_var_identifier();
 	ProjVar _parse_var_simple();
 
-	NORETURN void _XUnexpectedToken(const string &expected = "") const {
-		char buffer[inner::ExceptionBufferSz]{};
+	NORETURN void _XUnexpectedToken(const string &msg = "") const {
+		std::ostringstream ss{};
 
-		if (!expected.empty())
+		ss << "Unexpected " << get_tk();
+
+		if (!msg.empty())
 		{
-			sprintf_s(
-				buffer, "Unexpected token at %u:%u, expected '%s'",
-				get_tk().pos.line, get_tk().pos.column, expected.c_str()
-			);
-		}
-		else
-		{
-			sprintf_s(buffer, "Unexpected token at %u:%u", get_tk().pos.line, get_tk().pos.column);
+			ss << ", expected " << msg;
 		}
 
-		throw std::runtime_error(buffer);
+		throw std::runtime_error(ss.str().c_str());
 	}
 
 private:
 	const Token *m_tokens;
 	const size_t m_size;
+	vector<size_t> m_indicies_stack = {};
 };
 
 ProjVar::VarString Parser::_parse_var_string() {
@@ -455,34 +468,19 @@ ProjVar::VarDict Parser::_parse_var_dict(const bool body_dict) {
 		_advance_tk();
 	}
 
+	std::cout << "dict started at " << get_tk() << '\n';
+
+	bool expecting_separator = false;
 	ProjVar::VarDict dict{};
 
-	std::cout << "can read? " << _can_read() << ' ' << current_index << ' ' << m_size << '\n';
+	_skip_empty();
 
 	while (_can_read())
 	{
+		_push_index();
 		_skip_empty();
 
-		std::cout << "1: " << get_tk() << '\n';
-
-		// parse next tokens as value key pairs to the constructed dict
-		dict.emplace(_parse_var_kv());
-
-
-		std::cout << "2: " << get_tk() << '\n';
-
-		_skip_useless();
-		const bool has_kv_separator = get_tk().type == TKType::Comma || get_tk().type == TKType::Newline;
-
-		// did we hit a comma after value? then skip it
-		if (has_kv_separator)
-		{
-			_advance_tk();
-			_skip_empty();
-		}
-
-		std::cout << "3: " << get_tk() << '\n';
-
+		// checking for dict termination (either EOF for body dict or closing '}' for normal dicts)
 		if (body_dict)
 		{
 			// for body dicts, we close on EOF
@@ -504,14 +502,33 @@ ProjVar::VarDict Parser::_parse_var_dict(const bool body_dict) {
 			}
 		}
 
-		// the dict has no key-value separator, but we expecting the next kv
-		// if we didn't have a next kv, then it would have had stoped above
-		if (!has_kv_separator)
+		_pop_index();
+		_skip_useless();
+
+		if (expecting_separator)
 		{
+			// the dict has no key-value separator, but we expecting the next kv
+			// if we didn't have a next kv, then it would have had stoped above
+			if (get_tk().type == TKType::Comma || get_tk().type == TKType::Newline)
+			{
+				_advance_tk();
+				expecting_separator = false;
+				continue;
+			}
+
 			_XUnexpectedToken(format_join('\'', ValueSeparateOp, "' or '}'"));
 		}
 
+		// skip useless and new lines to the next value token
+		_skip_empty();
+
+		// parse next tokens as value key pairs to the constructed dict
+		dict.emplace(_parse_var_kv());
+
+		expecting_separator = true;
 	}
+
+	std::cout << "dict ended at " << get_tk() << '\n';
 
 	return dict;
 }
@@ -524,46 +541,41 @@ ProjVar::VarArray Parser::_parse_var_array() {
 		_advance_tk();
 	}
 
+	bool expecting_separator = false;
+
 	ProjVar::VarArray array{};
+
+	_skip_empty();
+
 	while (_can_read())
 	{
 		_skip_empty();
 
-		std::cout << "A1: " << get_tk() << '\n';
-
-		// parse next tokens as value and added to the constructed array
-		array.emplace_back(_parse_var());
-
-
-		std::cout << "A2: " << get_tk() << '\n';
-		_skip_empty();
-		const bool has_leading_comma = get_tk().type == TKType::Comma;
-
-		// did we hit a comma after value? then skip it
-		if (has_leading_comma)
-		{
-			_advance_tk();
-			_skip_empty();
-		}
-
-
-		std::cout << "A3: " << get_tk() << '\n';
-
 		// did we hit the closing bracket? skip it (to mark it read) and break
-		// if we didn't hit a closing bracket, then there must be a next value
 		if (get_tk().type == TKType::Close_SqBracket)
 		{
 			_advance_tk();
 			break;
 		}
 
-		// the list has a next value with no comma separating them
-		// if it didn't have a next value, then it would have had stoped above
-		if (!has_leading_comma)
+		std::cout << "A1: " << get_tk() << '\n';
+
+		if (expecting_separator)
 		{
-			_XUnexpectedToken(format_join('\'', ValueSeparateOp, "' or ']'"));
+			if (get_tk().type == TKType::Comma)
+			{
+				_advance_tk();
+				expecting_separator = false;
+				continue;
+			}
+
+			_XUnexpectedToken(format_join('"', ValueSeparateOp, "\" or \"]\""));
 		}
 
+
+		// parse next tokens as value and added to the constructed array
+		array.emplace_back(_parse_var());
+		expecting_separator = true;
 	}
 
 	return array;
@@ -571,6 +583,8 @@ ProjVar::VarArray Parser::_parse_var_array() {
 
 ProjVar Parser::_parse_var() {
 	_skip_useless();
+
+	std::cout << "parsing tk: " << get_tk() << '\n';
 
 	switch (get_tk().type)
 	{
@@ -600,7 +614,7 @@ std::pair<ProjVar::VarString, ProjVar> Parser::_parse_var_kv() {
 
 	if (get_tk().type != TKType::Column)
 	{
-		_XUnexpectedToken(string(1, ValueAssignOp));
+		_XUnexpectedToken(format_join('"', ValueAssignOp, '"'));
 	}
 
 	_advance_tk();
@@ -611,6 +625,142 @@ std::pair<ProjVar::VarString, ProjVar> Parser::_parse_var_kv() {
 
 ProjVar::VarDict Parser::parse() {
 	return _parse_var_dict(true);
+}
+
+#pragma endregion
+
+#pragma region(writer)
+
+class ProjFileWriter
+{
+public:
+	inline ProjFileWriter(std::ostringstream &p_stream) : stream{p_stream} {}
+
+	void start(const ProjVar::VarDict &data);
+
+	void write(ProjVar::VarNull data);
+	void write(ProjVar::VarBool data);
+	void write(ProjVar::VarNumber data);
+
+	void write(const ProjVar::VarString &data);
+	void write(const ProjVar::VarArray &data);
+	void write(const ProjVar::VarDict &data, bool striped = false);
+
+	void write(const ProjVar &data);
+
+	inline void write_indent() {
+		stream << string(m_indent_level, '\t');
+	}
+
+	std::ostringstream &stream;
+
+private:
+	uint32_t m_indent_level = 0;
+};
+
+
+void ProjFileWriter::start(const ProjVar::VarDict &data) {
+	m_indent_level = 0;
+	write(data, true);
+}
+
+void ProjFileWriter::write(ProjVar::VarNull data) {
+	stream << "null";
+}
+
+void ProjFileWriter::write(ProjVar::VarBool data) {
+	stream << (data ? "true" : "false");
+}
+
+void ProjFileWriter::write(ProjVar::VarNumber data) {
+	stream << data;
+}
+
+void ProjFileWriter::write(const ProjVar::VarString &data) {
+	bool simple_string = data.length() < 32ULL;
+
+	if (simple_string)
+	{
+		// check if the string is not simple (only identifier chars)
+		for (const char c : data)
+		{
+			if (!is_identifier_char(c))
+			{
+				simple_string = false;
+				break;
+			}
+		}
+	}
+
+	if (!simple_string)
+	{
+		stream << '"' << data << '"';
+		return;
+	}
+
+	stream << data;
+}
+
+void ProjFileWriter::write(const ProjVar::VarArray &data) {
+	stream << '[';
+	for (const auto &var : data)
+	{
+		write(var);
+		stream << ", ";
+	}
+	stream << ']';
+}
+
+void ProjFileWriter::write(const ProjVar::VarDict &data, bool striped) {
+	if (!striped)
+	{
+		stream << "{\n";
+	}
+
+	++m_indent_level;
+
+	for (const auto &kv : data)
+	{
+		write_indent();
+		stream << kv.first << ": ";
+		write(kv.second);
+		stream << '\n';
+	}
+
+	--m_indent_level;
+
+	if (!striped)
+	{
+		write_indent();
+		stream << '}';
+	}
+}
+
+void ProjFileWriter::write(const ProjVar &data) {
+	switch (data.get_type())
+	{
+	case ProjVarType::Null:
+		write(nullptr);
+		return;
+	case ProjVarType::Boolean:
+		write(data.get_bool());
+		return;
+	case ProjVarType::Number:
+		write(data.get_number());
+		return;
+	case ProjVarType::String:
+		write(data.get_string());
+		return;
+	case ProjVarType::Array:
+		write(data.get_array());
+		return;
+	case ProjVarType::Dict:
+		write(data.get_dict());
+		return;
+	default:
+		stream << "UNKNOWN";
+		return;
+	}
 }
 
 #pragma endregion
@@ -646,5 +796,20 @@ ProjVar ProjFile::read(const char *source, size_t length) {
 	Parser parser{tokens.data(), tokens.size()};
 
 	return ProjVar(parser.parse());
+}
+
+void ProjFile::dump(const string &filepath, const ProjVar::VarDict &data) {
+	string source = write(data);
+
+	std::ofstream out{filepath};
+
+	out << source;
+}
+
+string ProjFile::write(const ProjVar::VarDict &data) {
+	std::ostringstream output{};
+	ProjFileWriter writer{output};
+	writer.write(data);
+	return output.str();
 }
 
