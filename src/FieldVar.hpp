@@ -13,31 +13,31 @@ enum class ProjVarType : char
 	Dict,
 };
 
-struct ProjVar
+struct FieldVar
 {
 public:
 	using VarNull = std::nullptr_t;
 	using VarBool = bool;
 	using VarNumber = float;
 	using VarString = string;
-	using VarArray = vector<ProjVar>;
-	using VarDict = std::unordered_map<VarString, ProjVar>;
+	using VarArray = vector<FieldVar>;
+	using VarDict = std::unordered_map<VarString, FieldVar>;
 
-	inline ProjVar(ProjVarType type = ProjVarType::Null);
+	inline FieldVar(ProjVarType type = ProjVarType::Null);
 
-	inline explicit ProjVar(VarNull) : m_type{ProjVarType::Null} {}
-	inline ProjVar(VarBool boolean) : m_type{ProjVarType::Boolean}, m_bool{boolean} {}
-	inline ProjVar(VarNumber number) : m_type{ProjVarType::Number}, m_number{number} {}
-	inline ProjVar(const VarString &string) : m_type{ProjVarType::String}, m_string{string} {}
-	inline explicit ProjVar(const VarArray &array) : m_type{ProjVarType::Array}, m_array{array} { std::cout << this << '\n'; }
-	inline explicit ProjVar(const VarDict &dict) : m_type{ProjVarType::Dict}, m_dict{dict} {}
+	inline explicit FieldVar(VarNull) : m_type{ProjVarType::Null} {}
+	inline FieldVar(VarBool boolean) : m_type{ProjVarType::Boolean}, m_bool{boolean} {}
+	inline FieldVar(VarNumber number) : m_type{ProjVarType::Number}, m_number{number} {}
+	inline FieldVar(const VarString &string) : m_type{ProjVarType::String}, m_string{string} {}
+	inline explicit FieldVar(const VarArray &array) : m_type{ProjVarType::Array}, m_array{array} { std::cout << this << '\n'; }
+	inline explicit FieldVar(const VarDict &dict) : m_type{ProjVarType::Dict}, m_dict{dict} {}
 
-	inline ProjVar(const VarString::value_type *cstring) : ProjVar(VarString(cstring)) {}
+	inline FieldVar(const VarString::value_type *cstring) : FieldVar(VarString(cstring)) {}
 
-	inline ~ProjVar();
-	inline ProjVar(const ProjVar &copy);
+	inline ~FieldVar();
+	inline FieldVar(const FieldVar &copy);
 
-	inline ProjVar &operator=(const ProjVar &copy);
+	inline FieldVar &operator=(const FieldVar &copy);
 
 	inline ProjVarType get_type() const noexcept { return m_type; }
 
@@ -86,19 +86,19 @@ private:
 	};
 };
 
-inline ProjVar::ProjVar(ProjVarType type) : m_type{type} {
+inline FieldVar::FieldVar(ProjVarType type) : m_type{type} {
 	_handle<inner::EmptyCTor>();
 }
 
-inline ProjVar::~ProjVar() {
+inline FieldVar::~FieldVar() {
 	_handle<inner::DTor>();
 }
 
-ProjVar::ProjVar(const ProjVar &copy) : m_type{copy.m_type} {
+FieldVar::FieldVar(const FieldVar &copy) : m_type{copy.m_type} {
 	_handle(inner::TypelessCTor(copy._union_ptr()));
 }
 
-inline ProjVar &ProjVar::operator=(const ProjVar &copy) {
+inline FieldVar &FieldVar::operator=(const FieldVar &copy) {
 	// type didn't change, just assign data
 	if (copy.m_type == m_type)
 	{
@@ -121,21 +121,21 @@ inline ProjVar &ProjVar::operator=(const ProjVar &copy) {
 
 namespace std
 {
-	inline ostream &operator<<(ostream &stream, const ProjVar &project_variable) {
+	inline ostream &operator<<(ostream &stream, const FieldVar &project_variable) {
 		switch (project_variable.get_type())
 		{
 		case ProjVarType::Null:
-			return stream << "<PVar=Null>";
+			return stream << "Null";
 		case ProjVarType::Boolean:
-			return stream << "<PVar=" << (project_variable.get_bool() ? "true" : "false") << ">";
+			return stream << (project_variable.get_bool() ? "true" : "false");
 		case ProjVarType::Number:
-			return stream << "<PVar=" << project_variable.get_number() << ">";
+			return stream << project_variable.get_number();
 		case ProjVarType::String:
-			return stream << "<PVar=\"" << project_variable.get_string() << "\">";
+			return stream << "\"" << project_variable.get_string() << "\"";
 		case ProjVarType::Array:
 			{
-				stream << "<PVar=[";
-				const ProjVar::VarArray &array = project_variable.get_array();
+				stream << "[";
+				const FieldVar::VarArray &array = project_variable.get_array();
 
 				for (size_t i = 0; i < array.size(); ++i) {
 					if (i)
@@ -146,12 +146,12 @@ namespace std
 					stream << array[i];
 				}
 
-				return stream << "]>";
+				return stream << "]";
 			}
 		case ProjVarType::Dict:
 			{
-				stream << "<PVar={";
-				const ProjVar::VarDict &dict = project_variable.get_dict();
+				stream << "{";
+				const FieldVar::VarDict &dict = project_variable.get_dict();
 
 				size_t counter = 0;
 				for (const auto &kv : dict) {
@@ -165,7 +165,7 @@ namespace std
 					stream << '"' << kv.first << "\": " << kv.second;
 				}
 
-				return stream << "}>";
+				return stream << "}";
 			}
 		}
 		return stream;

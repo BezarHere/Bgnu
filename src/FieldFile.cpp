@@ -1,4 +1,4 @@
-#include "ProjFile.hpp"
+#include "FieldFile.hpp"
 #include "Console.hpp"
 #include <fstream>
 #include <string.h>
@@ -296,7 +296,7 @@ public:
 		: m_tokens{tks}, m_size{count} {
 	}
 
-	ProjVar::VarDict parse();
+	FieldVar::VarDict parse();
 
 	static bool is_useless_token(const Token &token) {
 		if (token.length == 0)
@@ -361,17 +361,17 @@ private:
 		m_indicies_stack.pop_back();
 	}
 
-	ProjVar _parse_var();
-	std::pair<ProjVar::VarString, ProjVar> _parse_var_kv();
+	FieldVar _parse_var();
+	std::pair<FieldVar::VarString, FieldVar> _parse_var_kv();
 
 
-	ProjVar::VarString _parse_var_string();
-	ProjVar::VarNumber _parse_var_number();
-	ProjVar::VarArray _parse_var_array();
-	ProjVar::VarDict _parse_var_dict(bool body_dict = false);
+	FieldVar::VarString _parse_var_string();
+	FieldVar::VarNumber _parse_var_number();
+	FieldVar::VarArray _parse_var_array();
+	FieldVar::VarDict _parse_var_dict(bool body_dict = false);
 
-	ProjVar _parse_var_identifier();
-	ProjVar _parse_var_simple();
+	FieldVar _parse_var_identifier();
+	FieldVar _parse_var_simple();
 
 	NORETURN void _XUnexpectedToken(const string &msg = "") const {
 		std::ostringstream ss{};
@@ -392,7 +392,7 @@ private:
 	vector<size_t> m_indicies_stack = {};
 };
 
-ProjVar::VarString Parser::_parse_var_string() {
+FieldVar::VarString Parser::_parse_var_string() {
 	const Token &tk = get_tk();
 	_advance_tk();
 
@@ -409,7 +409,7 @@ ProjVar::VarString Parser::_parse_var_string() {
 	return {tk.str + 1, tk.length - 2};
 }
 
-ProjVar Parser::_parse_var_identifier() {
+FieldVar Parser::_parse_var_identifier() {
 	const Token &token = get_tk();
 	_advance_tk();
 
@@ -420,7 +420,7 @@ ProjVar Parser::_parse_var_identifier() {
 
 	if (strncmp(token_str, null_str, std::size(null_str) - 1) == 0)
 	{
-		return ProjVar(ProjVarType::Null);
+		return FieldVar(ProjVarType::Null);
 	}
 
 	if (strncmp(token_str, true_str, std::size(true_str) - 1) == 0)
@@ -433,10 +433,10 @@ ProjVar Parser::_parse_var_identifier() {
 		return false;
 	}
 
-	return ProjVar::VarString(token_str, token.length);
+	return FieldVar::VarString(token_str, token.length);
 }
 
-ProjVar::VarNumber Parser::_parse_var_number() {
+FieldVar::VarNumber Parser::_parse_var_number() {
 	// TODO: error detection
 
 	float val = strtof(get_tk().str, nullptr);
@@ -447,7 +447,7 @@ ProjVar::VarNumber Parser::_parse_var_number() {
 	return val;
 }
 
-ProjVar Parser::_parse_var_simple() {
+FieldVar Parser::_parse_var_simple() {
 	_skip_useless();
 
 	if (get_tk().type == TKType::String)
@@ -459,7 +459,7 @@ ProjVar Parser::_parse_var_simple() {
 	return _parse_var_identifier();
 }
 
-ProjVar::VarDict Parser::_parse_var_dict(const bool body_dict) {
+FieldVar::VarDict Parser::_parse_var_dict(const bool body_dict) {
 	_skip_useless();
 
 	// skip starting '{' for non-body dicts
@@ -471,7 +471,7 @@ ProjVar::VarDict Parser::_parse_var_dict(const bool body_dict) {
 	std::cout << "dict started at " << get_tk() << '\n';
 
 	bool expecting_separator = false;
-	ProjVar::VarDict dict{};
+	FieldVar::VarDict dict{};
 
 	_skip_empty();
 
@@ -533,7 +533,7 @@ ProjVar::VarDict Parser::_parse_var_dict(const bool body_dict) {
 	return dict;
 }
 
-ProjVar::VarArray Parser::_parse_var_array() {
+FieldVar::VarArray Parser::_parse_var_array() {
 	_skip_useless();
 
 	if (get_tk().type == TKType::Open_SqBracket)
@@ -543,7 +543,7 @@ ProjVar::VarArray Parser::_parse_var_array() {
 
 	bool expecting_separator = false;
 
-	ProjVar::VarArray array{};
+	FieldVar::VarArray array{};
 
 	_skip_empty();
 
@@ -581,7 +581,7 @@ ProjVar::VarArray Parser::_parse_var_array() {
 	return array;
 }
 
-ProjVar Parser::_parse_var() {
+FieldVar Parser::_parse_var() {
 	_skip_useless();
 
 	std::cout << "parsing tk: " << get_tk() << '\n';
@@ -592,23 +592,23 @@ ProjVar Parser::_parse_var() {
 	case TKType::String:
 		return _parse_var_simple();
 	case TKType::Open_CurlyBracket:
-		return ProjVar(_parse_var_dict());
+		return FieldVar(_parse_var_dict());
 	case TKType::Open_SqBracket:
-		return ProjVar(_parse_var_array());
+		return FieldVar(_parse_var_array());
 
 	default:
 		//! Report the error with more info
 		throw std::runtime_error("error");
 	}
 
-	return ProjVar(0.0F);
+	return FieldVar(0.0F);
 }
 
-std::pair<ProjVar::VarString, ProjVar> Parser::_parse_var_kv() {
+std::pair<FieldVar::VarString, FieldVar> Parser::_parse_var_kv() {
 
 	_skip_useless();
 
-	ProjVar::VarString key = _parse_var_string();
+	FieldVar::VarString key = _parse_var_string();
 
 	_skip_empty();
 
@@ -623,7 +623,7 @@ std::pair<ProjVar::VarString, ProjVar> Parser::_parse_var_kv() {
 	return {key, _parse_var()};
 }
 
-ProjVar::VarDict Parser::parse() {
+FieldVar::VarDict Parser::parse() {
 	return _parse_var_dict(true);
 }
 
@@ -631,25 +631,25 @@ ProjVar::VarDict Parser::parse() {
 
 #pragma region(writer)
 
-class ProjFileWriter
+class FieldFileWriter
 {
 public:
-	inline ProjFileWriter(std::ostringstream &p_stream) : stream{p_stream} {}
+	inline FieldFileWriter(std::ostringstream &p_stream) : stream{p_stream} {}
 
-	void start(const ProjVar::VarDict &data);
+	void start(const FieldVar::VarDict &data);
 
-	void write(ProjVar::VarNull data);
-	void write(ProjVar::VarBool data);
-	void write(ProjVar::VarNumber data);
+	void write(FieldVar::VarNull data);
+	void write(FieldVar::VarBool data);
+	void write(FieldVar::VarNumber data);
 
-	void write(const ProjVar::VarString &data);
-	void write(const ProjVar::VarArray &data);
-	void write(const ProjVar::VarDict &data, bool striped = false);
+	void write(const FieldVar::VarString &data);
+	void write(const FieldVar::VarArray &data);
+	void write(const FieldVar::VarDict &data, bool striped = false);
 
-	void write(const ProjVar &data);
+	void write(const FieldVar &data);
 
 	inline void write_indent() {
-		stream << string(m_indent_level, '\t');
+		stream << string(m_indent_level * 2, ' ');
 	}
 
 	std::ostringstream &stream;
@@ -659,24 +659,24 @@ private:
 };
 
 
-void ProjFileWriter::start(const ProjVar::VarDict &data) {
+void FieldFileWriter::start(const FieldVar::VarDict &data) {
 	m_indent_level = 0;
 	write(data, true);
 }
 
-void ProjFileWriter::write(ProjVar::VarNull data) {
+void FieldFileWriter::write(FieldVar::VarNull data) {
 	stream << "null";
 }
 
-void ProjFileWriter::write(ProjVar::VarBool data) {
+void FieldFileWriter::write(FieldVar::VarBool data) {
 	stream << (data ? "true" : "false");
 }
 
-void ProjFileWriter::write(ProjVar::VarNumber data) {
+void FieldFileWriter::write(FieldVar::VarNumber data) {
 	stream << data;
 }
 
-void ProjFileWriter::write(const ProjVar::VarString &data) {
+void FieldFileWriter::write(const FieldVar::VarString &data) {
 	bool simple_string = data.length() < 32ULL;
 
 	if (simple_string)
@@ -701,7 +701,7 @@ void ProjFileWriter::write(const ProjVar::VarString &data) {
 	stream << data;
 }
 
-void ProjFileWriter::write(const ProjVar::VarArray &data) {
+void FieldFileWriter::write(const FieldVar::VarArray &data) {
 	stream << '[';
 	for (const auto &var : data)
 	{
@@ -711,7 +711,7 @@ void ProjFileWriter::write(const ProjVar::VarArray &data) {
 	stream << ']';
 }
 
-void ProjFileWriter::write(const ProjVar::VarDict &data, bool striped) {
+void FieldFileWriter::write(const FieldVar::VarDict &data, bool striped) {
 	if (!striped)
 	{
 		stream << "{\n";
@@ -736,7 +736,7 @@ void ProjFileWriter::write(const ProjVar::VarDict &data, bool striped) {
 	}
 }
 
-void ProjFileWriter::write(const ProjVar &data) {
+void FieldFileWriter::write(const FieldVar &data) {
 	switch (data.get_type())
 	{
 	case ProjVarType::Null:
@@ -765,7 +765,7 @@ void ProjFileWriter::write(const ProjVar &data) {
 
 #pragma endregion
 
-ProjVar ProjFile::load(const string &filepath) {
+FieldVar FieldFile::load(const string &filepath) {
 	std::ifstream file{filepath, std::ios::in};
 
 	file.seekg(0, std::ios::seekdir::_S_end);
@@ -781,7 +781,7 @@ ProjVar ProjFile::load(const string &filepath) {
 	return read(text.c_str(), text.length());
 }
 
-ProjVar ProjFile::read(const char *source, size_t length) {
+FieldVar FieldFile::read(const char *source, size_t length) {
 	Tokenizer tokenizer{source, length};
 
 	vector<Token> tokens{};
@@ -795,10 +795,10 @@ ProjVar ProjFile::read(const char *source, size_t length) {
 
 	Parser parser{tokens.data(), tokens.size()};
 
-	return ProjVar(parser.parse());
+	return FieldVar(parser.parse());
 }
 
-void ProjFile::dump(const string &filepath, const ProjVar::VarDict &data) {
+void FieldFile::dump(const string &filepath, const FieldVar::VarDict &data) {
 	string source = write(data);
 
 	std::ofstream out{filepath};
@@ -806,9 +806,9 @@ void ProjFile::dump(const string &filepath, const ProjVar::VarDict &data) {
 	out << source;
 }
 
-string ProjFile::write(const ProjVar::VarDict &data) {
+string FieldFile::write(const FieldVar::VarDict &data) {
 	std::ostringstream output{};
-	ProjFileWriter writer{output};
+	FieldFileWriter writer{output};
 	writer.write(data);
 	return output.str();
 }

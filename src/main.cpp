@@ -1,5 +1,5 @@
 #include "Console.hpp"
-#include "ProjFile.hpp"
+#include "FieldFile.hpp"
 #include <iostream>
 
 int main() {
@@ -8,18 +8,18 @@ int main() {
 
 	std::cout << "hello\n";
 
-	ProjVar loaded_file = ProjFile::load("F:\\gcc\\bgnu\\test.txt");
+	FieldVar loaded_file = FieldFile::load("F:\\gcc\\bgnu\\test.txt");
 	std::cout << loaded_file << '\n';
 
-	ProjFile::dump("F:\\gcc\\bgnu\\dump.txt", loaded_file.get_dict());
+	FieldFile::dump("F:\\gcc\\bgnu\\dump.txt", loaded_file.get_dict());
 
 
-	// ProjVar var = 312.41F;
-	// ProjVar var2 = false;
-	// ProjVar var3 = "yeah baby!";
+	// FieldVar var = 312.41F;
+	// FieldVar var2 = false;
+	// FieldVar var3 = "yeah baby!";
 
-	// ProjVar::VarDict dict{{"age", var}, {"admin", var2}, {"bio", var}};
-	// ProjVar var4{dict};
+	// FieldVar::VarDict dict{{"age", var}, {"admin", var2}, {"bio", var}};
+	// FieldVar var4{dict};
 
 	// std::cout << "hello!\n";
 	// std::cout << var << '\n';
