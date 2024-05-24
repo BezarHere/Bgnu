@@ -1,4 +1,5 @@
 #include "Console.hpp"
+#include "base.hpp"
 
 struct ColorResetter
 {
@@ -7,8 +8,16 @@ struct ColorResetter
 		Console::set_fg(ConsoleColor::White);
 	}
 };
-
 static ColorResetter __clr_resetter{};
+
+struct ConsoleState
+{
+	ConsoleColor background;
+	ConsoleColor foreground;
+};
+
+
+static vector<ConsoleState> g_states{};
 
 ConsoleColor Console::s_bg = ConsoleColor::Black;
 ConsoleColor Console::s_fg = ConsoleColor::White;
@@ -99,5 +108,19 @@ void Console::set_fg(ConsoleColor color) {
 
 	s_fg = color;
 	push_fg_clr_console(color);
+}
+
+void Console::push_state() {
+	g_states.emplace_back();
+	g_states.back().background = s_bg;
+	g_states.back().foreground = s_fg;
+}
+
+void Console::pop_state() {
+	const auto &old_state = g_states.back();
+	g_states.pop_back();
+	
+	set_bg(old_state.background);
+	set_fg(old_state.foreground);
 }
 

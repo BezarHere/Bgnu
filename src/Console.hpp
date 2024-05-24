@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <cstdint>
+#include <stdarg.h>
 
 // Intense: Bright or Bold (implementation dependent)
 enum class ConsoleColor : uint8_t
@@ -39,6 +40,8 @@ public:
 
 	static void set_bg(ConsoleColor color);
 	static void set_fg(ConsoleColor color);
+	static void push_state();
+	static void pop_state();
 
 	static inline ConsoleColor get_bg_color() {
 		return s_bg;
@@ -46,6 +49,46 @@ public:
 
 	static inline ConsoleColor get_fg_color() {
 		return s_fg;
+	}
+
+	static inline void warning(const char *format, ...) {
+		push_state();
+		set_bg(ConsoleColor::Black);
+		set_fg(ConsoleColor::Yellow);
+
+		va_list valist{};
+		va_start(valist, format);
+		vfprintf(stdout, format, valist);
+		va_end(valist);
+
+		pop_state();
+	}
+
+	static inline void error(const char *format, ...) {
+		push_state();
+		set_bg(ConsoleColor::Black);
+		set_fg(ConsoleColor::IntenseRed);
+
+		va_list valist{};
+		va_start(valist, format);
+		vfprintf(stdout, format, valist);
+		va_end(valist);
+
+		pop_state();
+	}
+
+	static inline void debug(const char *format, ...) {
+		push_state();
+		set_bg(ConsoleColor::Black);
+		// hopefully this is just dark gray for foreground
+		set_fg(ConsoleColor::IntenseBlack);
+
+		va_list valist{};
+		va_start(valist, format);
+		vfprintf(stdout, format, valist);
+		va_end(valist);
+
+		pop_state();
 	}
 
 private:
