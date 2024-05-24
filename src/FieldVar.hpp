@@ -46,6 +46,7 @@ public:
 	inline FieldVar(const FieldVar &copy);
 
 	inline FieldVar &operator=(const FieldVar &copy);
+	inline bool operator==(const FieldVar &other) const;
 
 	inline FieldVarType get_type() const noexcept { return m_type; }
 
@@ -223,7 +224,7 @@ inline constexpr bool FieldVar::is_convertible(FieldVarType from, FieldVarType t
 		return to == FieldVarType::Real || to == FieldVarType::Boolean;
 	case FieldVarType::Real:
 		return to == FieldVarType::Integer;
-		
+
 	default:
 		// string, arrays and dicts can't be converted to anything easily
 		return false;
@@ -258,6 +259,34 @@ inline FieldVar &FieldVar::operator=(const FieldVar &copy) {
 	// construct new data
 	_handle(inner::TypelessCTor(copy._union_ptr()));
 	return *this;
+}
+
+inline bool FieldVar::operator==(const FieldVar &other) const {
+	if (!other.is_convertible_to(get_type()))
+	{
+		return false;
+	}
+
+	switch (m_type)
+	{
+	case FieldVarType::Null:
+		// null always equals null
+		return true;
+	case FieldVarType::Boolean:
+		return get_bool() == other.get_bool();
+	case FieldVarType::Integer:
+		return get_int() == other.get_int();
+	case FieldVarType::Real:
+		return get_real() == other.get_real();
+	case FieldVarType::String:
+		return get_string() == other.get_string();
+	case FieldVarType::Array:
+		return get_array() == other.get_array();
+	case FieldVarType::Dict:
+		return get_dict() == other.get_dict();
+	default:
+		return false;
+	}
 }
 
 inline void FieldVar::stringify() {
