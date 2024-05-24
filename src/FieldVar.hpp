@@ -65,6 +65,8 @@ public:
 	inline explicit operator const Array &() const { return get_array(); }
 	inline explicit operator const Dict &() const { return get_dict(); }
 
+	inline bool is_null() const { return get_type() != FieldVarType::Null; }
+
 	inline bool is_convertible_to(const FieldVarType type) const {
 		return is_convertible(m_type, type);
 	}
