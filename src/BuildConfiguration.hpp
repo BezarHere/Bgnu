@@ -52,7 +52,7 @@ enum class StandardType : uint8_t
 	Cpp20,
 	Cpp23,
 
-	Latest = 0xFF
+	Latest
 };
 
 enum class SIMDType : uint8_t
@@ -82,30 +82,42 @@ struct WarningReportInfo
 	bool pedantic = false;
 };
 
-class BuildConfiguration
+struct BuildConfiguration
 {
-public:
+	static BuildConfiguration from_data(const FieldVar::Dict &data, ParsingResult &result);
 
+	static const char *get_enum_name(OptimizationType opt_type);
+	static const char *get_enum_name(OptimizationDegree opt_degree);
+	static const char *get_enum_name(WarningLevel wrn_lvl);
+	static const char *get_enum_name(StandardType standard);
+	static const char *get_enum_name(SIMDType simd);
 
-private:
-	vector<string> m_preprocessor_args;
-	vector<string> m_linker_args;
-	vector<string> m_assembler_args;
+	static OptimizationType get_optimization_type(const string &name);
+	static OptimizationDegree get_optimization_degree(const string &name);
+	static WarningLevel get_warning_level(const string &name);
+	static StandardType get_standard_type(const string &name);
+	static SIMDType get_simd_type(const string &name);
 
-	vector<string> m_library_names;
+	// values should be either a string OR a null 
+	FieldVar::Dict predefines;
+	
+	OptimizationInfo optimization = {};
+	WarningReportInfo warnings = {};
 
-	vector<FilePath> m_library_directories;
-	vector<FilePath> m_include_directories;
+	StandardType standard = StandardType::Cpp17;
 
-	vector<string> m_predefines;
-
-	OptimizationInfo m_optimization = {};
-	WarningReportInfo m_warnings = {};
-
-	bool m_fatal_errors = true;
+	bool fatal_errors = true;
 	bool print_stats = false;
 	bool dynamically_linkable = true;
 
-	StandardType m_standard = StandardType::Cpp17;
-	SIMDType m_simd_type = SIMDType::AVX2;
+	SIMDType simd_type = SIMDType::AVX2;
+
+	vector<string> preprocessor_args;
+	vector<string> linker_args;
+	vector<string> assembler_args;
+
+	vector<string> library_names;
+
+	vector<FilePath> library_directories;
+	vector<FilePath> include_directories;
 };
