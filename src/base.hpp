@@ -30,6 +30,16 @@ namespace inner
 {
 	static constexpr size_t ExceptionBufferSz = 1024;
 
+	// a struct that can be called with any arguments, but it does not do anything
+	struct DryCallable
+	{
+
+		template <typename... _Args>
+		inline void operator()(_Args &&...) const noexcept {
+		}
+
+	};
+
 	struct EmptyCTor
 	{
 		template <class T>
