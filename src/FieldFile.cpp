@@ -285,7 +285,7 @@ public:
 	static constexpr char ValueAssignOp = ':';
 	static constexpr char ValueSeparateOp = ',';
 
-	enum class SkipType
+	enum class SkipType : uint8_t
 	{
 		None,
 		Useless,
@@ -296,7 +296,7 @@ public:
 		: m_tokens{tks}, m_size{count} {
 	}
 
-	FieldVar::VarDict parse();
+	FieldVar::Dict parse();
 
 	static bool is_useless_token(const Token &token) {
 		if (token.length == 0)
@@ -362,13 +362,13 @@ private:
 	}
 
 	FieldVar _parse_var();
-	std::pair<FieldVar::VarString, FieldVar> _parse_var_kv();
+	std::pair<FieldVar::String, FieldVar> _parse_var_kv();
 
 
-	FieldVar::VarString _parse_var_string();
-	FieldVar::VarNumber _parse_var_number();
-	FieldVar::VarArray _parse_var_array();
-	FieldVar::VarDict _parse_var_dict(bool body_dict = false);
+	FieldVar::String _parse_var_string();
+	FieldVar::Real _parse_var_number();
+	FieldVar::Array _parse_var_array();
+	FieldVar::Dict _parse_var_dict(bool body_dict = false);
 
 	FieldVar _parse_var_identifier();
 	FieldVar _parse_var_simple();
@@ -392,7 +392,7 @@ private:
 	vector<size_t> m_indicies_stack = {};
 };
 
-FieldVar::VarString Parser::_parse_var_string() {
+FieldVar::String Parser::_parse_var_string() {
 	const Token &tk = get_tk();
 	_advance_tk();
 
@@ -420,7 +420,7 @@ FieldVar Parser::_parse_var_identifier() {
 
 	if (strncmp(token_str, null_str, std::size(null_str) - 1) == 0)
 	{
-		return FieldVar(ProjVarType::Null);
+		return FieldVar(FieldVarType::Null);
 	}
 
 	if (strncmp(token_str, true_str, std::size(true_str) - 1) == 0)
@@ -433,10 +433,10 @@ FieldVar Parser::_parse_var_identifier() {
 		return false;
 	}
 
-	return FieldVar::VarString(token_str, token.length);
+	return FieldVar::String(token_str, token.length);
 }
 
-FieldVar::VarNumber Parser::_parse_var_number() {
+FieldVar::Real Parser::_parse_var_number() {
 	// TODO: error detection
 
 	float val = strtof(get_tk().str, nullptr);
@@ -459,7 +459,7 @@ FieldVar Parser::_parse_var_simple() {
 	return _parse_var_identifier();
 }
 
-FieldVar::VarDict Parser::_parse_var_dict(const bool body_dict) {
+FieldVar::Dict Parser::_parse_var_dict(const bool body_dict) {
 	_skip_useless();
 
 	// skip starting '{' for non-body dicts
@@ -471,7 +471,7 @@ FieldVar::VarDict Parser::_parse_var_dict(const bool body_dict) {
 	std::cout << "dict started at " << get_tk() << '\n';
 
 	bool expecting_separator = false;
-	FieldVar::VarDict dict{};
+	FieldVar::Dict dict{};
 
 	_skip_empty();
 
@@ -533,7 +533,7 @@ FieldVar::VarDict Parser::_parse_var_dict(const bool body_dict) {
 	return dict;
 }
 
-FieldVar::VarArray Parser::_parse_var_array() {
+FieldVar::Array Parser::_parse_var_array() {
 	_skip_useless();
 
 	if (get_tk().type == TKType::Open_SqBracket)
@@ -543,7 +543,7 @@ FieldVar::VarArray Parser::_parse_var_array() {
 
 	bool expecting_separator = false;
 
-	FieldVar::VarArray array{};
+	FieldVar::Array array{};
 
 	_skip_empty();
 
@@ -604,11 +604,11 @@ FieldVar Parser::_parse_var() {
 	return FieldVar(0.0F);
 }
 
-std::pair<FieldVar::VarString, FieldVar> Parser::_parse_var_kv() {
+std::pair<FieldVar::String, FieldVar> Parser::_parse_var_kv() {
 
 	_skip_useless();
 
-	FieldVar::VarString key = _parse_var_string();
+	FieldVar::String key = _parse_var_string();
 
 	_skip_empty();
 
@@ -623,7 +623,7 @@ std::pair<FieldVar::VarString, FieldVar> Parser::_parse_var_kv() {
 	return {key, _parse_var()};
 }
 
-FieldVar::VarDict Parser::parse() {
+FieldVar::Dict Parser::parse() {
 	return _parse_var_dict(true);
 }
 
@@ -636,15 +636,15 @@ class FieldFileWriter
 public:
 	inline FieldFileWriter(std::ostringstream &p_stream) : stream{p_stream} {}
 
-	void start(const FieldVar::VarDict &data);
+	void start(const FieldVar::Dict &data);
 
-	void write(FieldVar::VarNull data);
-	void write(FieldVar::VarBool data);
-	void write(FieldVar::VarNumber data);
+	void write(FieldVar::Null data);
+	void write(FieldVar::Bool data);
+	void write(FieldVar::Real data);
 
-	void write(const FieldVar::VarString &data);
-	void write(const FieldVar::VarArray &data);
-	void write(const FieldVar::VarDict &data, bool striped = false);
+	void write(const FieldVar::String &data);
+	void write(const FieldVar::Array &data);
+	void write(const FieldVar::Dict &data, bool striped = false);
 
 	void write(const FieldVar &data);
 
@@ -659,24 +659,24 @@ private:
 };
 
 
-void FieldFileWriter::start(const FieldVar::VarDict &data) {
+void FieldFileWriter::start(const FieldVar::Dict &data) {
 	m_indent_level = 0;
 	write(data, true);
 }
 
-void FieldFileWriter::write(FieldVar::VarNull data) {
+void FieldFileWriter::write(FieldVar::Null data) {
 	stream << "null";
 }
 
-void FieldFileWriter::write(FieldVar::VarBool data) {
+void FieldFileWriter::write(FieldVar::Bool data) {
 	stream << (data ? "true" : "false");
 }
 
-void FieldFileWriter::write(FieldVar::VarNumber data) {
+void FieldFileWriter::write(FieldVar::Real data) {
 	stream << data;
 }
 
-void FieldFileWriter::write(const FieldVar::VarString &data) {
+void FieldFileWriter::write(const FieldVar::String &data) {
 	bool simple_string = data.length() < 32ULL;
 
 	if (simple_string)
@@ -701,7 +701,7 @@ void FieldFileWriter::write(const FieldVar::VarString &data) {
 	stream << data;
 }
 
-void FieldFileWriter::write(const FieldVar::VarArray &data) {
+void FieldFileWriter::write(const FieldVar::Array &data) {
 	stream << '[';
 	for (const auto &var : data)
 	{
@@ -711,7 +711,7 @@ void FieldFileWriter::write(const FieldVar::VarArray &data) {
 	stream << ']';
 }
 
-void FieldFileWriter::write(const FieldVar::VarDict &data, bool striped) {
+void FieldFileWriter::write(const FieldVar::Dict &data, bool striped) {
 	if (!striped)
 	{
 		stream << "{\n";
@@ -739,22 +739,22 @@ void FieldFileWriter::write(const FieldVar::VarDict &data, bool striped) {
 void FieldFileWriter::write(const FieldVar &data) {
 	switch (data.get_type())
 	{
-	case ProjVarType::Null:
+	case FieldVarType::Null:
 		write(nullptr);
 		return;
-	case ProjVarType::Boolean:
+	case FieldVarType::Boolean:
 		write(data.get_bool());
 		return;
-	case ProjVarType::Number:
-		write(data.get_number());
+	case FieldVarType::Real:
+		write(data.get_real());
 		return;
-	case ProjVarType::String:
+	case FieldVarType::String:
 		write(data.get_string());
 		return;
-	case ProjVarType::Array:
+	case FieldVarType::Array:
 		write(data.get_array());
 		return;
-	case ProjVarType::Dict:
+	case FieldVarType::Dict:
 		write(data.get_dict());
 		return;
 	default:
@@ -798,7 +798,7 @@ FieldVar FieldFile::read(const char *source, size_t length) {
 	return FieldVar(parser.parse());
 }
 
-void FieldFile::dump(const string &filepath, const FieldVar::VarDict &data) {
+void FieldFile::dump(const string &filepath, const FieldVar::Dict &data) {
 	string source = write(data);
 
 	std::ofstream out{filepath};
@@ -806,7 +806,7 @@ void FieldFile::dump(const string &filepath, const FieldVar::VarDict &data) {
 	out << source;
 }
 
-string FieldFile::write(const FieldVar::VarDict &data) {
+string FieldFile::write(const FieldVar::Dict &data) {
 	std::ostringstream output{};
 	FieldFileWriter writer{output};
 	writer.write(data);

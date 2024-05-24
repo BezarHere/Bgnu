@@ -3,11 +3,12 @@
 #include <iostream>
 #include <unordered_map>
 
-enum class ProjVarType : char
+enum class FieldVarType : char
 {
 	Null,
 	Boolean,
-	Number,
+	Integer,
+	Real,
 	String,
 	Array,
 	Dict,
@@ -16,51 +17,56 @@ enum class ProjVarType : char
 struct FieldVar
 {
 public:
-	using VarNull = std::nullptr_t;
-	using VarBool = bool;
-	using VarNumber = float;
-	using VarString = string;
-	using VarArray = vector<FieldVar>;
-	using VarDict = std::unordered_map<VarString, FieldVar>;
+	using Null = std::nullptr_t;
+	using Bool = bool;
+	using Int = int64_t;
+	using Real = float;
+	using String = string;
+	using Array = vector<FieldVar>;
+	using Dict = std::unordered_map<String, FieldVar>;
 
-	inline FieldVar(ProjVarType type = ProjVarType::Null);
+	inline FieldVar(FieldVarType type = FieldVarType::Null);
 
-	inline explicit FieldVar(VarNull) : m_type{ProjVarType::Null} {}
-	inline FieldVar(VarBool boolean) : m_type{ProjVarType::Boolean}, m_bool{boolean} {}
-	inline FieldVar(VarNumber number) : m_type{ProjVarType::Number}, m_number{number} {}
-	inline FieldVar(const VarString &string) : m_type{ProjVarType::String}, m_string{string} {}
-	inline explicit FieldVar(const VarArray &array) : m_type{ProjVarType::Array}, m_array{array} { std::cout << this << '\n'; }
-	inline explicit FieldVar(const VarDict &dict) : m_type{ProjVarType::Dict}, m_dict{dict} {}
+	inline explicit FieldVar(Null) : m_type{FieldVarType::Null} {}
+	inline FieldVar(Bool boolean) : m_type{FieldVarType::Boolean}, m_bool{boolean} {}
+	inline FieldVar(Int integer) : m_type{FieldVarType::Integer}, m_int{integer} {}
+	inline FieldVar(Real number) : m_type{FieldVarType::Real}, m_real{number} {}
+	inline FieldVar(const String &string) : m_type{FieldVarType::String}, m_string{string} {}
+	inline explicit FieldVar(const Array &array) : m_type{FieldVarType::Array}, m_array{array} { std::cout << this << '\n'; }
+	inline explicit FieldVar(const Dict &dict) : m_type{FieldVarType::Dict}, m_dict{dict} {}
 
-	inline FieldVar(const VarString::value_type *cstring) : FieldVar(VarString(cstring)) {}
+	inline FieldVar(const String::value_type *cstring) : FieldVar(String(cstring)) {}
 
 	inline ~FieldVar();
 	inline FieldVar(const FieldVar &copy);
 
 	inline FieldVar &operator=(const FieldVar &copy);
 
-	inline ProjVarType get_type() const noexcept { return m_type; }
+	inline FieldVarType get_type() const noexcept { return m_type; }
 
-	inline VarBool get_bool() const noexcept { return m_bool; }
-	inline VarNumber get_number() const noexcept { return m_number; }
-	inline const VarString &get_string() const noexcept { return m_string; }
-	inline const VarArray &get_array() const noexcept { return m_array; }
-	inline const VarDict &get_dict() const noexcept { return m_dict; }
+	inline Bool get_bool() const noexcept { return m_bool; }
+	inline Int get_int() const noexcept { return m_int; }
+	inline Real get_real() const noexcept { return m_real; }
+	inline const String &get_string() const noexcept { return m_string; }
+	inline const Array &get_array() const noexcept { return m_array; }
+	inline const Dict &get_dict() const noexcept { return m_dict; }
 
 private:
 	template <typename Transformer>
 	inline void _handle(Transformer &&transformer) {
 		switch (m_type)
 		{
-		case ProjVarType::Boolean:
+		case FieldVarType::Boolean:
 			return transformer(m_bool);
-		case ProjVarType::Number:
-			return transformer(m_number);
-		case ProjVarType::String:
+		case FieldVarType::Integer:
+			return transformer(m_int);
+		case FieldVarType::Real:
+			return transformer(m_real);
+		case FieldVarType::String:
 			return transformer(m_string);
-		case ProjVarType::Array:
+		case FieldVarType::Array:
 			return transformer(m_array);
-		case ProjVarType::Dict:
+		case FieldVarType::Dict:
 			return transformer(m_dict);
 		default:
 			return;
@@ -74,19 +80,20 @@ private:
 	inline const void *_union_ptr() const { return &m_bool; }
 
 private:
-	ProjVarType m_type;
+	FieldVarType m_type;
 
 	union
 	{
-		VarBool m_bool;
-		VarNumber m_number;
-		VarString m_string;
-		VarArray m_array;
-		VarDict m_dict;
+		Bool m_bool;
+		Int m_int;
+		Real m_real;
+		String m_string;
+		Array m_array;
+		Dict m_dict;
 	};
 };
 
-inline FieldVar::FieldVar(ProjVarType type) : m_type{type} {
+inline FieldVar::FieldVar(FieldVarType type) : m_type{type} {
 	_handle<inner::EmptyCTor>();
 }
 
@@ -124,18 +131,20 @@ namespace std
 	inline ostream &operator<<(ostream &stream, const FieldVar &project_variable) {
 		switch (project_variable.get_type())
 		{
-		case ProjVarType::Null:
+		case FieldVarType::Null:
 			return stream << "Null";
-		case ProjVarType::Boolean:
+		case FieldVarType::Boolean:
 			return stream << (project_variable.get_bool() ? "true" : "false");
-		case ProjVarType::Number:
-			return stream << project_variable.get_number();
-		case ProjVarType::String:
+		case FieldVarType::Integer:
+			return stream << project_variable.get_int();
+		case FieldVarType::Real:
+			return stream << project_variable.get_real();
+		case FieldVarType::String:
 			return stream << "\"" << project_variable.get_string() << "\"";
-		case ProjVarType::Array:
+		case FieldVarType::Array:
 			{
 				stream << "[";
-				const FieldVar::VarArray &array = project_variable.get_array();
+				const FieldVar::Array &array = project_variable.get_array();
 
 				for (size_t i = 0; i < array.size(); ++i) {
 					if (i)
@@ -148,10 +157,10 @@ namespace std
 
 				return stream << "]";
 			}
-		case ProjVarType::Dict:
+		case FieldVarType::Dict:
 			{
 				stream << "{";
-				const FieldVar::VarDict &dict = project_variable.get_dict();
+				const FieldVar::Dict &dict = project_variable.get_dict();
 
 				size_t counter = 0;
 				for (const auto &kv : dict) {
