@@ -1,6 +1,10 @@
 #include "Console.hpp"
 #include "base.hpp"
 
+
+ConsoleColor Console::s_bg = ConsoleColor::Black;
+ConsoleColor Console::s_fg = ConsoleColor::White;
+
 struct ColorResetter
 {
 	~ColorResetter() {
@@ -19,8 +23,6 @@ struct ConsoleState
 
 static vector<ConsoleState> g_states{};
 
-ConsoleColor Console::s_bg = ConsoleColor::Black;
-ConsoleColor Console::s_fg = ConsoleColor::White;
 
 #define ANSI_CLR_CODE(code) ("\033[" code "m")
 

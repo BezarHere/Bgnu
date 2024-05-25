@@ -11,6 +11,7 @@ enum class FieldVarType : char
 	Boolean,
 	Integer,
 	Real,
+	
 	String,
 	Array,
 	Dict,
@@ -29,6 +30,7 @@ public:
 
 	static constexpr const char *get_type_name(FieldVarType type);
 	static constexpr bool is_convertible(FieldVarType from, FieldVarType to);
+	static constexpr bool is_simple_type(FieldVarType type);
 
 	inline FieldVar(FieldVarType type = FieldVarType::Null);
 
@@ -50,7 +52,16 @@ public:
 
 	inline FieldVarType get_type() const noexcept { return m_type; }
 
+	/// @brief transforms the value to it's string representation
+	/// @brief (e.g. FieldVar(3.14F).string() == FieldVar("3.14"))
 	inline void stringify();
+
+	/// @brief creates a copy, stringifies it and returns it
+	inline FieldVar copy_stringified() const {
+		FieldVar copy{*this};
+		copy.stringify();
+		return copy;
+	}
 
 	inline Bool get_bool() const;
 	inline Int get_int() const;
@@ -66,10 +77,15 @@ public:
 	inline explicit operator const Array &() const { return get_array(); }
 	inline explicit operator const Dict &() const { return get_dict(); }
 
+	/// @brief is the value a null? like it has nothing?
 	inline bool is_null() const { return get_type() != FieldVarType::Null; }
 
 	inline bool is_convertible_to(const FieldVarType type) const {
 		return is_convertible(m_type, type);
+	}
+
+	inline bool has_simple_value() const {
+		return is_simple_type(m_type);
 	}
 
 private:
@@ -229,6 +245,10 @@ inline constexpr bool FieldVar::is_convertible(FieldVarType from, FieldVarType t
 		// string, arrays and dicts can't be converted to anything easily
 		return false;
 	}
+}
+
+inline constexpr bool FieldVar::is_simple_type(FieldVarType type) {
+	return (int)type < (int)FieldVarType::String;
 }
 
 inline FieldVar::FieldVar(FieldVarType type) : m_type{type} {

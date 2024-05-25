@@ -1,14 +1,9 @@
 #pragma once
 #include "base.hpp"
+#include "Error.hpp"
 #include "Console.hpp"
 #include "FieldVar.hpp"
 
-struct ParsingResult
-{
-	bool success = false;
-	string reason = "";
-	uint32_t code = 0;
-};
 
 struct FieldDataReader
 {

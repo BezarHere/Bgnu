@@ -18,7 +18,7 @@ int main() {
 	// FieldVar var2 = false;
 	// FieldVar var3 = "yeah baby!";
 
-	// FieldVar::VarDict dict{{"age", var}, {"admin", var2}, {"bio", var}};
+	// FieldVar::Dict dict{{"age", var}, {"admin", var2}, {"bio", var}};
 	// FieldVar var4{dict};
 
 	// std::cout << "hello!\n";

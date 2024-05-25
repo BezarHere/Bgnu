@@ -10,7 +10,7 @@ struct ProjectOutputData
 class Project
 {
 public:
-	Project(const FieldVar::VarDict &data);
+	Project(const FieldVar::Dict &data);
 
 private:
 	ProjectOutputData m_output = {};

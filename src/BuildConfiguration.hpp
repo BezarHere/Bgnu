@@ -84,7 +84,7 @@ struct WarningReportInfo
 
 struct BuildConfiguration
 {
-	static BuildConfiguration from_data(const FieldVar::Dict &data, ParsingResult &result);
+	static BuildConfiguration from_data(const FieldVar::Dict &data, ErrorReport &result);
 
 	static const char *get_enum_name(OptimizationType opt_type);
 	static const char *get_enum_name(OptimizationDegree opt_degree);
@@ -106,8 +106,9 @@ struct BuildConfiguration
 
 	StandardType standard = StandardType::Cpp17;
 
-	bool fatal_errors = true;
+	bool exit_on_errors = true;
 	bool print_stats = false;
+	bool print_includes = false;
 	bool dynamically_linkable = true;
 
 	SIMDType simd_type = SIMDType::AVX2;

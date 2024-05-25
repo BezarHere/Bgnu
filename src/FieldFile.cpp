@@ -9,7 +9,9 @@ inline static bool is_identifier_char(char c) {
 
 inline static bool is_number_identifier(const char *str, size_t len) {
 	if (len == 0)
+	{
 		return false;
+	}
 
 	// skip the minus or plus signs, if there are any
 	if (*str == '-' || *str == '+')

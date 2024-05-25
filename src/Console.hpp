@@ -96,14 +96,18 @@ private:
 	static ConsoleColor s_fg;
 };
 
+// for empty args
+static inline void _format_join(std::ostream &stream) {
+	(void)stream;
+}
 
 template <typename T>
-static inline void _format_join(std::ostringstream &stream, const T &value) {
+static inline void _format_join(std::ostream &stream, const T &value) {
 	stream << value;
 }
 
 template <typename T1, typename T2, typename... VArgs>
-static inline void _format_join(std::ostringstream &stream, const T1 &value1, const T2 &value2, const VArgs &... args) {
+static inline void _format_join(std::ostream &stream, const T1 &value1, const T2 &value2, const VArgs &... args) {
 	stream << value1;
 	return _format_join(stream, value2, args...);
 }

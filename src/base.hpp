@@ -79,4 +79,11 @@ namespace inner
 
 		const void *ptr;
 	};
+
+	template <typename T, typename NameType = const char *>
+	struct NamedValue
+	{
+		NameType name;
+		T value;
+	};
 }
