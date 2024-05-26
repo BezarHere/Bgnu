@@ -1,5 +1,6 @@
 #pragma once
 #include "BuildConfiguration.hpp"
+#include <map>
 
 struct ProjectOutputData
 {
@@ -10,11 +11,11 @@ struct ProjectOutputData
 class Project
 {
 public:
-	Project(const FieldVar::Dict &data);
+	static Project from_data(const FieldVar::Dict &data, ErrorReport &result);
 
 private:
 	ProjectOutputData m_output = {};
 	vector<Glob> m_source_selectors = {"**/*.c", "**/*.cpp", "**/*.cc", "**/*.cxx"};
 
-	vector<BuildConfiguration> m_build_configurations;
+	std::map<FieldVar::String, BuildConfiguration> m_build_configurations;
 };
