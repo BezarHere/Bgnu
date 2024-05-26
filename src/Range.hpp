@@ -9,6 +9,8 @@ struct TRange
 {
 	static_assert(std::is_arithmetic_v<_T> || std::is_pointer_v<_T>, "only arithmetic or pointer ranges are allowed");
 
+	inline constexpr TRange() = default;
+
 	inline constexpr TRange(_T pstart, _T pend) : start{pstart}, end{pend} {
 	}
 
@@ -24,7 +26,8 @@ struct TRange
 		return value < end && value >= start;
 	}
 
-	_T start, end;
+	_T start{};
+	_T end{};
 };
 
 using FloatRange = TRange<float>;
