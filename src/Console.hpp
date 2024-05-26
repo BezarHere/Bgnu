@@ -51,46 +51,6 @@ public:
 		return s_fg;
 	}
 
-	static inline void warning(const char *format, ...) {
-		push_state();
-		set_bg(ConsoleColor::Black);
-		set_fg(ConsoleColor::Yellow);
-
-		va_list valist{};
-		va_start(valist, format);
-		vfprintf(stdout, format, valist);
-		va_end(valist);
-
-		pop_state();
-	}
-
-	static inline void error(const char *format, ...) {
-		push_state();
-		set_bg(ConsoleColor::Black);
-		set_fg(ConsoleColor::IntenseRed);
-
-		va_list valist{};
-		va_start(valist, format);
-		vfprintf(stdout, format, valist);
-		va_end(valist);
-
-		pop_state();
-	}
-
-	static inline void debug(const char *format, ...) {
-		push_state();
-		set_bg(ConsoleColor::Black);
-		// hopefully this is just dark gray for foreground
-		set_fg(ConsoleColor::IntenseBlack);
-
-		va_list valist{};
-		va_start(valist, format);
-		vfprintf(stdout, format, valist);
-		va_end(valist);
-
-		pop_state();
-	}
-
 private:
 	static ConsoleColor s_bg;
 	static ConsoleColor s_fg;

@@ -1,6 +1,14 @@
 #include "Logger.hpp"
 #include <array>
+#include <vector>
 #include <string.h>
+#include <limits>
+
+#ifdef _DEBUG
+#define IN_DEBUG true
+#else
+#define IN_DEBUG false
+#endif
 
 struct Logger::State
 {
@@ -21,9 +29,6 @@ struct Logger::State
 	inline void _update_indent() {
 		_indent_dirty = false;
 
-		// hopefully, str() will only use chars until the put pos, otherwise we are screwed
-		_indent_template_stream.seekp(0, std::ios::seekdir::_S_beg);
-
 		if (indent > 0)
 		{
 			const size_t template_len = strnlen(_indent_template.data(), _indent_template.size());
@@ -36,8 +41,6 @@ struct Logger::State
 					template_len
 				);
 			}
-
-			_indent_str = _indent_template_stream.str();
 		}
 		else
 		{
@@ -45,17 +48,57 @@ struct Logger::State
 		}
 	}
 
-	size_t indent = 0;
+	uint8_t indent = 0;
 	bool _indent_dirty = true;
 	IndentTemplate _indent_template = {"  "};
-	string_stream_type _indent_template_stream;
 	string_type _indent_str;
+
+	static std::vector<Logger::State> s_stack;
 };
 
+std::vector<Logger::State> Logger::State::s_stack;
+
 Logger::State Logger::s_state = {};
+
+bool Logger::s_debug = IN_DEBUG;
 bool Logger::s_verbose = false;
 
+void Logger::_push_state() {
+	State::s_stack.push_back(s_state);
+}
+
+void Logger::_pop_state() {
+	s_state = State::s_stack.back();
+	State::s_stack.pop_back();
+}
 
 void Logger::_write_indent(std::ostream &stream) {
 	stream << s_state.get_indent_string();
+}
+
+void Logger::_write_indent(FILE *pfile) {
+	fputs(s_state.get_indent_string().c_str(), pfile);
+}
+
+void Logger::raise_indent() {
+	typedef std::numeric_limits<decltype(State::indent)> IndentLimits;
+
+	if (s_state.indent == IndentLimits::max())
+	{
+		return;
+	}
+
+	s_state.indent++;
+	s_state._indent_dirty = true;
+}
+
+void Logger::lower_indent() {
+
+	if (!s_state.indent)
+	{
+		return;
+	}
+
+	s_state.indent--;
+	s_state._indent_dirty = true;
 }
