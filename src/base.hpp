@@ -24,7 +24,8 @@ static constexpr size_t npos = (size_t)-1;
 #define ALWAYS_INLINE inline __attribute__((__always_inline__))
 #endif
 
-
+static ALWAYS_INLINE constexpr const char *to_cstr(const char *value) { return value; }
+static ALWAYS_INLINE const char *to_cstr(const string &value) { return value.c_str(); }
 
 namespace inner
 {
