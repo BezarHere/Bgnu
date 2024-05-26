@@ -28,9 +28,10 @@ public:
 	using Array = vector<FieldVar>;
 	using Dict = std::unordered_map<String, FieldVar>;
 
-	static constexpr const char *get_type_name(FieldVarType type);
+	// returns the name of the given type
+	static constexpr const char *get_name_for_type(FieldVarType type);
 	static constexpr bool is_convertible(FieldVarType from, FieldVarType to);
-	static constexpr bool is_simple_type(FieldVarType type);
+	static constexpr bool is_type_simple(FieldVarType type);
 
 	inline FieldVar(FieldVarType type = FieldVarType::Null);
 
@@ -84,8 +85,13 @@ public:
 		return is_convertible(m_type, type);
 	}
 
-	inline bool has_simple_value() const {
-		return is_simple_type(m_type);
+	inline bool has_simple_type() const {
+		return is_type_simple(m_type);
+	}
+
+	// get the name of the field var's type 
+	inline const char *get_type_name() const {
+		return get_name_for_type(m_type);
 	}
 
 private:
@@ -138,8 +144,8 @@ class fieldvar_access_violation : public std::runtime_error
 			buffer,
 			"Trying to access a fieldvar [%p] of type '%s' as type '%s'",
 			&fieldvar,
-			FieldVar::get_type_name(fieldvar.get_type()),
-			FieldVar::get_type_name(access_type)
+			FieldVar::get_name_for_type(fieldvar.get_type()),
+			FieldVar::get_name_for_type(access_type)
 		);
 
 		return buffer;
@@ -211,7 +217,7 @@ namespace std
 }
 
 #pragma region(defines)
-inline constexpr const char *FieldVar::get_type_name(FieldVarType type) {
+inline constexpr const char *FieldVar::get_name_for_type(FieldVarType type) {
 	constexpr const char *Names[]{
 		"null",
 		"boolean",
@@ -247,7 +253,7 @@ inline constexpr bool FieldVar::is_convertible(FieldVarType from, FieldVarType t
 	}
 }
 
-inline constexpr bool FieldVar::is_simple_type(FieldVarType type) {
+inline constexpr bool FieldVar::is_type_simple(FieldVarType type) {
 	return (int)type < (int)FieldVarType::String;
 }
 
