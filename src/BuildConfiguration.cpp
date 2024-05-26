@@ -1,10 +1,7 @@
 #include "BuildConfiguration.hpp"
 #include "StringUtils.hpp"
 #include "FieldDataReader.hpp"
-#include "Console.hpp"
-
-static inline constexpr const char *to_cstr(const char *value) { return value; }
-static inline const char *to_cstr(const string &value) { return value.c_str(); }
+#include "Logger.hpp"
 
 template <typename Type, typename ParseProc, typename StringifyProc, typename ValidateProc>
 struct EnumTraits
@@ -34,7 +31,7 @@ struct EnumTraits
 
 	ALWAYS_INLINE enum_type get_default() const { return default_value; }
 	ALWAYS_INLINE string_type get_default_named() const { return stringify(default_value); }
-	ALWAYS_INLINE enum_type name() const { return _name; }
+	ALWAYS_INLINE const string_type &name() const { return _name; }
 };
 
 struct BuildConfigurationReader
@@ -57,7 +54,7 @@ struct BuildConfigurationReader
 
 		if (enum_field_var.is_null())
 		{
-			Console::error(
+			Logger::error(
 				"%s: Value for %s ('%s') isn't defined, defaulting to '%s'",
 				to_cstr(reader._context),
 				to_cstr(traits.name()),
@@ -71,13 +68,15 @@ struct BuildConfigurationReader
 
 		if (!traits.validate(enum_val))
 		{
+			const auto default_named = traits.get_default_named();
+
 			enum_val = traits.get_default();
-			Console::error(
+			Logger::error(
 				"%s: Invalid %s value '%s', defaulting to '%s'",
 				to_cstr(reader._context),
 				to_cstr(traits.name()),
 				enum_field_var.get_string().c_str(),
-				to_cstr(traits.get_default_named())
+				to_cstr(default_named)
 			);
 		}
 
@@ -90,23 +89,17 @@ struct BuildConfigurationReader
 };
 
 
-#define CHECK_RESULT(expr) expr; if (result.code != Error::Ok) { return config; }
-BuildConfiguration BuildConfiguration::from_data(const FieldVar::Dict &data, ErrorReport &result) {
-	static constexpr const char Context[] = "BuildConfiguration";
+#define CHECK_REPORT(expr) expr; if (report.code != Error::Ok) { return config; }
+BuildConfiguration BuildConfiguration::from_data(FieldDataReader reader, ErrorReport &report) {
 	BuildConfiguration config{};
 
-	result = {};
-	result.code = Error::Ok;
-
-	FieldDataReader reader{Context, data};
-
-	BuildConfigurationReader bc_reader{config, reader, result};
+	BuildConfigurationReader bc_reader{config, reader, report};
 
 
-	CHECK_RESULT(bc_reader.read_predefines(config.predefines));
+	CHECK_REPORT(bc_reader.read_predefines(config.predefines));
 
-	CHECK_RESULT(bc_reader.read_optimization_info(config.optimization));
-	CHECK_RESULT(bc_reader.read_warning_info(config.warnings));
+	CHECK_REPORT(bc_reader.read_optimization_info(config.optimization));
+	CHECK_REPORT(bc_reader.read_warning_info(config.warnings));
 
 	typedef inner::NamedValue<bool *, string> NamedBool;
 
@@ -128,17 +121,17 @@ BuildConfiguration BuildConfiguration::from_data(const FieldVar::Dict &data, Err
 		*bool_ptr.value = var.get_bool();
 	}
 
-	CHECK_RESULT(
+	CHECK_REPORT(
 		bc_reader.read_strings_named("preprocessor_args", config.preprocessor_args);
 	);
-	CHECK_RESULT(
+	CHECK_REPORT(
 		bc_reader.read_strings_named("linker_args", config.linker_args);
 	);
-	CHECK_RESULT(
+	CHECK_REPORT(
 		bc_reader.read_strings_named("assembler_args", config.assembler_args);
 	);
 
-	CHECK_RESULT(
+	CHECK_REPORT(
 		bc_reader.read_strings_named("lib_names", config.library_names);
 	);
 
@@ -162,7 +155,7 @@ void BuildConfigurationReader::read_predefines(FieldVar::Dict &predefines) {
 			continue;
 		}
 
-		Console::warning(
+		Logger::warning(
 			("%s: predefine named '%s' is not a string or null,"
 			 " the value will be stringified, but that may lead to undefined behavior"),
 			to_cstr(reader._context), key.c_str()
@@ -181,16 +174,16 @@ void BuildConfigurationReader::read_optimization_info(OptimizationInfo &info) {
 	EnumTraits opt_type{
 		"optimization type",
 		info.type,
-		BuildConfiguration::get_optimization_type,
-		(GetEnumNameOfType<OptimizationType>)BuildConfiguration::get_enum_name,
+		[](auto val) { return BuildConfiguration::get_optimization_type(val); },
+		[](OptimizationType type) { return BuildConfiguration::get_enum_name(type); },
 		[](const OptimizationType type) { return type != OptimizationType::None; }
 	};
 
 	EnumTraits opt_level{
 		"optimization level",
 		info.degree,
-		BuildConfiguration::get_optimization_degree,
-		(GetEnumNameOfType<OptimizationDegree>)BuildConfiguration::get_enum_name,
+		[](auto val) { return BuildConfiguration::get_optimization_degree(val); },
+		[](OptimizationDegree degree) { return BuildConfiguration::get_enum_name(degree); },
 		[](const OptimizationDegree type) { return type != OptimizationDegree::None; }
 	};
 
@@ -202,8 +195,8 @@ void BuildConfigurationReader::read_warning_info(WarningReportInfo &info) {
 	EnumTraits wrn_type{
 		"warning level",
 		info.level,
-		BuildConfiguration::get_warning_level,
-		(GetEnumNameOfType<WarningLevel>)BuildConfiguration::get_enum_name,
+		[](auto val) { return BuildConfiguration::get_warning_level(val); },
+		[](WarningLevel lvl) { return BuildConfiguration::get_enum_name(lvl); },
 		[](const WarningLevel type) { return type != WarningLevel::None; }
 	};
 
@@ -230,7 +223,7 @@ void BuildConfigurationReader::read_strings_named(const string &name, vector<str
 			continue;
 		}
 
-		if (array[i].is_simple_type())
+		if (array[i].has_simple_type())
 		{
 			out.push_back(array[i].copy_stringified().get_string());
 			continue;
@@ -243,12 +236,12 @@ void BuildConfigurationReader::read_strings_named(const string &name, vector<str
 			'[',
 			i,
 			"] should be a string, but it's of type '",
-			FieldVar::get_type_name(array[i].get_type()),
+			FieldVar::get_name_for_type(array[i].get_type()),
 			'\''
 		);
 
 		auto err_msg = reader._context + ':' + result.message;
-		Console::error(
+		Logger::error(
 			err_msg.c_str()
 		);
 		break;

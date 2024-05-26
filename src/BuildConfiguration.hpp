@@ -1,6 +1,7 @@
 #pragma once
 #include "base.hpp"
 #include "FieldVar.hpp"
+#include "Error.hpp"
 
 using FilePath = string;
 using Glob = string;
@@ -84,7 +85,7 @@ struct WarningReportInfo
 
 struct BuildConfiguration
 {
-	static BuildConfiguration from_data(const FieldVar::Dict &data, ErrorReport &result);
+	static BuildConfiguration from_data(FieldDataReader reader, ErrorReport &report);
 
 	static const char *get_enum_name(OptimizationType opt_type);
 	static const char *get_enum_name(OptimizationDegree opt_degree);
