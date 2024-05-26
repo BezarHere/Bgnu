@@ -1,7 +1,7 @@
 #pragma once
 #include "base.hpp"
 #include "Error.hpp"
-#include "Console.hpp"
+#include "Logger.hpp"
 #include "FieldVar.hpp"
 
 
@@ -29,6 +29,9 @@ public:
 	// branching will fail if the value at 'name' isn't a dict (something else or does not exist)
 	FieldDataReader branch_reader(const FieldVar::String &name, const string &new_context = "") const;
 
+	inline const string &get_context() const noexcept { return _context; }
+	inline const FieldVar::Dict &get_data() const noexcept { return _data; }
+
 	const string _context;
 	const FieldVar::Dict &_data;
 
@@ -36,7 +39,7 @@ private:
 	template <typename... _Args>
 	inline void _error(const char *format, _Args &&...args) const {
 		const string new_format = _context + ": " + format;
-		Console::error(
+		Logger::error(
 			new_format.c_str(), std::forward<_Args>(args)...
 		);
 	}
@@ -49,7 +52,7 @@ inline const FieldVar &FieldDataReader::try_get_value(const FieldVar::String &na
 	{
 		_error(
 			"Expecting a value of type %s named '%s'",
-			FieldVar::get_type_name(FType),
+			FieldVar::get_name_for_type(FType),
 			name.c_str()
 		);
 		return default_value;
@@ -61,9 +64,9 @@ inline const FieldVar &FieldDataReader::try_get_value(const FieldVar::String &na
 	{
 		_error(
 			"Expecting type '%s' for '%s', got type '%s'",
-			FieldVar::get_type_name(FType),
+			FieldVar::get_name_for_type(FType),
 			name.c_str(),
-			FieldVar::get_type_name(var.get_type())
+			FieldVar::get_name_for_type(var.get_type())
 		);
 		return default_value;
 	}
@@ -88,9 +91,9 @@ inline const FieldVar &FieldDataReader::try_get_array(const FieldVar::String &na
 			_error(
 				"The array '%s' should only contain %s types, but element at %llu is a/an %s type",
 				name.c_str(),
-				FieldVar::get_type_name(ElementFType),
+				FieldVar::get_name_for_type(ElementFType),
 				i,
-				FieldVar::get_type_name(var.get_type())
+				FieldVar::get_name_for_type(var.get_type())
 			);
 			return default_value;
 		}
