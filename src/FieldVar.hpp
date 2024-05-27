@@ -79,7 +79,7 @@ public:
 	inline explicit operator const Dict &() const { return get_dict(); }
 
 	/// @brief is the value a null? like it has nothing?
-	inline bool is_null() const { return get_type() != FieldVarType::Null; }
+	inline bool is_null() const { return get_type() == FieldVarType::Null; }
 
 	inline bool is_convertible_to(const FieldVarType type) const {
 		return is_convertible(m_type, type);
