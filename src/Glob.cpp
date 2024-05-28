@@ -38,7 +38,203 @@ struct Glob::Segment
 	DataCharacters data_chars;
 };
 
-static Glob::Segment parse_char_selector(const StrBlob &blob) {
+static Glob::Segment parse_char_selector(const StrBlob &blob);
+
+Glob::Glob(const string &str)
+	: m_source{str}, m_segments{parse(str)} {
+}
+
+size_t Glob::test_segment(size_t index, const StrBlob &source) const {
+	if (index >= m_segments.size)
+	{
+		//? should we throw an out of range?
+		return false;
+	}
+
+	const auto &segment = m_segments[index];
+
+	switch (segment.type)
+	{
+	case SegmentType::Text:
+		{
+			// can't possibly match, source too short
+			if (source.size < segment.range.length())
+			{
+				return false;
+			}
+
+			for (size_t i = 0; i < segment.range.length(); i++)
+			{
+				if (m_source[segment.range.begin + i] != source[i])
+				{
+					// text mismatch at current char
+					return 0;
+				}
+			}
+
+			// text match
+			return segment.range.length();
+		}
+
+	case SegmentType::DirectorySeparator:
+		{
+			size_t count = StringUtils::count(source.data, source.size, FilePath::is_directory_separator);
+			return count;
+		}
+
+	case SegmentType::SelectCharacters:
+	case SegmentType::AvoidCharacters:
+		{
+			//* oh boy, this will be confusing after couple days 
+
+			const auto &data_chars = segment.data_chars;
+			const bool inverted = segment.type == SegmentType::AvoidCharacters;
+
+			const auto proc = [&data_chars, inverted](const string_char character)
+				{
+					for (size_t i = 0; i < data_chars.count; i++)
+					{
+						// character match
+						if (character == data_chars.chars[i])
+						{
+
+							return !inverted;
+						}
+					}
+
+					// no character matched
+					return inverted;
+				};
+
+			size_t selected_count = StringUtils::count(source.data, source.size, proc);
+			return selected_count;
+		}
+
+	case SegmentType::AnyCharacter:
+		{
+			// not enough chars to match all the '?'
+			if (source.size < segment.range.length())
+			{
+				return 0;
+			}
+
+			size_t count = StringUtils::count(
+				source.data,
+				std::min(source.size, segment.range.length()),
+				// only continue if we found anything except directory separators ('?' can't match dir seps)
+				inner::InvertOp(&FilePath::is_directory_separator)
+			);
+
+			if (count == segment.range.length())
+			{
+				return count;
+			}
+
+			return 0;
+		}
+
+	case SegmentType::AnyName:
+		return Glob::test_any_name(source);
+	case SegmentType::AnyPath:
+		return Glob::test_any_path(source);
+
+	default:
+		return 0;
+	}
+
+	return false;
+}
+
+size_t Glob::test_any_name(const StrBlob &source) {
+	for (size_t i = 0; i < source.size; i++)
+	{
+		if (FilePath::is_directory_separator(source[i]))
+		{
+			return i;
+		}
+	}
+
+	return source.size;
+}
+
+size_t Glob::test_any_path(const StrBlob &source) {
+	// npos + 1 == 0
+	size_t last_anchor = npos;
+
+	for (size_t i = 0; i < source.size; i++)
+	{
+		if (FilePath::is_directory_separator(source[i]))
+		{
+			last_anchor = i;
+		}
+	}
+
+	return last_anchor + 1;
+}
+
+Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
+	vector<Segment> segments{};
+
+	for (size_t i = 0; i < blob.size; i++)
+	{
+		if (FilePath::is_directory_separator(blob[i]))
+		{
+			size_t count = StringUtils::count(&blob[i], blob.size - i, FilePath::is_directory_separator);
+			i += count - 1;
+			segments.emplace_back(SegmentType::DirectorySeparator, IndexRange(i, i + count));
+			continue;
+		}
+
+		if (blob[i] == '?')
+		{
+			size_t count = StringUtils::count(&blob[i], blob.size - i, inner::EqualTo('?'));
+			i += count - 1;
+			segments.emplace_back(SegmentType::AnyCharacter, IndexRange(i, i + count));
+			continue;
+		}
+
+		if (blob[i] == '*')
+		{
+			size_t count = StringUtils::count(
+				&blob[i],
+				// check either 1 or two stars in a row
+				std::min<size_t>(blob.size - i, 2),
+				inner::EqualTo('*')
+			);
+
+			i += count - 1;
+
+			segments.emplace_back(
+				count == 2 ? SegmentType::AnyPath : SegmentType::AnyName,
+				IndexRange(i, i + count)
+			);
+			continue;
+		}
+
+		if (blob[i] == '[')
+		{
+			segments.push_back(parse_char_selector(blob.slice(i)));
+			IndexRange &range = segments.back().range;
+			range = range.shifted(i);
+			continue;
+		}
+
+		size_t text_length = StringUtils::count(&blob[i], blob.size - i, is_char_reserved);
+		segments.emplace_back(SegmentType::Text, IndexRange(i, i + text_length));
+		i += text_length - 1;
+	}
+
+	// TODO: find a better abroach
+	Segment *seg = new Segment[segments.size()];
+	for (size_t i = 0; i < segments.size(); i++)
+	{
+		seg[i] = segments[i];
+	}
+
+	return {seg, segments.size()};
+}
+
+Glob::Segment parse_char_selector(const StrBlob &blob) {
 	size_t closure_counter = 0;
 	size_t end = blob.size;
 
@@ -119,69 +315,4 @@ static Glob::Segment parse_char_selector(const StrBlob &blob) {
 		{0, end},
 		data_chars
 	};
-}
-
-Glob::Glob(const string &str) : m_source{str}, m_segments{parse(str)} {
-}
-
-Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
-	vector<Segment> segments{};
-
-	for (size_t i = 0; i < blob.size; i++)
-	{
-		if (FilePath::is_directory_separator(blob[i]))
-		{
-			size_t count = StringUtils::count(&blob[i], blob.size - i, FilePath::is_directory_separator);
-			i += count - 1;
-			segments.emplace_back(SegmentType::DirectorySeparator, IndexRange(i, i + count));
-			continue;
-		}
-
-		if (blob[i] == '?')
-		{
-			size_t count = StringUtils::count(&blob[i], blob.size - i, inner::EqualTo('?'));
-			i += count - 1;
-			segments.emplace_back(SegmentType::AnyCharacter, IndexRange(i, i + count));
-			continue;
-		}
-
-		if (blob[i] == '*')
-		{
-			size_t count = StringUtils::count(
-				&blob[i],
-				// check either 1 or two stars in a row
-				std::min<size_t>(blob.size - i, 2),
-				inner::EqualTo('*')
-			);
-
-			i += count - 1;
-
-			segments.emplace_back(
-				count == 2 ? SegmentType::AnyPath : SegmentType::AnyName,
-				IndexRange(i, i + count)
-			);
-			continue;
-		}
-
-		if (blob[i] == '[')
-		{
-			segments.push_back(parse_char_selector(blob.slice(i)));
-			IndexRange &range = segments.back().range;
-			range = range.shifted(i);
-			continue;
-		}
-
-		size_t text_length = StringUtils::count(&blob[i], blob.size - i, is_char_reserved);
-		segments.emplace_back(SegmentType::Text, IndexRange(i, i + text_length));
-		i += text_length - 1;
-	}
-
-	// TODO: find a better abroach
-	Segment *seg = new Segment[segments.size()];
-	for (size_t i = 0; i < segments.size(); i++)
-	{
-		seg[i] = segments[i];
-	}
-
-	return {seg, segments.size()};
 }
