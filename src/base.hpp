@@ -14,6 +14,7 @@ using std::vector;
 using std::array;
 
 typedef std::string string;
+typedef string::value_type string_char;
 
 typedef Blob<const string::value_type> StrBlob;
 
