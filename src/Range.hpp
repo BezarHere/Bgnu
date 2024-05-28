@@ -7,7 +7,6 @@ template <typename _T>
 struct TRange
 {
 	static_assert(std::is_arithmetic_v<_T> || std::is_pointer_v<_T>, "only arithmetic or pointer ranges are allowed");
-	using iterable = TRangeIterable<_T>;
 
 	inline constexpr TRange() = default;
 
