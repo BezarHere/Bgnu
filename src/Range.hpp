@@ -25,6 +25,17 @@ struct TRange
 		return value < end && value >= begin;
 	}
 
+	// returns a copy expanded by `value`.
+	// expansion size is `2 * value` (e.g. `{1, 5}.expanded(2)` == `{-1, 7}`)
+	inline constexpr TRange expended(const _T value) const {
+		return {begin - value, end + value};
+	}
+
+	// returns a copy shifted by `value` (e.g. `{2, 7}.shifted(-3)` == `{-1, 4}`)
+	inline constexpr TRange shifted(const _T value) const {
+		return {begin + value, end + value};
+	}
+
 	_T begin{};
 	_T end{};
 };
