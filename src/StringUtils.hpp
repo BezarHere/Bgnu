@@ -76,4 +76,16 @@ struct StringUtils
 		);
 	}
 
+	template <typename CountPred>
+	static inline size_t count(const char_type *start, const size_t max_count, CountPred &&pred) {
+		for (size_t i = 0; i < max_count; i++)
+		{
+			if (!pred(start[i]))
+			{
+				return i;
+			}
+		}
+		return max_count;
+	}
+
 };
