@@ -11,11 +11,12 @@ struct Blob final
 	using size_type = size_t;
 
 	inline constexpr Blob() noexcept = default;
-	inline constexpr Blob(std::nullptr_t) noexcept = default;
+	inline constexpr Blob(std::nullptr_t) noexcept {}
 
 	inline constexpr Blob(value_type *_data, size_type _size) noexcept : size{_size}, data{_data} {}
 
-	inline constexpr Blob(value_type *begin, value_type *end) : size{end - begin}, data{begin} {
+	inline constexpr Blob(value_type *begin, value_type *end)
+		: size{static_cast<size_t>(end - begin)}, data{begin} {
 		if (end < begin)
 		{
 			throw std::range_error("end < begin");
