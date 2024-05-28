@@ -99,7 +99,11 @@ namespace inner
 	{
 		inline EqualTo(T &&_value) : value{_value} {}
 
-		inline bool operator()(T &&other) const { return other == value; }
+		template <typename E>
+		inline bool operator()(E &&other) const { return other == value; }
+
+		template <typename E>
+		inline bool operator()(const E &other) const { return other == value; }
 
 		T value;
 	};
