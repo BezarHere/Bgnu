@@ -4,31 +4,6 @@
 // is a dot file an nameless extension or a extension-less name?
 // #define DOT_FILE_EXTENSIONLESS
 
-static constexpr FilePath::char_type DirectorySeparator = '/';
-
-static inline bool is_directory_separator(const char value) {
-	return value == '\\' || value == '/';
-}
-
-static inline bool is_valid_filename_char(const char value) {
-	switch (value)
-	{
-	case ':':
-	case '<':
-	case '>':
-	case '"':
-	case '?':
-	case '|':
-		return false;
-	default:
-		return true;
-	}
-}
-
-static inline bool is_valid_filepath_char(const char value) {
-	return is_valid_filename_char(value) || is_directory_separator(value);
-}
-
 /// @brief finds where the extension starts, if there is an extension
 /// @param filename the filename (string) to search
 /// @param length the length of `filename`
@@ -244,6 +219,8 @@ FilePath::string_type FilePath::get_extension() const {
 bool FilePath::is_valid() const {
 	return m_internal && m_internal->segments_count && m_internal->text_length;
 }
+
+
 
 FilePath::FilePath(Internal *data, size_t start, size_t end)
 	: m_internal{new Internal(*data, IndexRange(start, end))} {
