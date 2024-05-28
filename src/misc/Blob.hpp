@@ -34,6 +34,28 @@ struct Blob final
 	inline value_type *begin() const { return data; }
 	inline value_type *end() const { return data + size; }
 
+	// returns a slice from start to the end of the blob
+	inline Blob slice(size_type start) const {
+		if (start >= size)
+		{
+			throw std::range_error(
+				"'start' should be contained in [0, size)"
+			);
+		}
+		return {data + start, data + size};
+	}
+
+	// returns a slice from start to end (exclusive end)
+	inline Blob slice(size_type start, size_type end) const {
+		if (start >= size || end >= size || end < start)
+		{
+			throw std::range_error(
+				"'start' and 'end' should be contained in [0, size), with 'start' <= 'end'"
+			);
+		}
+		return {data + start, data + end};
+	}
+
 	// we don't handle out-of-range errors, this is a blob
 	inline value_type &operator[](const size_type index) const { return data[index]; }
 
