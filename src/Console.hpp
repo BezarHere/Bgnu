@@ -43,6 +43,8 @@ public:
 	static void push_state();
 	static void pop_state();
 
+	static void clear_colors();
+
 	static inline ConsoleColor get_bg_color() {
 		return s_bg;
 	}

@@ -121,8 +121,14 @@ void Console::push_state() {
 void Console::pop_state() {
 	const auto &old_state = g_states.back();
 	g_states.pop_back();
-	
+
+
+	clear_colors();
 	set_bg(old_state.background);
 	set_fg(old_state.foreground);
+}
+
+void Console::clear_colors() {
+	std::cout << "\033[0m";
 }
 
