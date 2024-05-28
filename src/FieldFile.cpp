@@ -1,5 +1,5 @@
 #include "FieldFile.hpp"
-#include "Console.hpp"
+#include "Logger.hpp"
 #include <fstream>
 #include <string.h>
 
@@ -470,7 +470,7 @@ FieldVar::Dict Parser::_parse_var_dict(const bool body_dict) {
 		_advance_tk();
 	}
 
-	std::cout << "dict started at " << get_tk() << '\n';
+	// std::cout << "dict started at " << get_tk() << '\n';
 
 	bool expecting_separator = false;
 	FieldVar::Dict dict{};
