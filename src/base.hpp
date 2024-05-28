@@ -4,12 +4,18 @@
 #include <array>
 #include <cstdint>
 
+#include <map>
+
+#include "misc/Blob.hpp"
+
 #define HAS_FLAG(field, flag) (((field) & (flag)) == (flag))
 
-using std::string;
 using std::vector;
 using std::array;
 
+typedef std::string string;
+
+typedef Blob<const string::value_type> StrBlob;
 
 static constexpr size_t npos = (size_t)-1;
 
@@ -87,4 +93,26 @@ namespace inner
 		NameType name;
 		T value;
 	};
+
+	template <typename T>
+	struct EqualTo
+	{
+		inline EqualTo(T &&_value) : value{_value} {}
+
+		inline bool operator()(T &&other) const { return other == value; }
+
+		T value;
+	};
+
+	template <typename Op>
+	struct InvertOp
+	{
+		inline InvertOp(Op &&_op) : _operator{_op} {}
+
+		template <typename T>
+		inline bool operator()(T &&arg) const { return !_operator(arg); }
+
+		Op _operator;
+	};
+
 }
