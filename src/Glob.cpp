@@ -1,5 +1,4 @@
 #include "Glob.hpp"
-#include "FilePath.hpp"
 #include "StringUtils.hpp"
 
 constexpr size_t MaxSegmentCharacters = 64;
@@ -25,6 +24,8 @@ struct Glob::Segment
 		size_t count = 0;
 		std::array<string::value_type, MaxSegmentCharacters> chars;
 	};
+
+	inline Segment() = default;
 
 	inline Segment(SegmentType _type, const IndexRange &_range, const DataCharacters &_data_chars = {})
 		: type{_type}, range{_range}, data_chars{_data_chars} {
@@ -66,11 +67,58 @@ static Glob::Segment parse_char_selector(const StrBlob &blob) {
 		//? should this print out an error?
 	}
 
+	size_t start = 1;
+
+	const bool inverted = blob[1] == '!';
+
+	if (inverted)
+	{
+		start++;
+	}
+
 	// after '[' and before ']'
-	IndexRange chars_range{1, end};
+	const IndexRange chars_range{start, end};
 
-	
+	typedef Glob::Segment::DataCharacters DataChars;
 
+	DataChars data_chars{};
+
+	for (size_t i = chars_range.begin; i < chars_range.end; i++)
+	{
+		// reached max characters count
+		if (data_chars.count >= MaxSegmentCharacters)
+		{
+			break;
+		}
+
+		const string::value_type character = blob[i];
+
+		bool found = false;
+
+		// checking if the character is a duplicate
+		for (size_t j = 0; j < data_chars.count; j++)
+		{
+			if (data_chars.chars[j] == character)
+			{
+				found = true;
+				break;
+			}
+		}
+
+		// duplicate character
+		if (found)
+		{
+			continue;
+		}
+
+		data_chars.chars[data_chars.count++] = character;
+	}
+
+	return {
+		inverted ? SegmentType::AvoidCharacters : SegmentType::SelectCharacters,
+		{0, end},
+		data_chars
+	};
 }
 
 Glob::Glob(const string &str) : m_source{str}, m_segments{parse(str)} {
@@ -118,9 +166,22 @@ Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
 		if (blob[i] == '[')
 		{
 			segments.push_back(parse_char_selector(blob.slice(i)));
+			IndexRange &range = segments.back().range;
+			range = range.shifted(i);
+			continue;
 		}
 
+		size_t text_length = StringUtils::count(&blob[i], blob.size - i, is_char_reserved);
+		segments.emplace_back(SegmentType::Text, IndexRange(i, i + text_length));
+		i += text_length - 1;
 	}
 
-	return nullptr;
+	// TODO: find a better abroach
+	Segment *seg = new Segment[segments.size()];
+	for (size_t i = 0; i < segments.size(); i++)
+	{
+		seg[i] = segments[i];
+	}
+
+	return {seg, segments.size()};
 }
