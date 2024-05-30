@@ -470,8 +470,6 @@ FieldVar::Dict Parser::_parse_var_dict(const bool body_dict) {
 		_advance_tk();
 	}
 
-	// std::cout << "dict started at " << get_tk() << '\n';
-
 	bool expecting_separator = false;
 	FieldVar::Dict dict{};
 
@@ -530,8 +528,6 @@ FieldVar::Dict Parser::_parse_var_dict(const bool body_dict) {
 		expecting_separator = true;
 	}
 
-	std::cout << "dict ended at " << get_tk() << '\n';
-
 	return dict;
 }
 
@@ -585,8 +581,6 @@ FieldVar::Array Parser::_parse_var_array() {
 
 FieldVar Parser::_parse_var() {
 	_skip_useless();
-
-	std::cout << "parsing tk: " << get_tk() << '\n';
 
 	switch (get_tk().type)
 	{
@@ -789,11 +783,6 @@ FieldVar FieldFile::read(const char *source, size_t length) {
 	vector<Token> tokens{};
 
 	tokenizer.put_all(tokens);
-
-	// for (const auto &tk : tokens)
-	// {
-	// 	std::cout << tk << '\n';
-	// }
 
 	Parser parser{tokens.data(), tokens.size()};
 
