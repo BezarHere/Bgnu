@@ -12,18 +12,15 @@ int main(int argc, const char *argv[]) {
 
 	std::cout << std::boolalpha;
 
-	Glob glob = "**\\bgnu\\test.*";
-	std::cout << glob.test("F:\\gcc\\bgnu\\test.txt") << '\n';
-	std::cout << glob.test("F:\\gcc\\bgnu\\test.gg") << '\n';
-	std::cout << glob.test("\\bgnu\\test.gg") << '\n';
-	std::cout << glob.test("bgnu\\test.gg") << '\n';
+	Glob glob = "*\\bgnu\\test.*";
+	std::cout << "glob test: " << glob.test("F:\\gcc\\bgnu\\test.txt") << "\n";
+	std::cout << "glob test: " << glob.test("F:\\gcc\\bgnu\\test.gg") << "\n";
+	std::cout << "glob test: " << glob.test("\\bgnu\\test.gg") << "\n";
+	std::cout << "glob test: " << glob.test("bgnu\\test.gg") << "\n";
 
 	FieldVar loaded_file = FieldFile::load("F:\\gcc\\bgnu\\test.txt");
 	ErrorReport report{};
 	Project project = Project::from_data(loaded_file.get_dict(), report);
 
-	std::cout << &project << '\n';
-
-	std::cout << "now break here to see how is `project`" << '\n';
 	std::cin.get();
 }

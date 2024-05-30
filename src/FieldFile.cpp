@@ -191,9 +191,11 @@ Token Tokenizer::_tk_string(const StringParseFlags flags) const {
 		if (m_source[i] == '\n' || m_source[i] == '\r')
 		{
 			if (HAS_FLAG(flags, eStrPFlag_Multiline))
+			{
 				continue;
+			}
 
-			std::cerr << "Unclosed string at " << line << ':' << (i - line_start) << '\n';
+			Logger::error("_tk_string: Unclosed string at %llu:%llu", line, i - line_start);
 			end_index = i;
 			break;
 		}
@@ -555,8 +557,6 @@ FieldVar::Array Parser::_parse_var_array() {
 			_advance_tk();
 			break;
 		}
-
-		std::cout << "A1: " << get_tk() << '\n';
 
 		if (expecting_separator)
 		{

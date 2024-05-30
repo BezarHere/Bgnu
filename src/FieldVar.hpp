@@ -40,7 +40,7 @@ public:
 	inline FieldVar(Int integer) : m_type{FieldVarType::Integer}, m_int{integer} {}
 	inline FieldVar(Real number) : m_type{FieldVarType::Real}, m_real{number} {}
 	inline FieldVar(const String &string) : m_type{FieldVarType::String}, m_string{string} {}
-	inline explicit FieldVar(const Array &array) : m_type{FieldVarType::Array}, m_array{array} { std::cout << this << '\n'; }
+	inline explicit FieldVar(const Array &array) : m_type{FieldVarType::Array}, m_array{array} {}
 	inline explicit FieldVar(const Dict &dict) : m_type{FieldVarType::Dict}, m_dict{dict} {}
 
 	inline FieldVar(const String::value_type *cstring) : FieldVar(String(cstring)) {}

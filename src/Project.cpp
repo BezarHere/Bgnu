@@ -10,15 +10,13 @@ Project Project::from_data(const FieldVar::Dict &data, ErrorReport &result) {
 	FieldDataReader reader{"Project", data};
 
 
-	
-
-
 	const FieldVar &build_configs = reader.try_get_value<FieldVarType::Dict>("build_configurations");
 
 	if (build_configs.is_null())
 	{
 		result.code = Error::NoData;
-		result.message = "No build configs (build_configurations) set";
+		result.message = "No build configs ('build_configurations') set";
+		Logger::error("Project: %s", to_cstr(result.message));
 		return project;
 	}
 
