@@ -123,9 +123,8 @@ size_t Glob::run_match_all(size_t start_index, const StrBlob &source) const {
 	// two conditions:
 	// * one, to break processing on failure (no frames)
 	// * two to break on success (all segments matched those creating frames)
-	while (!frames.empty() || frames.back().segment_index < m_segments.size)
+	while (!frames.empty() && frames.back().segment_index < m_segments.size)
 	{
-		// std::cout << "iter[" << _limit << "] frame: i=" << frames.back().segment_index << '\n';
 
 		// limit checks
 		if (++_limit > RunMatchAllLimit)
@@ -139,12 +138,22 @@ size_t Glob::run_match_all(size_t start_index, const StrBlob &source) const {
 
 		const auto &frame = frames.back();
 
-		size_t match_len = run_match(frame.segment_index, source.slice(frame.source_pos), frame.skip);
+		size_t next_match_len = 0;
 
-		std::cout << "match length for " << frame.segment_index << ", " << frame.skip << ": " << match_len << '\n';
+		size_t match_len = run_match(
+			frame.segment_index,
+			source.slice(frame.source_pos),
+			frame.skip,
+			&next_match_len
+		);
 
-		// segment matched
-		if (match_len > 0)
+		// if this segment can match zero chars and the next segment (if calculated) matched something
+		// *ex: '**/file.txt' matches "/file.txt" even tho '**' matched nothing, '/' matched so it's ok
+		const bool valid_empty_match = \
+			m_segments[frame.segment_index].can_be_empty() && next_match_len > 0;
+
+		// segment matched or not matched but it's ok (for ex: greedy segments can match zero chars)
+		if (match_len > 0 || valid_empty_match)
 		{
 			// we continue to the next frame
 			frames.emplace_back(frame.segment_index + 1, frame.source_pos + match_len);
@@ -175,7 +184,7 @@ size_t Glob::run_match_all(size_t start_index, const StrBlob &source) const {
 	return !frames.empty();
 }
 
-size_t Glob::run_match(size_t index, const StrBlob &source, size_t skip) const {
+size_t Glob::run_match(size_t index, const StrBlob &source, size_t skip, size_t *next_match) const {
 	// segment at `index`
 	const auto &seg = m_segments[index];
 
@@ -185,11 +194,13 @@ size_t Glob::run_match(size_t index, const StrBlob &source, size_t skip) const {
 		// where and how much did the next non-greedy segment get?
 		Match end_range = match_segment(index + 1, source, skip);
 
+		if (next_match)
+		{
+			*next_match = end_range.length;
+		}
+
 		// greedy segment test length
 		size_t greedy_len = test_segment(index, source.slice(0, end_range.position));
-
-		std::cout << "end range: " << end_range.length << ' ' << end_range.position << '\n';
-		std::cout << "greedy len: " << greedy_len << '\n';
 
 		// greedy segment read to the start of the next segment, making *no* gap
 		if (end_range.position == greedy_len && (seg.can_be_empty() || greedy_len > 0)) {

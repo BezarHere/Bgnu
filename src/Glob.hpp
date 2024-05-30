@@ -38,7 +38,8 @@ private:
 	};
 
 	size_t run_match_all(size_t start_index, const StrBlob &source) const;
-	size_t run_match(size_t index, const StrBlob &source, size_t skip) const;
+	size_t run_match(size_t index, const StrBlob &source,
+									 size_t skip, size_t *next_match = nullptr) const;
 
 	Match match_segment(size_t index, const StrBlob &source, size_t skip) const;
 	size_t test_segment(size_t index, const StrBlob &source) const;
