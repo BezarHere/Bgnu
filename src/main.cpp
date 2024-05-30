@@ -1,29 +1,29 @@
-#include "Console.hpp"
 #include "FieldFile.hpp"
+#include "Project.hpp"
+#include "Command.hpp"
+
 #include <iostream>
 
-int main() {
-	// Console::set_fg(ConsoleColor::IntenseBlue);
-	// Console::set_bg(ConsoleColor::Green);
+int main(int argc, const char *argv[]) {
+	CommandDB::_load_commands();
+	ArgumentReader reader = ArgumentReader::from_args(argv, argc);
 
 	std::cout << "hello\n";
 
+	std::cout << std::boolalpha;
+
+	Glob glob = "**\\bgnu\\test.*";
+	std::cout << glob.test("F:\\gcc\\bgnu\\test.txt") << '\n';
+	std::cout << glob.test("F:\\gcc\\bgnu\\test.gg") << '\n';
+	std::cout << glob.test("\\bgnu\\test.gg") << '\n';
+	std::cout << glob.test("bgnu\\test.gg") << '\n';
+
 	FieldVar loaded_file = FieldFile::load("F:\\gcc\\bgnu\\test.txt");
-	std::cout << loaded_file << '\n';
+	ErrorReport report{};
+	Project project = Project::from_data(loaded_file.get_dict(), report);
 
-	FieldFile::dump("F:\\gcc\\bgnu\\dump.txt", loaded_file.get_dict());
+	std::cout << &project << '\n';
 
-
-	// FieldVar var = 312.41F;
-	// FieldVar var2 = false;
-	// FieldVar var3 = "yeah baby!";
-
-	// FieldVar::Dict dict{{"age", var}, {"admin", var2}, {"bio", var}};
-	// FieldVar var4{dict};
-
-	// std::cout << "hello!\n";
-	// std::cout << var << '\n';
-	// std::cout << var2 << '\n';
-	// std::cout << var3 << '\n';
-	// std::cout << var4 << '\n';
+	std::cout << "now break here to see how is `project`" << '\n';
+	std::cin.get();
 }
