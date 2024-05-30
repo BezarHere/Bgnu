@@ -1,10 +1,9 @@
 #pragma once
 #include "base.hpp"
-#include "FieldVar.hpp"
+#include "FieldDataReader.hpp"
+#include "FilePath.hpp"
 #include "Error.hpp"
-
-using FilePath = string;
-using Glob = string;
+#include "Glob.hpp"
 
 enum class OptimizationType : uint8_t
 {
