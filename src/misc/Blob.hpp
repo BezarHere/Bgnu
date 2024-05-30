@@ -57,6 +57,8 @@ struct Blob final
 		return {data + start, data + end};
 	}
 
+	inline size_t length() const { return size; }
+
 	// we don't handle out-of-range errors, this is a blob
 	inline value_type &operator[](const size_type index) const { return data[index]; }
 
