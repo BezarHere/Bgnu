@@ -1,5 +1,6 @@
 #include "Glob.hpp"
 #include "StringUtils.hpp"
+#include <iostream>
 
 constexpr size_t MaxSegmentCharacters = 64;
 
@@ -27,21 +28,201 @@ struct Glob::Segment
 
 	inline Segment() = default;
 
-	inline Segment(SegmentType _type, const IndexRange &_range, const DataCharacters &_data_chars = {})
+	inline Segment(SegmentType _type, const IndexRange &_range)
+		: type{_type}, range{_range} {
+
+	}
+
+	inline Segment(SegmentType _type, const IndexRange &_range, const DataCharacters &_data_chars)
 		: type{_type}, range{_range}, data_chars{_data_chars} {
 
 	}
 
+	inline static constexpr bool is_type_greed(SegmentType type) {
+		return type == SegmentType::AnyName || type == SegmentType::AnyPath;
+	}
+
+	// will this segment read infinite character if it's allowed to
+	inline bool is_greedy() const { return is_type_greed(type); }
+
+	// can this segment match 0 character as a valid match
+	inline bool can_be_empty() const { return is_greedy(); }
+
+	// skips just make the next segment skip acceptable position
+	// only for greedy segments, for they are the only segment the can fill the skip gap
+	inline bool can_use_skip() const { return is_greedy(); }
+
 	SegmentType type;
 	IndexRange range;
 
-	DataCharacters data_chars;
+	DataCharacters data_chars{};
 };
 
+static Glob::SegmentCollection copy_segments(const Glob::SegmentCollection &collection);
 static Glob::Segment parse_char_selector(const StrBlob &blob);
 
 Glob::Glob(const string &str)
 	: m_source{str}, m_segments{parse(str)} {
+}
+
+Glob::~Glob() noexcept {
+	_clear();
+}
+
+Glob::Glob(const Glob &copy)
+	: m_source{copy.m_source},
+	m_segments{copy_segments(copy.m_segments)} {
+}
+
+Glob &Glob::operator=(const Glob &copy) {
+
+	m_source = copy.m_source;
+
+	SegmentCollection segments_copy = copy_segments(copy.m_segments);
+
+	_clear();
+	m_segments = segments_copy;
+
+	return *this;
+}
+
+bool Glob::test(const FilePath &path) const {
+	return test(path.get_source());
+}
+
+bool Glob::test(const StrBlob &path) const {
+	if (!is_valid())
+	{
+		return false;
+	}
+
+	return run_match_all(0, path);
+}
+
+
+struct MatchFrame
+{
+	// can be removed & subsituted by the frame's index, but this is less troublesome
+	size_t segment_index;
+	size_t source_pos;
+	size_t skip = 0;
+};
+
+size_t Glob::run_match_all(size_t start_index, const StrBlob &source) const {
+	// genres limit, hopefully never reached
+	constexpr size_t RunMatchAllLimit = 1024;
+
+	// forces the vectors to use the {size_t, allocator_type} ctor to ensure capacity on init
+	vector<MatchFrame> frames{m_segments.size, vector<MatchFrame>::allocator_type()};
+
+	// start segment, start of source
+	frames.emplace_back(start_index, 0);
+
+	size_t _limit = 0;
+
+	// two conditions:
+	// * one, to break processing on failure (no frames)
+	// * two to break on success (all segments matched those creating frames)
+	while (!frames.empty() || frames.back().segment_index < m_segments.size)
+	{
+		// std::cout << "iter[" << _limit << "] frame: i=" << frames.back().segment_index << '\n';
+
+		// limit checks
+		if (++_limit > RunMatchAllLimit)
+		{
+			throw std::length_error("run_match_all limit reached");
+
+			// frames.clear();
+			// break;
+		}
+
+
+		const auto &frame = frames.back();
+
+		size_t match_len = run_match(frame.segment_index, source.slice(frame.source_pos), frame.skip);
+
+		std::cout << "match length for " << frame.segment_index << ", " << frame.skip << ": " << match_len << '\n';
+
+		// segment matched
+		if (match_len > 0)
+		{
+			// we continue to the next frame
+			frames.emplace_back(frame.segment_index + 1, frame.source_pos + match_len);
+			continue;
+		}
+
+		// go back to the last skip-able segment and inc it's `skip`
+
+		// ! local `frame` is now dangling ! 
+		frames.pop_back();
+
+		//* if no frame can be skiped then `source` can't be matched,
+		//* and we will opt-out on the outer loop
+		while (!frames.empty())
+		{
+			if (m_segments[frames.back().segment_index].can_use_skip())
+			{
+				frames.back().skip++;
+				break;
+			}
+
+			// segment can't use 'skip', pop it
+			frames.pop_back();
+		}
+	}
+
+	// empty frames mean that the no way segments could match the source
+	return !frames.empty();
+}
+
+size_t Glob::run_match(size_t index, const StrBlob &source, size_t skip) const {
+	// segment at `index`
+	const auto &seg = m_segments[index];
+
+	// a greedy segments that is not the last one
+	if (seg.is_greedy() && index < m_segments.size - 1)
+	{
+		// where and how much did the next non-greedy segment get?
+		Match end_range = match_segment(index + 1, source, skip);
+
+		// greedy segment test length
+		size_t greedy_len = test_segment(index, source.slice(0, end_range.position));
+
+		std::cout << "end range: " << end_range.length << ' ' << end_range.position << '\n';
+		std::cout << "greedy len: " << greedy_len << '\n';
+
+		// greedy segment read to the start of the next segment, making *no* gap
+		if (end_range.position == greedy_len && (seg.can_be_empty() || greedy_len > 0)) {
+			return greedy_len;
+		}
+
+		// there is a gap between the two segments, failing the segments
+		// Unknown example, i dont know how to trigger this in a test
+		return 0;
+	}
+
+	return test_segment(index, source);
+}
+
+Glob::Match Glob::match_segment(size_t index, const StrBlob &source, size_t skip) const {
+	for (size_t i = 0; i < source.size; i++)
+	{
+		size_t len = test_segment(index, source.slice(i));
+		if (len == 0)
+		{
+			continue;
+		}
+
+		if (skip)
+		{
+			skip--;
+			continue;
+		}
+
+		return {len, i};
+	}
+
+	return {};
 }
 
 size_t Glob::test_segment(size_t index, const StrBlob &source) const {
@@ -145,6 +326,33 @@ size_t Glob::test_segment(size_t index, const StrBlob &source) const {
 	return false;
 }
 
+size_t Glob::find_last_non_greedy() const {
+	size_t index = m_segments.size;
+
+	// iterates from last to first
+	while (index != 0)
+	{
+		index--;
+
+		if (m_segments[index].is_greedy())
+		{
+			continue;
+		}
+
+		// segment at index is not greedy
+		return index;
+	}
+
+	// all segments are greedy!
+	return npos;
+}
+
+void Glob::_clear() {
+	delete[] m_segments.data;
+	m_segments.size = 0;
+}
+
+
 size_t Glob::test_any_name(const StrBlob &source) {
 	for (size_t i = 0; i < source.size; i++)
 	{
@@ -158,18 +366,8 @@ size_t Glob::test_any_name(const StrBlob &source) {
 }
 
 size_t Glob::test_any_path(const StrBlob &source) {
-	// npos + 1 == 0
-	size_t last_anchor = npos;
-
-	for (size_t i = 0; i < source.size; i++)
-	{
-		if (FilePath::is_directory_separator(source[i]))
-		{
-			last_anchor = i;
-		}
-	}
-
-	return last_anchor + 1;
+	// match everything
+	return source.size;
 }
 
 Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
@@ -197,15 +395,17 @@ Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
 		{
 			size_t count = StringUtils::count(
 				&blob[i],
-				// check either 1 or two stars in a row
-				std::min<size_t>(blob.size - i, 2),
+				// check either 1 or more stars in a row
+				blob.size - i,
 				inner::EqualTo('*')
 			);
 
 			i += count - 1;
 
+			// 1 star -> any name
+			// +2 stars -> any path (two greedy segments in a row might crash this impl of glob) 
 			segments.emplace_back(
-				count == 2 ? SegmentType::AnyPath : SegmentType::AnyName,
+				count >= 2 ? SegmentType::AnyPath : SegmentType::AnyName,
 				IndexRange(i, i + count)
 			);
 			continue;
@@ -219,7 +419,7 @@ Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
 			continue;
 		}
 
-		size_t text_length = StringUtils::count(&blob[i], blob.size - i, is_char_reserved);
+		size_t text_length = StringUtils::count(&blob[i], blob.size - i, inner::InvertOp(&is_char_reserved));
 		segments.emplace_back(SegmentType::Text, IndexRange(i, i + text_length));
 		i += text_length - 1;
 	}
@@ -232,6 +432,20 @@ Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
 	}
 
 	return {seg, segments.size()};
+}
+
+Glob::SegmentCollection copy_segments(const Glob::SegmentCollection &collection) {
+	Glob::SegmentCollection segments;
+
+	segments.size = collection.size;
+	segments.data = new Glob::Segment[segments.size];
+
+	for (size_t i = 0; i < segments.size; i++)
+	{
+		segments[i] = collection[i];
+	}
+
+	return segments;
 }
 
 Glob::Segment parse_char_selector(const StrBlob &blob) {

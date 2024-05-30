@@ -11,11 +11,45 @@ public:
 	typedef Blob<Segment> SegmentCollection;
 
 	Glob(const string &str);
+	inline Glob(const string_char *cstr) : Glob{string{cstr}} {}
+
+	~Glob() noexcept;
+
+	Glob(const Glob &copy);
+	Glob &operator=(const Glob &copy);
+
+	inline bool is_valid() const {
+		return m_segments.size > 0;
+	}
+
+	bool test(const FilePath &path) const;
+	bool test(const StrBlob &path) const;
+
+	inline bool test(const string &str) const { return test(StrBlob(str)); }
+	inline bool test(const string_char *cstr) const {
+		return test(StrBlob(cstr, string::traits_type::length(cstr)));
+	}
 
 private:
+	struct Match
+	{
+		size_t length;
+		size_t position;
+	};
+
+	size_t run_match_all(size_t start_index, const StrBlob &source) const;
+	size_t run_match(size_t index, const StrBlob &source, size_t skip) const;
+
+	Match match_segment(size_t index, const StrBlob &source, size_t skip) const;
 	size_t test_segment(size_t index, const StrBlob &source) const;
+
+	size_t find_last_non_greedy() const;
+
+	void _clear();
+
 	static size_t test_any_name(const StrBlob &source);
 	static size_t test_any_path(const StrBlob &source);
+
 
 	static SegmentCollection parse(const StrBlob &blob);
 
