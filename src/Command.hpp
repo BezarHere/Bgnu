@@ -10,8 +10,6 @@ public:
 		: name{_name}, description{_desc} {
 	}
 
-	virtual Command &operator=(const Command &copy) = default;
-
 	virtual ~Command() = default;
 
 	virtual Error execute(ArgumentReader &reader) = 0;
