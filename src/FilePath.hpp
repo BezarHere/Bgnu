@@ -52,6 +52,7 @@ private:
 
 	static void build_segments(Internal &internals);
 	static void resolve(Internal &internals, const string_type &base);
+	static bool process(TextBlock &text);
 private:
 	Internal *m_internal;
 };

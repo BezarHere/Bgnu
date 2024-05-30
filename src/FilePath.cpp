@@ -60,6 +60,11 @@ FilePath::Internal::Internal(const string_type &str)
 	string_type::traits_type::copy(text.data(), str.c_str(), text_length);
 	text[text_length] = char_type{};
 
+	if (FilePath::process(text))
+	{
+		//? do something
+	}
+
 	// build the segments
 	FilePath::build_segments(*this);
 }
@@ -124,6 +129,11 @@ FilePath::Internal::Internal(const Internal &from, const IndexRange &segments_ra
 	}
 
 	text[text_length] = char_type{};
+	
+	if (FilePath::process(text))
+	{
+		//? do something
+	}
 
 }
 
@@ -142,6 +152,11 @@ FilePath::FilePath(FilePath &&move) noexcept : m_internal{move.m_internal} {
 }
 
 FilePath &FilePath::operator=(const FilePath &assign) {
+	if (std::addressof(assign) == this)
+	{
+		return *this;
+	}
+
 	*m_internal = *assign.m_internal;
 	return *this;
 }
@@ -272,4 +287,20 @@ void FilePath::resolve(Internal &internals, const string_type &base) {
 	// TODO: substitute '..' & '.' to make the path contained in `internals` absolute
 }
 
+bool FilePath::process(FilePath::TextBlock &block) {
+	for (size_t i = 0; i < block.size(); i++)
+	{
+		if (block[i] == '\\')
+		{
+			block[i] = '/';
+		}
+
+		if (!FilePath::is_valid_path_char(block[i]))
+		{
+			Logger::error("FilePath: Invalid path \"%.*s\"", block.size(), block.data());
+			return false;
+		}
+	}
+	return true;
+}
 
