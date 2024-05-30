@@ -8,6 +8,8 @@ enum class Error
 
 	NoData,
 	InvalidType,
+
+	NotImplemented,
 };
 
 struct ErrorReport
