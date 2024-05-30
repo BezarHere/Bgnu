@@ -1,8 +1,10 @@
 #include "FilePath.hpp"
 #include "Logger.hpp"
+#include <filesystem>
 
-// is a dot file an nameless extension or a extension-less name?
-// #define DOT_FILE_EXTENSIONLESS
+// as Mathias Begert on https://stackoverflow.com/questions/32173890
+// dot files can have extensions those the prefix dot is a part of the filename
+#define DOT_FILE_EXTENSIONLESS
 
 /// @brief finds where the extension starts, if there is an extension
 /// @param filename the filename (string) to search
@@ -214,6 +216,14 @@ FilePath::string_type FilePath::get_extension() const {
 		last_seg_text + extension_start,
 		last_segment.length() - extension_start
 	);
+}
+
+StrBlob FilePath::get_source() const {
+	return {m_internal->text.data(), m_internal->text_length};
+}
+
+Blob<const FilePath::segment_type> FilePath::get_segments() const {
+	return {m_internal->segments.data(), m_internal->segments_count};
 }
 
 bool FilePath::is_valid() const {

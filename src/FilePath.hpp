@@ -37,12 +37,15 @@ public:
 	string_type get_name() const;
 	string_type get_extension() const;
 
+	StrBlob get_source() const;
+	Blob<const segment_type> get_segments() const;
+
 	bool is_valid() const;
+
 
 	static constexpr bool is_directory_separator(const char_type character);
 	static constexpr bool is_valid_filename_char(const char_type character);
 	static constexpr bool is_valid_path_char(const char_type character);
-
 private:
 	struct Internal;
 	FilePath(Internal *data, size_t start, size_t end);
