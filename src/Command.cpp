@@ -3,6 +3,9 @@
 #include <map>
 #include "Logger.hpp"
 
+#include "commands/HelpCommand.hpp"
+#include "commands/BuildCommand.hpp"
+
 constexpr size_t MaxCommandsCount = 8;
 
 struct CommandDB::Data
@@ -19,6 +22,7 @@ const CommandDB::command_ptr *CommandDB::get_commands(size_t &length) {
 }
 
 void CommandDB::_load_commands() {
+	
 }
 
 void CommandDB::_add_command(command_ptr &&command) {
