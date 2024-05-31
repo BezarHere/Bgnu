@@ -1,6 +1,10 @@
 #pragma once
 #include "Console.hpp"
 
+#define LOG_ASSERT(condition) if (!(condition)) Logger::_assert_fail(#condition, nullptr)
+#define LOG_ASSERT_V(condition, ...) \
+	if (!(condition)) Logger::_assert_fail(#condition, __VA_ARGS__)
+
 class Logger : public Console
 {
 public:
@@ -24,22 +28,35 @@ public:
 		std::cout << '\n';
 	}
 
+	// to be used with the LOG_ASSERT/LOG_ASSERT_V macro
+	// `format` can be null to display the assertion fail without any message
+	NORETURN static inline
+		void _assert_fail(const char *assert_cond, const char *format, ...) {
 
-	static inline void warning(const char *format, ...) {
 		Console::push_state();
 		Console::set_bg(ConsoleColor::Black);
-		Console::set_fg(ConsoleColor::Yellow);
+		Console::set_fg(ConsoleColor::IntenseMagenta);
 
-		_write_indent(stdout);
+		fprintf(stderr, "CONDITION \"%s\" FAILED\n");
 
-		va_list valist{};
-		va_start(valist, format);
-		vfprintf(stdout, format, valist);
-		va_end(valist);
+		if (format)
+		{
+			_write_indent(stderr);
 
-		fputc('\n', stdout);
+
+			va_list valist{};
+			va_start(valist, format);
+			vfprintf(stderr, format, valist);
+			va_end(valist);
+
+			fputc('\n', stderr);
+		}
+
+		fflush(stderr);
 
 		Console::pop_state();
+
+		throw std::runtime_error(assert_cond);
 	}
 
 	static inline void error(const char *format, ...) {
@@ -58,6 +75,24 @@ public:
 
 		Console::pop_state();
 	}
+
+	static inline void warning(const char *format, ...) {
+		Console::push_state();
+		Console::set_bg(ConsoleColor::Black);
+		Console::set_fg(ConsoleColor::Yellow);
+
+		_write_indent(stdout);
+
+		va_list valist{};
+		va_start(valist, format);
+		vfprintf(stdout, format, valist);
+		va_end(valist);
+
+		fputc('\n', stdout);
+
+		Console::pop_state();
+	}
+
 
 	// logs the message in a gray color if the logger is in debug or verbose mode
 	static inline void debug(const char *format, ...) {
