@@ -60,7 +60,7 @@ FilePath::Internal::Internal(const string_type &str)
 	string_type::traits_type::copy(text.data(), str.c_str(), text_length);
 	text[text_length] = char_type{};
 
-	if (FilePath::process(text))
+	if (FilePath::process(text, text_length))
 	{
 		//? do something
 	}
@@ -130,7 +130,7 @@ FilePath::Internal::Internal(const Internal &from, const IndexRange &segments_ra
 
 	text[text_length] = char_type{};
 
-	if (FilePath::process(text))
+	if (FilePath::process(text, text_length))
 	{
 		//? do something
 	}
@@ -299,8 +299,8 @@ void FilePath::resolve(Internal &internals, const string_type &base) {
 	// TODO: substitute '..' & '.' to make the path contained in `internals` absolute
 }
 
-bool FilePath::process(TextBlock &text) {
-	for (size_t i = 0; i < text.size(); i++)
+bool FilePath::process(TextBlock &text, size_t size) {
+	for (size_t i = 0; i < size; i++)
 	{
 		if (text[i] == '\\')
 		{
@@ -309,7 +309,13 @@ bool FilePath::process(TextBlock &text) {
 
 		if (!FilePath::is_valid_path_char(text[i]))
 		{
-			Logger::error("FilePath: Invalid path \"%.*s\"", text.size(), text.data());
+			Logger::error(
+				"FilePath: Invalid path \"%.*s\", Bad char '%c' [%llu]",
+				size,
+				text.data(),
+				text[i],
+				i
+			);
 			return false;
 		}
 	}
