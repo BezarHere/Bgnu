@@ -39,6 +39,10 @@ public:
 
 	StrBlob get_source() const;
 	Blob<const segment_type> get_segments() const;
+	
+	bool exists() const;
+	bool is_file() const;
+	bool is_directory() const;
 
 	bool is_valid() const;
 

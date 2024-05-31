@@ -129,7 +129,7 @@ FilePath::Internal::Internal(const Internal &from, const IndexRange &segments_ra
 	}
 
 	text[text_length] = char_type{};
-	
+
 	if (FilePath::process(text))
 	{
 		//? do something
@@ -241,6 +241,18 @@ Blob<const FilePath::segment_type> FilePath::get_segments() const {
 	return {m_internal->segments.data(), m_internal->segments_count};
 }
 
+bool FilePath::exists() const {
+	return std::filesystem::exists(string(m_internal->text.data(), m_internal->text_length));
+}
+
+bool FilePath::is_file() const {
+	return std::filesystem::is_regular_file(string(m_internal->text.data(), m_internal->text_length));
+}
+
+bool FilePath::is_directory() const {
+	return std::filesystem::is_directory(string(m_internal->text.data(), m_internal->text_length));
+}
+
 bool FilePath::is_valid() const {
 	return m_internal && m_internal->segments_count && m_internal->text_length;
 }
@@ -287,17 +299,17 @@ void FilePath::resolve(Internal &internals, const string_type &base) {
 	// TODO: substitute '..' & '.' to make the path contained in `internals` absolute
 }
 
-bool FilePath::process(FilePath::TextBlock &block) {
-	for (size_t i = 0; i < block.size(); i++)
+bool FilePath::process(TextBlock &text) {
+	for (size_t i = 0; i < text.size(); i++)
 	{
-		if (block[i] == '\\')
+		if (text[i] == '\\')
 		{
-			block[i] = '/';
+			text[i] = '/';
 		}
 
-		if (!FilePath::is_valid_path_char(block[i]))
+		if (!FilePath::is_valid_path_char(text[i]))
 		{
-			Logger::error("FilePath: Invalid path \"%.*s\"", block.size(), block.data());
+			Logger::error("FilePath: Invalid path \"%.*s\"", text.size(), text.data());
 			return false;
 		}
 	}
