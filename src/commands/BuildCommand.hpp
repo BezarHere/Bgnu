@@ -6,6 +6,7 @@ namespace commands
 	
 	class BuildCommand : public Command
 	{
+	public:
 		inline BuildCommand() : Command("build", "builds a project") {
 		}
 
