@@ -33,6 +33,15 @@ class CommandDB
 public:
 	using command_ptr = std::unique_ptr<Command>;
 	
+	struct CommandSuggestion
+	{
+		Command *command;
+		float confidence;
+	};
+
+	static Command *get_command(const string &name);
+	static CommandSuggestion get_suggestion(const string &name);
+
 	static const command_ptr *get_commands(size_t &length);
 
 	static void _load_commands();
