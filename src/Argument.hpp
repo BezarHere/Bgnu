@@ -25,6 +25,17 @@ public:
 
 	inline void reset_cursor() { m_cursor = 0; }
 
+	inline ArgumentReader slice(size_t start, size_t end) const {
+		ArgumentReader reader{};
+		for (size_t i = start; i < end; i++)
+		{
+			reader.m_args.emplace_back(m_args[i]);
+		}
+		return reader;
+	}
+
+	inline ArgumentReader slice(size_t start) const { return slice(start, m_args.size()); }
+
 private:
 	inline size_t _find_unused() const {
 		for (size_t i = m_cursor; i < m_args.size(); i++)
