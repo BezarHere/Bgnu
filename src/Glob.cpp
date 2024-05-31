@@ -427,6 +427,8 @@ Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
 			segments.push_back(parse_char_selector(blob.slice(i)));
 			IndexRange &range = segments.back().range;
 			range = range.shifted(i);
+
+			i += range.length() - 1;
 			continue;
 		}
 
