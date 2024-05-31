@@ -9,6 +9,10 @@ struct StringUtils
 	using char_type = string_type::value_type;
 	using traits_type = string_type::traits_type;
 
+	using wide_string_type = std::wstring;
+	using wide_char_type = wide_string_type::value_type;
+	using wide_traits_type = wide_string_type::traits_type;
+
 	template <typename StrProcessor>
 	static ALWAYS_INLINE string_type _modify(const string_type &str, const StrProcessor &processor = {}) {
 		if (str.empty())
@@ -86,6 +90,28 @@ struct StringUtils
 			}
 		}
 		return max_count;
+	}
+
+	static inline string_type narrow(const wide_char_type *wstr, const size_t max_count) {
+		const size_t dst_sz = wcsnlen_s(wstr, max_count) * 2 + 1;
+		string_type str{};
+		str.resize(dst_sz);
+
+		size_t chars_converted = 0;
+		errno_t error =
+			wcstombs_s(&chars_converted, str.data(), dst_sz * sizeof(char_type), wstr, max_count);
+
+		if (error != 0)
+		{
+			Logger::error(
+				"Error while narrowing string \"%S\" max count=%llu, errno=%d",
+				wstr,
+				max_count,
+				error
+			);
+		}
+
+		return str;
 	}
 
 };
