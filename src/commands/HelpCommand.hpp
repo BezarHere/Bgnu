@@ -12,6 +12,7 @@ namespace commands
 
 		inline Error execute(ArgumentReader &reader) override {
 			
+			return Error::Ok;
 		}
 	};
 
