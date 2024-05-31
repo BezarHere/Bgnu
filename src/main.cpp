@@ -12,11 +12,12 @@ int main(int argc, const char *argv[]) {
 
 	std::cout << std::boolalpha;
 
-	Glob glob = "*\\bgnu\\test.*";
-	std::cout << "glob test: " << glob.test("F:\\gcc\\bgnu\\test.txt") << "\n";
-	std::cout << "glob test: " << glob.test("F:\\gcc\\bgnu\\test.gg") << "\n";
-	std::cout << "glob test: " << glob.test("\\bgnu\\test.gg") << "\n";
-	std::cout << "glob test: " << glob.test("bgnu\\test.gg") << "\n";
+	Glob glob = "**\\*.[ch][px][px]";
+	
+	string path;
+	std::cin >> path;
+
+	std::cout << "\n\"" << path << "\" matches as " << glob.test(path) << '\n';
 
 	FieldVar loaded_file = FieldFile::load("F:\\gcc\\bgnu\\test.txt");
 	ErrorReport report{};
