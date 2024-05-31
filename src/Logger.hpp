@@ -1,4 +1,5 @@
 #pragma once
+#include "base.hpp"
 #include "Console.hpp"
 
 #define LOG_ASSERT(condition) if (!(condition)) Logger::_assert_fail(#condition, nullptr)
@@ -37,7 +38,7 @@ public:
 		Console::set_bg(ConsoleColor::Black);
 		Console::set_fg(ConsoleColor::IntenseMagenta);
 
-		fprintf(stderr, "CONDITION \"%s\" FAILED\n");
+		fprintf(stderr, "CONDITION \"%s\" FAILED\n", assert_cond);
 
 		if (format)
 		{
@@ -93,6 +94,39 @@ public:
 		Console::pop_state();
 	}
 
+	static inline void notify(const char *format, ...) {
+		Console::push_state();
+		Console::set_bg(ConsoleColor::Black);
+		Console::set_fg(ConsoleColor::Green);
+
+		_write_indent(stdout);
+
+		va_list valist{};
+		va_start(valist, format);
+		vfprintf(stdout, format, valist);
+		va_end(valist);
+
+		fputc('\n', stdout);
+
+		Console::pop_state();
+	}
+
+	static inline void note(const char *format, ...) {
+		Console::push_state();
+		Console::set_bg(ConsoleColor::Black);
+		Console::set_fg(ConsoleColor::Cyan);
+
+		_write_indent(stdout);
+
+		va_list valist{};
+		va_start(valist, format);
+		vfprintf(stdout, format, valist);
+		va_end(valist);
+
+		fputc('\n', stdout);
+
+		Console::pop_state();
+	}
 
 	// logs the message in a gray color if the logger is in debug or verbose mode
 	static inline void debug(const char *format, ...) {
