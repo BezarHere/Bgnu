@@ -4,11 +4,11 @@
 
 FieldVar::Dict Startup::s_env = {};
 
-void Startup::start(ArgumentReader reader) {
+int Startup::start(ArgumentReader reader) {
 	if (reader.count() == 0)
 	{
 		Logger::warning("no command passed, please pass a command and it's arguments");
-		return;
+		return 1;
 	}
 
 
@@ -23,9 +23,40 @@ void Startup::start(ArgumentReader reader) {
 	{
 		Logger::error("No command named '%s'", to_cstr(command_arg->value));
 		_check_misspelled_command(command_arg->value);
-		return;
+		return 1;
 	}
 
+	ArgumentReader command_input = reader.slice(1);
+
+	Console::push_state();
+	Logger::_push_state();
+
+	Error error;
+
+	try
+	{
+		error = command->execute(command_input);
+	}
+	catch (std::exception &e)
+	{
+		Logger::error(
+			"Command '%s' has raised an exception: what='%s'",
+			to_cstr(command->name),
+			to_cstr(e.what())
+		);
+
+		throw;
+	}
+
+	Logger::_pop_state();
+	Console::pop_state();
+
+	if (error != Error::Ok)
+	{
+		Logger::error("Command '%s' failed, returned error %d", to_cstr(command->name), (int)error);
+	}
+
+	return (int)error;
 }
 
 void Startup::_build_env() {

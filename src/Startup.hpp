@@ -5,7 +5,7 @@
 class Startup
 {
 public:
-	static void start(ArgumentReader reader);
+	static int start(ArgumentReader reader);
 
 private:
 	static void _build_env();
