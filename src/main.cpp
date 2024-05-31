@@ -9,5 +9,5 @@ int main(int argc, const char *argv[]) {
 		Logger::debug("arg no.%d: '%s'", i, argv[i]);
 	}
 
-	Startup::start(ArgumentReader::from_args(argv + 1, std::max(argc - 1, 0)));
+	return Startup::start(ArgumentReader::from_args(argv + 1, std::max(argc - 1, 0)));
 }
