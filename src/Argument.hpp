@@ -3,8 +3,8 @@
 
 struct Argument
 {
-	bool used;
-	const string value;
+	bool used = false;
+	const string value = "";
 };
 
 class ArgumentReader
