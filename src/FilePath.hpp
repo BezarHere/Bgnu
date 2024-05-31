@@ -3,10 +3,17 @@
 #include <array>
 #include <string>
 #include <memory>
+#include <filesystem>
+#include "StringUtils.hpp"
+
+struct FilePath;
 
 struct FilePath
 {
 public:
+	typedef std::filesystem::directory_iterator iterator;
+	typedef iterator::value_type iterator_entry;
+
 	static constexpr size_t MaxPathLength = 256;
 	static constexpr size_t MaxPathSegCount = MaxPathLength / 8;
 
@@ -22,6 +29,10 @@ public:
 
 	FilePath(const string_type &str);
 	inline FilePath(const char_type *cstr) : FilePath(string_type(cstr)) {}
+	// narrowing WILL have gonky behavior
+	inline FilePath(const iterator_entry &entry)
+		: FilePath(StringUtils::narrow(entry.path().c_str(), npos)) {
+	}
 	~FilePath();
 
 	FilePath(const FilePath &copy);
@@ -39,13 +50,14 @@ public:
 
 	StrBlob get_source() const;
 	Blob<const segment_type> get_segments() const;
-	
+
+	iterator create_iterator() const;
+
 	bool exists() const;
 	bool is_file() const;
 	bool is_directory() const;
 
 	bool is_valid() const;
-
 
 	static constexpr bool is_directory_separator(const char_type character);
 	static constexpr bool is_valid_filename_char(const char_type character);

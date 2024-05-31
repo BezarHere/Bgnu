@@ -1,6 +1,5 @@
 #include "FilePath.hpp"
 #include "Logger.hpp"
-#include <filesystem>
 
 // as Mathias Begert on https://stackoverflow.com/questions/32173890
 // dot files can have extensions those the prefix dot is a part of the filename
@@ -218,6 +217,7 @@ FilePath::string_type FilePath::get_extension() const {
 		return "";
 	}
 
+
 	const IndexRange &last_segment = m_internal->segments[m_internal->segments_count - 1];
 
 	const char_type *last_seg_text = m_internal->text.data() + last_segment.begin;
@@ -239,6 +239,10 @@ StrBlob FilePath::get_source() const {
 
 Blob<const FilePath::segment_type> FilePath::get_segments() const {
 	return {m_internal->segments.data(), m_internal->segments_count};
+}
+
+FilePath::iterator FilePath::create_iterator() const {
+	return iterator(m_internal->text.data());
 }
 
 bool FilePath::exists() const {
