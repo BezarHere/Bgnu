@@ -125,8 +125,6 @@ struct StringUtils
 
 		const auto max_distance = std::max(first.size(), second.size());
 
-		std::cout << "similarity " << distance << " " << max_distance << '\n';
-
 		return 1.0F - (float(distance) / max_distance);
 	}
 
