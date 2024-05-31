@@ -1,6 +1,8 @@
 #pragma once
 #include "base.hpp"
 #include <string.h>
+#include "misc/SpellChecker.hpp"
+#include "Logger.hpp"
 
 
 struct StringUtils
@@ -112,6 +114,20 @@ struct StringUtils
 		}
 
 		return str;
+	}
+
+	/// @brief 
+	/// @param first 
+	/// @param second 
+	/// @returns a value ranging from 0.0F to 1.0F representing the string's similarity 
+	static inline float similarity(const string_type &first, const string_type &second) {
+		int32_t distance = (int32_t)spell::wagner_fischer_distance(first, second);
+
+		const auto max_distance = std::max(first.size(), second.size());
+
+		std::cout << "similarity " << distance << " " << max_distance << '\n';
+
+		return 1.0F - (float(distance) / max_distance);
 	}
 
 };
