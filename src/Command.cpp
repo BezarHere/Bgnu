@@ -6,6 +6,7 @@
 
 #include "commands/HelpCommand.hpp"
 #include "commands/BuildCommand.hpp"
+#include "commands/NewCommand.hpp"
 
 constexpr size_t MaxCommandsCount = 8;
 
@@ -61,6 +62,7 @@ const CommandDB::command_ptr *CommandDB::get_commands(size_t &length) {
 void CommandDB::_load_commands() {
 	_add_command(std::make_unique<commands::HelpCommand>());
 	_add_command(std::make_unique<commands::BuildCommand>());
+	_add_command(std::make_unique<commands::NewCommand>());
 }
 
 void CommandDB::_add_command(command_ptr &&command) {
