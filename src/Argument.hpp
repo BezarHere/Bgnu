@@ -3,8 +3,47 @@
 
 struct Argument
 {
-	bool used = false;
+
+	inline Argument(const string &_value, bool used = false)
+		: value{_value}, m_used{used} {
+	}
+
+	inline void mark_used() { m_used = true; }
+	inline bool is_used() const { return m_used; }
+
+	/// @brief tries to use the argument (marking it as 'used')
+	/// @returns weather the argument can be used (false if it's already used or if this is null)
+	/// @note can be used on a nullptr, altho, it will returns false
+	inline bool try_use() {
+		if (this == nullptr)
+		{
+			return false;
+		}
+
+		if (this->m_used)
+		{
+			return false;
+		}
+
+		mark_used();
+
+		return true;
+	}
+
+	/// @returns the value of this argument, or `default_value` if this == nullptr
+	/// @note can be used on a nullptr, altho, it will returns false
+	inline const string &try_get_value(const string &default_value = "") const {
+		if (this == nullptr)
+		{
+			return default_value;
+		}
+
+		return value;
+	}
+
 	const string value = "";
+private:
+	bool m_used = false;
 };
 
 class ArgumentReader
@@ -12,35 +51,68 @@ class ArgumentReader
 public:
 	using char_type = string::value_type;
 
-	static ArgumentReader from_args(const char_type *argv[], size_t argc);
+	ArgumentReader(const char_type *argv[], size_t argc);
+	ArgumentReader(const Blob<const Argument> &args);
 
-	const Argument *get_next();
+	Argument &read();
 
-	const Argument *find_named(const string &name);
+	Argument *extract(const string &name);
+	Argument *extract_any(const Blob<const string> &names);
 
-	inline size_t count() const { return m_args.size(); }
-
-	inline const vector<Argument> &get_args() const { return m_args; }
-	inline size_t get_cursor() const { return m_cursor; }
-
-	inline void reset_cursor() { m_cursor = 0; }
-
-	inline ArgumentReader slice(size_t start, size_t end) const {
-		ArgumentReader reader{};
-		for (size_t i = start; i < end; i++)
+	template <typename _Pred>
+	inline Argument *extract_matching(_Pred &&pred) {
+		for (size_t i = 0; i < m_args.size(); i++)
 		{
-			reader.m_args.emplace_back(m_args[i]);
+			if (m_args[i].is_used())
+			{
+				continue;
+			}
+
+			if (pred(const_cast<const Argument &>(m_args[i])))
+			{
+				return &m_args[i];
+			}
 		}
-		return reader;
+		return nullptr;
 	}
 
+	size_t count() const {
+		size_t counter = 0;
+		for (const auto &arg : m_args)
+		{
+			if (!arg.is_used())
+			{
+				counter++;
+			}
+		}
+		return counter;
+	}
+
+	inline size_t empty() const {
+		for (const auto &arg : m_args)
+		{
+			if (!arg.is_used())
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+
+
+	inline const vector<Argument> &get_args() const { return m_args; }
+
+	inline ArgumentReader slice(size_t start, size_t end) const {
+		return ArgumentReader({m_args.data() + start, m_args.data() + end});
+	}
 	inline ArgumentReader slice(size_t start) const { return slice(start, m_args.size()); }
 
 private:
 	inline size_t _find_unused() const {
-		for (size_t i = m_cursor; i < m_args.size(); i++)
+		for (size_t i = 0; i < m_args.size(); i++)
 		{
-			if (!m_args[i].used)
+			if (!m_args[i].is_used())
 			{
 				return i;
 			}
@@ -49,6 +121,5 @@ private:
 	}
 
 private:
-	size_t m_cursor = 0;
 	vector<Argument> m_args;
 };
