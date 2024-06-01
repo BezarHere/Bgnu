@@ -25,10 +25,13 @@ public:
 	bool test(const FilePath &path) const;
 	bool test(const StrBlob &path) const;
 
-	inline bool test(const string &str) const { return test(StrBlob(str)); }
+	inline bool test(const string &str) const { return test(StrBlob(str.data(), str.length())); }
 	inline bool test(const string_char *cstr) const {
 		return test(StrBlob(cstr, string::traits_type::length(cstr)));
 	}
+
+	template <typename _T>
+	inline bool operator()(_T &&value) const { return test(value); }
 
 private:
 	struct Match

@@ -62,7 +62,7 @@ static Glob::SegmentCollection copy_segments(const Glob::SegmentCollection &coll
 static Glob::Segment parse_char_selector(const StrBlob &blob);
 
 Glob::Glob(const string &str)
-	: m_source{str}, m_segments{parse(str)} {
+	: m_source{str}, m_segments{parse({str.data(), str.length()})} {
 }
 
 Glob::~Glob() noexcept {
@@ -87,7 +87,7 @@ Glob &Glob::operator=(const Glob &copy) {
 }
 
 bool Glob::test(const FilePath &path) const {
-	return test(path.get_source());
+	return test(path.to_string());
 }
 
 bool Glob::test(const StrBlob &path) const {
