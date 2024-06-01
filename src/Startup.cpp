@@ -5,7 +5,7 @@
 FieldVar::Dict Startup::s_env = {};
 
 int Startup::start(ArgumentReader reader) {
-	if (reader.count() == 0)
+	if (reader.empty())
 	{
 		Logger::warning("no command passed, please pass a command and it's arguments");
 		return 1;
@@ -15,14 +15,15 @@ int Startup::start(ArgumentReader reader) {
 	_build_env();
 	CommandDB::_load_commands();
 
-	const Argument *command_arg = reader.get_next();
+	Argument &command_arg = reader.read();
+	command_arg.mark_used();
 
-	Command *command = CommandDB::get_command(command_arg->value);
+	Command *command = CommandDB::get_command(command_arg.value);
 
 	if (command == nullptr)
 	{
-		Logger::error("No command named '%s'", to_cstr(command_arg->value));
-		_check_misspelled_command(command_arg->value);
+		Logger::error("No command named '%s'", to_cstr(command_arg.value));
+		_check_misspelled_command(command_arg.value);
 		return 1;
 	}
 
