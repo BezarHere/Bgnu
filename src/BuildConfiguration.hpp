@@ -2,7 +2,7 @@
 #include "base.hpp"
 #include "FieldDataReader.hpp"
 #include "FilePath.hpp"
-#include "Error.hpp"
+#include "misc/Error.hpp"
 #include "Glob.hpp"
 
 enum class OptimizationType : uint8_t

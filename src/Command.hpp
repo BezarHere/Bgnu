@@ -1,6 +1,6 @@
 #pragma once
 #include "Argument.hpp"
-#include "Error.hpp"
+#include "misc/Error.hpp"
 #include <memory>
 
 class Command
