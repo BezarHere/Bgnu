@@ -1,4 +1,5 @@
 #pragma once
+#include <ostream>
 #include "Range.hpp"
 #include <array>
 #include <string>
@@ -48,7 +49,8 @@ public:
 	string_type get_name() const;
 	string_type get_extension() const;
 
-	StrBlob get_source() const;
+	StrBlob to_string() const;
+
 	Blob<const segment_type> get_segments() const;
 
 	iterator create_iterator() const;
@@ -59,16 +61,27 @@ public:
 
 	bool is_valid() const;
 
+	static const FilePath &working_directory();
+	static const FilePath &parent_directory();
+	static const FilePath &executable_path();
+
+	static string_type _get_working_directory();
+	static string_type _get_parent_directory();
+	static string_type _get_executable_path();
+
 	static constexpr bool is_directory_separator(const char_type character);
 	static constexpr bool is_valid_filename_char(const char_type character);
 	static constexpr bool is_valid_path_char(const char_type character);
+
+	static string_type _get_parent(const StrBlob &source);
+
 private:
 	struct Internal;
 	FilePath(Internal *data, size_t start, size_t end);
 
 	static void build_segments(Internal &internals);
 	static void resolve(Internal &internals, const string_type &base);
-	static bool process(TextBlock &text, size_t size);
+	static bool validate(TextBlock &text, size_t size);
 private:
 	Internal *m_internal;
 };
@@ -94,4 +107,11 @@ inline constexpr bool FilePath::is_valid_filename_char(const char_type character
 
 inline constexpr bool FilePath::is_valid_path_char(const char_type character) {
 	return is_valid_filename_char(character) || is_directory_separator(character);
+}
+
+namespace std
+{
+	inline ostream &operator<<(ostream &stream, const FilePath &filepath) {
+		return stream << '"' << filepath.to_string().data << '"';
+	}
 }
