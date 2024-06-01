@@ -23,7 +23,7 @@
             "exit_on_errors": true,
             "dynamically_linkable": true,
             "print_stats": true,
-            "simd_type": "sse",
+            "simd_type": "avx2",
             "include_dirs": [],
             "lib_dirs": [],
             "lib_names": [],
