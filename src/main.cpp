@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include "Logger.hpp"
+#include "FilePath.hpp"
 
 int main(int argc, const char *argv[]) {
 	for (int i = 0; i < argc; i++)
@@ -9,5 +10,5 @@ int main(int argc, const char *argv[]) {
 		Logger::debug("arg no.%d: '%s'", i, argv[i]);
 	}
 
-	return Startup::start(ArgumentReader::from_args(argv + 1, std::max(argc - 1, 0)));
+	return Startup::start(ArgumentReader(argv + 1, std::max(argc - 1, 0)));
 }
