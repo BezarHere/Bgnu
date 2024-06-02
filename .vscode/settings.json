@@ -6,6 +6,7 @@
 		"gonky",
 		"pfile",
 		"predefines",
+		"Resave",
 		"Typeless",
 		"valist"
 	],
@@ -67,7 +68,12 @@
 		"span": "cpp",
 		"streambuf": "cpp",
 		"typeinfo": "cpp",
-		"variant": "cpp"
+		"variant": "cpp",
+		"codecvt": "cpp",
+		"map": "cpp",
+		"cinttypes": "cpp",
+		"bitset": "cpp",
+		"regex": "cpp"
 	},
 	"C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
 		"readability-implicit-bool-conversion",
