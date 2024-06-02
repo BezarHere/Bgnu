@@ -1,19 +1,19 @@
 #pragma once
 #include "../Command.hpp"
+#include "../Project.hpp"
+
+#include <regex>
 
 namespace commands
 {
-	
+
 	class BuildCommand : public Command
 	{
 	public:
 		inline BuildCommand() : Command("build", "builds a project") {
 		}
 
-		inline Error execute(ArgumentReader &reader) override {
-			
-			return Error::Ok;
-		}
+		Error execute(ArgumentReader &reader) override;
 	};
 
 }
