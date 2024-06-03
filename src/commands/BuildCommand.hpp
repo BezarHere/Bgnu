@@ -14,6 +14,8 @@ namespace commands
 		}
 
 		Error execute(ArgumentReader &reader) override;
+
+		static FilePath _default_filepath();
 	};
 
 }
