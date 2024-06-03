@@ -87,7 +87,7 @@ Glob &Glob::operator=(const Glob &copy) {
 }
 
 bool Glob::test(const FilePath &path) const {
-	return test(path.to_string());
+	return test(path.get_text());
 }
 
 bool Glob::test(const StrBlob &path) const {
