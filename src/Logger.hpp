@@ -8,6 +8,7 @@
 
 class Logger : public Console
 {
+	friend class Startup;
 public:
 
 	static void _push_state();
@@ -182,6 +183,11 @@ public:
 		fputc('\n', stdout);
 
 		Console::pop_state();
+	}
+
+private:
+	static inline void _make_verbose() {
+		s_verbose = true;
 	}
 
 private:
