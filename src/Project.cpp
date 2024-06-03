@@ -57,3 +57,7 @@ Project Project::from_data(const FieldVar::Dict &data, ErrorReport &result) {
 
 	return project;
 }
+
+Error ProjectOutputData::ensure_available() const {
+	return Error();
+}
