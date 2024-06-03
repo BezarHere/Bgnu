@@ -1,6 +1,5 @@
 #include "Argument.hpp"
 
-
 ArgumentReader::ArgumentReader(const char_type *argv[], size_t argc) {
 	for (size_t i = 0; i < argc; i++)
 	{
@@ -29,7 +28,7 @@ Argument *ArgumentReader::extract(const string &name) {
 			continue;
 		}
 
-		if (m_args[i].value == name) {
+		if (m_args[i].get_value() == name) {
 			return &m_args[i];
 		}
 	}
@@ -49,4 +48,21 @@ Argument *ArgumentReader::extract_any(const Blob<const string> &names) {
 		return arg;
 	}
 	return nullptr;
+}
+
+void ArgumentReader::simplify() {
+
+	// reverse iterate to reduce moving values
+	for (size_t i = 1; i <= m_args.size(); i++)
+	{
+		const size_t rindex = m_args.size() - i;
+
+		if (m_args[rindex].is_used())
+		{
+			m_args.erase(m_args.begin() + static_cast<ptrdiff_t>(rindex));
+
+			i--;
+		}
+	}
+
 }

@@ -4,45 +4,46 @@
 struct Argument
 {
 
-	inline Argument(const string &_value, bool used = false)
-		: value{_value}, m_used{used} {
+	inline Argument(const string &value, bool used = false)
+		: m_value{value}, m_used{used} {
 	}
 
 	inline void mark_used() { m_used = true; }
 	inline bool is_used() const { return m_used; }
+	inline const string &get_value() const { return m_value; }
 
 	/// @brief tries to use the argument (marking it as 'used')
 	/// @returns weather the argument can be used (false if it's already used or if this is null)
 	/// @note can be used on a nullptr, altho, it will returns false
-	inline bool try_use() {
-		if (this == nullptr)
+	static inline bool try_use(Argument *arg) {
+		if (arg == nullptr)
 		{
 			return false;
 		}
 
-		if (this->m_used)
+		if (arg->m_used)
 		{
 			return false;
 		}
 
-		mark_used();
+		arg->mark_used();
 
 		return true;
 	}
 
 	/// @returns the value of this argument, or `default_value` if this == nullptr
 	/// @note can be used on a nullptr, altho, it will returns false
-	inline const string &try_get_value(const string &default_value = "") const {
-		if (this == nullptr)
+	static inline const string &try_get_value(const Argument *arg, const string &default_value = "") {
+		if (arg == nullptr)
 		{
 			return default_value;
 		}
 
-		return value;
+		return arg->m_value;
 	}
 
-	const string value = "";
 private:
+	string m_value = "";
 	bool m_used = false;
 };
 
@@ -99,14 +100,16 @@ public:
 		return true;
 	}
 
-
-
 	inline const vector<Argument> &get_args() const { return m_args; }
 
 	inline ArgumentReader slice(size_t start, size_t end) const {
 		return ArgumentReader({m_args.data() + start, m_args.data() + end});
 	}
+
 	inline ArgumentReader slice(size_t start) const { return slice(start, m_args.size()); }
+
+	// removes all the used arguments
+	void simplify();
 
 private:
 	inline size_t _find_unused() const {
