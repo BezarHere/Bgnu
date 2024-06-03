@@ -1,5 +1,6 @@
 #pragma once
 #include "base.hpp"
+#include "Range.hpp"
 #include <string.h>
 #include "misc/SpellChecker.hpp"
 #include "Logger.hpp"
@@ -126,6 +127,59 @@ struct StringUtils
 		const auto max_distance = std::max(first.size(), second.size());
 
 		return 1.0F - (float(distance) / max_distance);
+	}
+
+	/// @brief returns an inner range for the source,
+	/// @brief skipping leading and trailing chars matching `pred`
+	/// @tparam _Pred predicate type
+	/// @param source the source string
+	/// @param pred predicate to match the range
+	/// @returns a range skipping any leading/trailing chars matching pred 
+	template <typename _Pred>
+	static inline IndexRange range(const StrBlob &source, _Pred &&pred) {
+
+		// count of leading chars matching `pred`
+		size_t leading = source.size;
+
+		for (size_t i = 0; i < source.size; i++)
+		{
+			if (pred(source[i]))
+			{
+				leading++;
+			}
+
+			break;
+		}
+
+		if (leading == source.size)
+		{
+			return {source.size, source.size};
+		}
+
+		// count of trailing chars matching `pred`
+		size_t trailing = 0;
+
+		for (size_t i = source.size; i > leading; i--)
+		{
+			const size_t rindex = (i - 1);
+
+			if (pred(source[rindex]))
+			{
+				trailing++;
+			}
+
+			break;
+		}
+
+		return {leading, source.size - trailing};
+	}
+
+	static ALWAYS_INLINE IndexRange printable_range(const StrBlob &source) {
+		return range(source, &isprint);
+	}
+	
+	static ALWAYS_INLINE IndexRange whitespace_range(const StrBlob &source) {
+		return range(source, &iswspace);
 	}
 
 };
