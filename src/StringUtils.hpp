@@ -8,8 +8,8 @@
 
 struct StringUtils
 {
-	using string_type = std::string;
-	using char_type = string_type::value_type;
+	using string_type = string;
+	using char_type = string_char;
 	using traits_type = string_type::traits_type;
 
 	using wide_string_type = std::wstring;
@@ -95,26 +95,62 @@ struct StringUtils
 		return max_count;
 	}
 
-	static inline string_type narrow(const wide_char_type *wstr, const size_t max_count) {
-		const size_t dst_sz = wcsnlen_s(wstr, max_count) * 2 + 1;
-		string_type str{};
-		str.resize(dst_sz);
+	static inline string_type narrow(const wide_char_type *src_str, const size_t max_count) {
+		const size_t dst_sz = wcsnlen_s(src_str, max_count) * 2 + 1;
+		string_type dst_str{};
+		dst_str.resize(dst_sz);
 
 		size_t chars_converted = 0;
 		errno_t error =
-			wcstombs_s(&chars_converted, str.data(), dst_sz * sizeof(char_type), wstr, max_count);
+			wcstombs_s(&chars_converted, dst_str.data(), dst_sz * sizeof(char_type), src_str, max_count);
 
 		if (error != 0)
 		{
 			Logger::error(
 				"Error while narrowing string \"%S\" max count=%llu, errno=%d",
-				wstr,
+				src_str,
 				max_count,
 				error
 			);
 		}
 
-		return str;
+		return dst_str;
+	}
+
+	static inline wide_string_type widen(const char_type *src_str, const size_t max_count) {
+		const size_t dst_sz = mblen(src_str, max_count) + 1;
+		wide_string_type dst_str{};
+		dst_str.resize(dst_sz);
+
+		size_t chars_converted = 0;
+		errno_t error =
+			mbstowcs_s(&chars_converted, dst_str.data(), dst_sz * sizeof(wide_char_type), src_str, max_count);
+
+		if (error != 0)
+		{
+			Logger::error(
+				"Error while widening string \"%S\" max count=%llu, errno=%d",
+				dst_str,
+				max_count,
+				error
+			);
+		}
+
+		return dst_str;
+	}
+
+	template <class _Str>
+	static inline _Str convert(const _Str::value_type *src_str, const size_t max_count) {
+		(void)max_count;
+		return _Str(src_str);
+	}
+
+	static inline wide_string_type convert(const char_type *src_str, const size_t max_count) {
+		return widen(src_str, max_count);
+	}
+
+	static inline string_type convert(const wide_char_type *src_str, const size_t max_count) {
+		return narrow(src_str, max_count);
 	}
 
 	/// @brief 
@@ -177,7 +213,7 @@ struct StringUtils
 	static ALWAYS_INLINE IndexRange printable_range(const StrBlob &source) {
 		return range(source, &isprint);
 	}
-	
+
 	static ALWAYS_INLINE IndexRange whitespace_range(const StrBlob &source) {
 		return range(source, &iswspace);
 	}
