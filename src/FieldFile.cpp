@@ -711,9 +711,9 @@ void FieldFileWriter::write(const FieldVar::Dict &data, bool striped) {
 	if (!striped)
 	{
 		stream << "{\n";
+		++m_indent_level;
 	}
 
-	++m_indent_level;
 
 	for (const auto &kv : data)
 	{
@@ -723,10 +723,10 @@ void FieldFileWriter::write(const FieldVar::Dict &data, bool striped) {
 		stream << '\n';
 	}
 
-	--m_indent_level;
 
 	if (!striped)
 	{
+		--m_indent_level;
 		write_indent();
 		stream << '}';
 	}
@@ -800,7 +800,7 @@ void FieldFile::dump(const string &filepath, const FieldVar::Dict &data) {
 string FieldFile::write(const FieldVar::Dict &data) {
 	std::ostringstream output{};
 	FieldFileWriter writer{output};
-	writer.write(data);
+	writer.write(data, true);
 	return output.str();
 }
 
