@@ -54,17 +54,24 @@ FilePath::Internal::Internal(const string_type &str)
 	// is the path too long? (long strings might not be actual paths)
 	if (text_length >= MaxPathLength)
 	{
-		//! path truncated
+		Logger::error(
+			"Path source too long: \"%s\" is %llu chars, max is %llu chars; truncating.",
+			to_cstr(str), text_length, MaxPathLength - 1
+		);
 		text_length = MaxPathLength - 1;
 	}
 
 	string_type::traits_type::copy(text.data(), str.c_str(), text_length);
 	text[text_length] = char_type{};
 
-	if (FilePath::validate(text, text_length))
+	if (FilePath::preprocess(text.data(), text_length))
 	{
 		//? do something
 	}
+
+	Blob<TextBlock::value_type> blob{text.data(), text_length};
+
+
 
 	// build the segments
 	FilePath::build_segments(*this);
@@ -131,7 +138,7 @@ FilePath::Internal::Internal(const Internal &from, const IndexRange &segments_ra
 
 	text[text_length] = char_type{};
 
-	if (FilePath::validate(text, text_length))
+	if (FilePath::preprocess(text.data(), text_length))
 	{
 		//? do something
 	}
@@ -235,7 +242,7 @@ FilePath::string_type FilePath::get_extension() const {
 	);
 }
 
-StrBlob FilePath::to_string() const {
+StrBlob FilePath::get_text() const {
 	return {m_internal->text.data(), m_internal->text_length};
 }
 
@@ -245,6 +252,42 @@ Blob<const FilePath::segment_type> FilePath::get_segments() const {
 
 FilePath::iterator FilePath::create_iterator() const {
 	return iterator(m_internal->text.data());
+}
+
+FilePath FilePath::join_path(const StrBlob &path) const {
+	if (path.size == 0)
+	{
+		return *this;
+	}
+
+	if (path.size >= MaxPathLength)
+	{
+		Logger::error(
+			"path to join \"%s\" is too long (%llu chars), max path length is %llu chars",
+			path.data,
+			path.size,
+			MaxPathLength - 1
+		);
+
+		return *this;
+	}
+
+	const volatile StrBlob source = get_text();
+
+	string_type result{};
+	result.resize(source.size + 1 + path.size);
+
+
+	char_type *start = result.data();
+	string_type::traits_type::copy(start, source.data, source.size);
+	start += source.size;
+
+	*start = DirectorySeparator;
+	start++;
+
+	string_type::traits_type::copy(start, path.data, path.size);
+
+	return FilePath(result);
 }
 
 bool FilePath::exists() const {
@@ -263,22 +306,22 @@ bool FilePath::is_valid() const {
 	return m_internal && m_internal->segments_count && m_internal->text_length;
 }
 
-const FilePath &FilePath::working_directory() {
-	static const FilePath path{_get_working_directory()};
+const FilePath &FilePath::get_working_directory() {
+	static const FilePath path{_working_directory()};
 	return path;
 }
 
-const FilePath &FilePath::parent_directory() {
-	static const FilePath path{_get_parent_directory()};
+const FilePath &FilePath::get_parent_directory() {
+	static const FilePath path{_parent_directory()};
 	return path;
 }
 
-const FilePath &FilePath::executable_path() {
-	static const FilePath path{_get_executable_path()};
+const FilePath &FilePath::get_executable_path() {
+	static const FilePath path{_executable_path()};
 	return path;
 }
 
-FilePath::string_type FilePath::_get_working_directory() {
+FilePath::string_type FilePath::_working_directory() {
 	char_type buffer[MaxPathLength];
 
 	if (_getcwd(buffer, std::size(buffer) - 1) == nullptr)
@@ -294,15 +337,15 @@ FilePath::string_type FilePath::_get_working_directory() {
 	return string_type(buffer);
 }
 
-FilePath::string_type FilePath::_get_parent_directory() {
-	string_type exc_path = _get_executable_path();
+FilePath::string_type FilePath::_parent_directory() {
+	string_type exc_path = _executable_path();
 	string_type exc_parent = _get_parent({exc_path.data(), exc_path.length()});
 
 	// FIXME: return drive character in windows
 	return exc_parent.empty() ? "/" : exc_parent;
 }
 
-FilePath::string_type FilePath::_get_executable_path() {
+FilePath::string_type FilePath::_executable_path() {
 	char_type *cstr = nullptr;
 
 	//* docs do not mention anything about freeing the output ptr
@@ -378,15 +421,26 @@ void FilePath::resolve(Internal &internals, const string_type &base) {
 	// TODO: substitute '..' & '.' to make the path contained in `internals` absolute
 }
 
-bool FilePath::validate(TextBlock &text, size_t size) {
+bool FilePath::preprocess(Blob<TextBlock::value_type> &text) {
 	bool driver_column = false;
 
-	for (size_t i = 0; i < size; i++)
+	size_t drag_offset = 0;
+	size_t last_dir_separator = npos;
+
+	for (size_t i = 0; i < text.size; i++)
 	{
-		if (text[i] == '\\')
+		if (is_directory_separator(text[i]))
 		{
-			text[i] = '/';
+			if (last_dir_separator == i - 1)
+			{
+				drag_offset++;
+			}
+
+			last_dir_separator = i;
+			text[i] = DirectorySeparator;
 		}
+
+		text[i - drag_offset] = text[i];
 
 		if (!FilePath::is_valid_path_char(text[i]))
 		{
@@ -398,8 +452,8 @@ bool FilePath::validate(TextBlock &text, size_t size) {
 
 			Logger::error(
 				"FilePath: Invalid path \"%.*s\", Bad char '%c' [%llu]",
-				size,
-				text.data(),
+				text.size,
+				text.data,
 				text[i],
 				i
 			);
@@ -407,6 +461,10 @@ bool FilePath::validate(TextBlock &text, size_t size) {
 			return false;
 		}
 	}
+
+	text.size -= drag_offset;
+	text[text.size] = char_type();
+
 	return true;
 }
 

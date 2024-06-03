@@ -49,11 +49,19 @@ public:
 	string_type get_name() const;
 	string_type get_extension() const;
 
-	StrBlob to_string() const;
+	StrBlob get_text() const;
 
 	Blob<const segment_type> get_segments() const;
 
 	iterator create_iterator() const;
+
+	FilePath join_path(const StrBlob &path) const;
+
+	inline FilePath join_path(const FilePath &path) const;
+	inline FilePath join_path(const string_type &path) const;
+	inline FilePath join_path(const char_type *path) const {
+		return join_path(StrBlob(path, string_type::traits_type::length(path)));
+	}
 
 	bool exists() const;
 	bool is_file() const;
@@ -61,13 +69,13 @@ public:
 
 	bool is_valid() const;
 
-	static const FilePath &working_directory();
-	static const FilePath &parent_directory();
-	static const FilePath &executable_path();
+	static const FilePath &get_working_directory();
+	static const FilePath &get_parent_directory();
+	static const FilePath &get_executable_path();
 
-	static string_type _get_working_directory();
-	static string_type _get_parent_directory();
-	static string_type _get_executable_path();
+	static string_type _working_directory();
+	static string_type _parent_directory();
+	static string_type _executable_path();
 
 	static constexpr bool is_directory_separator(const char_type character);
 	static constexpr bool is_valid_filename_char(const char_type character);
@@ -81,7 +89,15 @@ private:
 
 	static void build_segments(Internal &internals);
 	static void resolve(Internal &internals, const string_type &base);
-	static bool validate(TextBlock &text, size_t size);
+	static bool preprocess(Blob<TextBlock::value_type> &text);
+
+	static inline bool preprocess(TextBlock::value_type *text, size_t &length) {
+		Blob<TextBlock::value_type> blob{text, length};
+		bool result = preprocess(blob);
+		length = blob.length();
+		return result;
+	}
+
 private:
 	Internal *m_internal;
 };
@@ -109,9 +125,17 @@ inline constexpr bool FilePath::is_valid_path_char(const char_type character) {
 	return is_valid_filename_char(character) || is_directory_separator(character);
 }
 
+inline FilePath FilePath::join_path(const FilePath &path) const {
+	return join_path(path.get_text());
+}
+
+inline FilePath FilePath::join_path(const string_type &path) const {
+	return join_path(StrBlob(path.data(), path.length()));
+}
+
 namespace std
 {
 	inline ostream &operator<<(ostream &stream, const FilePath &filepath) {
-		return stream << '"' << filepath.to_string().data << '"';
+		return stream << '"' << filepath.get_text().data << '"';
 	}
 }
