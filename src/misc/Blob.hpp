@@ -23,8 +23,13 @@ struct Blob final
 		}
 	}
 
+	// copy non-const value_type blobs
+	inline constexpr Blob(const Blob<std::remove_const_t<value_type>> &copy)
+		: size{copy.size}, data{copy.data} {
+	}
+
 	template <size_type N>
-	inline constexpr Blob(value_type (&memory)[N]) noexcept : size{N}, data{memory} {}
+	inline constexpr Blob(value_type(&memory)[N]) noexcept : size{N}, data{memory} {}
 
 	// blob does not own the memory, so we can directly use it for container types
 	template <class Cnt, std::enable_if_t<!std::is_void_v<Cnt::size>>>
