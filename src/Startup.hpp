@@ -8,7 +8,7 @@ public:
 	static int start(ArgumentReader reader);
 
 private:
-	static void _build_env();
+	static void _build_env(ArgumentReader &reader);
 	static void _check_misspelled_command(const string &name);
 
 

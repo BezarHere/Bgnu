@@ -1,6 +1,7 @@
 #include "Startup.hpp"
 #include "Logger.hpp"
 #include "Command.hpp"
+#include "FieldFile.hpp"
 
 FieldVar::Dict Startup::s_env = {};
 
@@ -11,19 +12,20 @@ int Startup::start(ArgumentReader reader) {
 		return 1;
 	}
 
+	_build_env(reader);
+	reader.simplify();
 
-	_build_env();
 	CommandDB::_load_commands();
 
 	Argument &command_arg = reader.read();
 	command_arg.mark_used();
 
-	Command *command = CommandDB::get_command(command_arg.value);
+	Command *command = CommandDB::get_command(command_arg.get_value());
 
 	if (command == nullptr)
 	{
-		Logger::error("No command named '%s'", to_cstr(command_arg.value));
-		_check_misspelled_command(command_arg.value);
+		Logger::error("No command named '%s'", to_cstr(command_arg.get_value()));
+		_check_misspelled_command(command_arg.get_value());
 		return 1;
 	}
 
@@ -60,8 +62,20 @@ int Startup::start(ArgumentReader reader) {
 	return (int)error;
 }
 
-void Startup::_build_env() {
-	s_env.emplace("min_broadcast_conf", 0.65F);
+void Startup::_build_env(ArgumentReader &reader) {
+	static const string VerboseArgs[] = {"-v", "--verbose"};
+
+	if (Argument::try_use(reader.extract_any(VerboseArgs)))
+	{
+		Logger::_make_verbose();
+	}
+
+	s_env.emplace("verbose", Logger::is_verbose());
+
+	s_env.emplace("command_min_confidence", 0.65F);
+
+	string env_str = FieldFile::write(s_env);
+	Logger::debug("Enviornment variables: %s", to_cstr(env_str));
 }
 
 void Startup::_check_misspelled_command(const string &name) {
@@ -81,7 +95,7 @@ void Startup::_check_misspelled_command(const string &name) {
 		suggestion.confidence
 	);
 
-	if (suggestion.confidence < (float)s_env.at("min_broadcast_conf"))
+	if (suggestion.confidence < (float)s_env.at("command_min_confidence"))
 	{
 		return;
 	}
