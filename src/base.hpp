@@ -32,7 +32,13 @@ static constexpr size_t npos = (size_t)-1;
 #endif
 
 static ALWAYS_INLINE constexpr const char *to_cstr(const char *value) { return value; }
+template <typename _T>
+static ALWAYS_INLINE constexpr const char *to_cstr(const Blob<_T> &value) { return value.data; }
 static ALWAYS_INLINE const char *to_cstr(const string &value) { return value.c_str(); }
+
+ALWAYS_INLINE constexpr const char *to_boolalpha(const bool value) {
+	return value ? "true" : "false";
+}
 
 namespace inner
 {
