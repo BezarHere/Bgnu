@@ -20,10 +20,13 @@ public:
 
 	using string_type = std::string;
 	using char_type = typename string_type::value_type;
+	
 
 	static constexpr FilePath::char_type DirectorySeparator = '/';
 
 	typedef IndexRange segment_type;
+
+	typedef Blob<const char_type> string_blob; 
 
 	typedef std::array<char_type, MaxPathLength> TextBlock;
 	typedef std::array<segment_type, MaxPathSegCount> SegmentBlock;
@@ -62,6 +65,9 @@ public:
 	inline FilePath join_path(const char_type *path) const {
 		return join_path(StrBlob(path, string_type::traits_type::length(path)));
 	}
+
+	errno_t create_file() const;
+	errno_t create_directory() const;
 
 	bool exists() const;
 	bool is_file() const;

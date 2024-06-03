@@ -3,6 +3,11 @@
 #include "misc/Error.hpp"
 #include <direct.h>
 
+namespace fs
+{
+	using namespace std::filesystem;
+}
+
 // as Mathias Begert on https://stackoverflow.com/questions/32173890
 // dot files can have extensions those the prefix dot is a part of the filename
 #define DOT_FILE_EXTENSIONLESS
@@ -288,6 +293,18 @@ FilePath FilePath::join_path(const StrBlob &path) const {
 	string_type::traits_type::copy(start, path.data, path.size);
 
 	return FilePath(result);
+}
+
+errno_t FilePath::create_file() const {
+
+	return errno_t();
+}
+
+errno_t FilePath::create_directory() const {
+	std::error_code err_code;
+	fs::create_directories(fs::path(m_internal->text.data()), err_code);
+
+	return errno_t();
 }
 
 bool FilePath::exists() const {
