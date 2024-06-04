@@ -1,5 +1,5 @@
 #include "BuildConfiguration.hpp"
-#include "StringUtils.hpp"
+#include "StringTools.hpp"
 #include "FieldDataReader.hpp"
 #include "Logger.hpp"
 
@@ -336,7 +336,7 @@ OptimizationType BuildConfiguration::get_optimization_type(const string &name) {
 
 	for (size_t i = 1; i < OptimizationTypeNames.size(); ++i)
 	{
-		if (StringUtils::equal_insensitive(OptimizationTypeNames[i], name.c_str(), name.size()))
+		if (StringTools::equal_insensitive(OptimizationTypeNames[i], name.c_str(), name.size()))
 		{
 			return OptimizationType(i);
 		}
@@ -349,7 +349,7 @@ OptimizationDegree BuildConfiguration::get_optimization_degree(const string &nam
 
 	for (size_t i = 1; i < OptimizationDegreeNames.size(); ++i)
 	{
-		if (StringUtils::equal_insensitive(OptimizationDegreeNames[i], name.c_str(), name.size()))
+		if (StringTools::equal_insensitive(OptimizationDegreeNames[i], name.c_str(), name.size()))
 		{
 			return OptimizationDegree(i);
 		}
@@ -362,7 +362,7 @@ WarningLevel BuildConfiguration::get_warning_level(const string &name) {
 
 	for (size_t i = 1; i < WarningLevelNames.size(); ++i)
 	{
-		if (StringUtils::equal_insensitive(WarningLevelNames[i], name.c_str(), name.size()))
+		if (StringTools::equal_insensitive(WarningLevelNames[i], name.c_str(), name.size()))
 		{
 			return WarningLevel(i);
 		}
@@ -375,7 +375,7 @@ StandardType BuildConfiguration::get_standard_type(const string &name) {
 
 	for (size_t i = 1; i < StandardTypeNames.size(); ++i)
 	{
-		if (StringUtils::equal_insensitive(StandardTypeNames[i], name.c_str(), name.size()))
+		if (StringTools::equal_insensitive(StandardTypeNames[i], name.c_str(), name.size()))
 		{
 			return StandardType(i);
 		}
@@ -388,7 +388,7 @@ SIMDType BuildConfiguration::get_simd_type(const string &name) {
 
 	for (size_t i = 1; i < SIMDTypeNames.size(); ++i)
 	{
-		if (StringUtils::equal_insensitive(SIMDTypeNames[i], name.c_str(), name.size()))
+		if (StringTools::equal_insensitive(SIMDTypeNames[i], name.c_str(), name.size()))
 		{
 			return SIMDType(i);
 		}

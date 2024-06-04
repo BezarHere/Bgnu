@@ -2,7 +2,7 @@
 
 #include <map>
 #include "Logger.hpp"
-#include "StringUtils.hpp"
+#include "StringTools.hpp"
 
 #include "commands/HelpCommand.hpp"
 #include "commands/BuildCommand.hpp"
@@ -31,7 +31,7 @@ Command *CommandDB::get_command(const string &name) {
 }
 
 CommandDB::CommandSuggestion CommandDB::get_suggestion(const string &name) {
-	const string lower_name = StringUtils::to_lower(name);
+	const string lower_name = StringTools::to_lower(name);
 
 	CommandDB::CommandSuggestion suggestion;
 	suggestion.confidence = 0.0F;
@@ -39,7 +39,7 @@ CommandDB::CommandSuggestion CommandDB::get_suggestion(const string &name) {
 
 	for (size_t i = 0; i < s_data.commands_count; i++)
 	{
-		float similarity = StringUtils::similarity(lower_name, s_data.commands[i]->name);
+		float similarity = StringTools::similarity(lower_name, s_data.commands[i]->name);
 		if (similarity > suggestion.confidence)
 		{
 			suggestion.confidence = similarity;

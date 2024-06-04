@@ -6,7 +6,7 @@
 #include "Logger.hpp"
 
 
-struct StringUtils
+struct StringTools
 {
 	using string_type = string;
 	using char_type = string_char;
