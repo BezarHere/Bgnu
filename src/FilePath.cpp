@@ -1,7 +1,9 @@
 #include "FilePath.hpp"
 #include "Logger.hpp"
 #include "misc/Error.hpp"
+
 #include <direct.h>
+#include <algorithm>
 
 namespace fs
 {
@@ -9,7 +11,7 @@ namespace fs
 }
 
 // as Mathias Begert on https://stackoverflow.com/questions/32173890
-// dot files can have extensions those the prefix dot is a part of the filename
+// dot files can have extensions thus the prefix dot is a part of the filename
 #define DOT_FILE_EXTENSIONLESS
 
 /// @brief finds where the extension starts, if there is an extension
@@ -41,10 +43,40 @@ static inline size_t find_extension(const FilePath::char_type *filename, size_t 
 #endif
 }
 
+enum class RelationSegmentType : uint8_t
+{
+	None = 0,
+
+	// just a ordinary segment path
+	Normal,
+	// should be treated like normal, no effect except being deleted
+	Current,
+
+	Parent, // go one directory up if possible
+
+	DriveLetter, // a drive letter (win32) anchor the path to said drive
+};
+
+static constexpr RelationSegmentType
+get_segment_relation_type(const FilePath::string_blob &segment);
+
+// the returned blob is either to a static pointer or to a slice in base, thus,
+// the returned blob data SHOULD NOT be deleted
+// also, returned blob might not have a null char at it's end
+static FilePath::string_blob get_root_path(const FilePath::string_blob &base);
+
 struct FilePath::Internal
 {
 	Internal(const string_type &str);
 	Internal(const Internal &from, const IndexRange &segments_range);
+
+	inline Blob<const SegmentBlock::value_type> get_segments() const {
+		return {segments.data(), segments_count};
+	}
+
+	inline string_blob get_text() const {
+		return {text.data(), text_length};
+	}
 
 	size_t segments_count;
 	SegmentBlock segments;
@@ -75,8 +107,6 @@ FilePath::Internal::Internal(const string_type &str)
 	}
 
 	Blob<TextBlock::value_type> blob{text.data(), text_length};
-
-
 
 	// build the segments
 	FilePath::build_segments(*this);
@@ -228,7 +258,7 @@ FilePath::string_type FilePath::get_name() const {
 FilePath::string_type FilePath::get_extension() const {
 	if (!is_valid())
 	{
-		return "";
+		return EmptyString;
 	}
 
 
@@ -247,19 +277,19 @@ FilePath::string_type FilePath::get_extension() const {
 	);
 }
 
-StrBlob FilePath::get_text() const {
-	return {m_internal->text.data(), m_internal->text_length};
+FilePath::string_blob FilePath::get_text() const {
+	return m_internal->get_text();
 }
 
 Blob<const FilePath::segment_type> FilePath::get_segments() const {
-	return {m_internal->segments.data(), m_internal->segments_count};
+	return m_internal->get_segments();
 }
 
 FilePath::iterator FilePath::create_iterator() const {
 	return iterator(m_internal->text.data());
 }
 
-FilePath FilePath::join_path(const StrBlob &path) const {
+FilePath FilePath::join_path(const string_blob &path) const {
 	if (path.size == 0)
 	{
 		return *this;
@@ -323,6 +353,13 @@ bool FilePath::is_valid() const {
 	return m_internal && m_internal->segments_count && m_internal->text_length;
 }
 
+void FilePath::resolve(const FilePath &base) {
+	string_type resolved_str = _resolve_path(m_internal->get_text(), base.get_text());
+
+	m_internal->~Internal();
+	new (m_internal) Internal(resolved_str);
+}
+
 const FilePath &FilePath::get_working_directory() {
 	static const FilePath path{_working_directory()};
 	return path;
@@ -356,10 +393,10 @@ FilePath::string_type FilePath::_working_directory() {
 
 FilePath::string_type FilePath::_parent_directory() {
 	string_type exc_path = _executable_path();
-	string_type exc_parent = _get_parent({exc_path.data(), exc_path.length()});
+	string_blob exc_parent = _get_parent({exc_path.data(), exc_path.length()});
 
 	// FIXME: return drive character in windows
-	return exc_parent.empty() ? "/" : exc_parent;
+	return exc_parent.empty() ? "/" : string(exc_parent.data, exc_parent.size);
 }
 
 FilePath::string_type FilePath::_executable_path() {
@@ -377,25 +414,16 @@ FilePath::string_type FilePath::_executable_path() {
 	return string_type(cstr);
 }
 
-FilePath::string_type FilePath::_get_parent(const StrBlob &source) {
-	size_t anchor = npos;
+FilePath::string_blob FilePath::_get_parent(const string_blob &source) {
+	const size_t anchor = _get_last_separator(source);
 
-	for (size_t i = source.size; i > 0; i--)
-	{
-		if (is_directory_separator(source[i - 1]))
-		{
-			anchor = i - 1;
-			break;
-		}
-	}
-
-	// no separator found, this path is at base-level and has no parent
+	// no separator found or this path is at base-level and has no parent
 	if (anchor == npos)
 	{
-		return "";
+		return string_blob();
 	}
 
-	return string_type(source.data, anchor);
+	return string_blob(source.data, anchor);
 }
 
 FilePath::FilePath(Internal *data, size_t start, size_t end)
@@ -434,8 +462,81 @@ void FilePath::build_segments(Internal &internals) {
 	}
 }
 
-void FilePath::resolve(Internal &internals, const string_type &base) {
-	// TODO: substitute '..' & '.' to make the path contained in `internals` absolute
+FilePath::string_type FilePath::_resolve_path(const string_blob &text, const string_blob &base) {
+	const bool root_start = is_directory_separator(text[0]);
+
+	string_type result_str{};
+	result_str.reserve(MaxPathLength * 2);
+
+	if (root_start)
+	{
+		string_blob root = get_root_path(base);
+
+		result_str.append(root.data, root.size);
+	}
+	else
+	{
+		result_str.append(base.data, base.length());
+	}
+
+	size_t last_anchor = 0;
+
+	// start after the first char, if it can be processed then it had been above 
+	for (size_t i = 1; i <= text.size; i++)
+	{
+		if (is_directory_separator(text[i]) || i == text.size)
+		{
+			const string_blob segment_source = text.slice(last_anchor, i);
+
+			RelationSegmentType rel_type = get_segment_relation_type(segment_source);
+
+			// "some_path"
+			if (rel_type == RelationSegmentType::Normal)
+			{
+				result_str \
+					.append(1, DirectorySeparator)
+					.append(segment_source.data, segment_source.length());
+			}
+			// ".."
+			else if (rel_type == RelationSegmentType::Parent)
+			{
+				string_blob result_blob = {result_str.data(), result_str.length()};
+
+				const size_t parent_sep = _get_last_separator(result_blob);
+
+				// no parent, go back to root
+				if (parent_sep == npos)
+				{
+					string_blob root = get_root_path(result_blob);
+					string_type root_str = string_type(root.data, root.length());
+
+					result_str.assign(root_str);
+				}
+				else
+				{
+					result_str.resize(parent_sep);
+				}
+			}
+			// drive letters ("E:", "C:")
+			else if (rel_type == RelationSegmentType::DriveLetter)
+			{
+				string_type drive_str = string_type(segment_source.data, segment_source.length());
+				result_str.assign(drive_str);
+			}
+			// current ('.')
+			else
+			{
+				// skip 'current' segments
+			}
+
+			// no need to process next char 
+			i++;
+
+			last_anchor = i;
+		}
+	}
+
+	return result_str;
 }
 
 bool FilePath::preprocess(Blob<TextBlock::value_type> &text) {
@@ -485,3 +586,37 @@ bool FilePath::preprocess(Blob<TextBlock::value_type> &text) {
 	return true;
 }
 
+constexpr RelationSegmentType get_segment_relation_type(const FilePath::string_blob &segment) {
+
+	// can't be anything except normal or current
+	if (segment.size <= 1)
+	{
+		return (segment.size == 1 && segment[0] == '.') ?
+			RelationSegmentType::Current : RelationSegmentType::Normal;
+	}
+
+	if (segment.size == 2)
+	{
+		if (segment[0] == '.' && segment[1] == '.')
+		{
+			return RelationSegmentType::Parent;
+		}
+
+		if (std::isalpha(segment[0]) && segment[1] == ':')
+		{
+			return RelationSegmentType::DriveLetter;
+		}
+	}
+
+	return RelationSegmentType::Normal;
+}
+
+FilePath::string_blob get_root_path(const FilePath::string_blob &base) {
+#ifdef _WIN32
+	LOG_ASSERT_V(FilePath::is_valid_drive_root(base), "Invalid base path");
+
+	return FilePath::string_blob(base.data, 2);
+#else
+	return FilePath::string_blob(&FilePath::DirectorySeparator, 1);
+#endif
+}
