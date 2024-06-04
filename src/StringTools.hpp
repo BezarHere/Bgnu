@@ -63,6 +63,18 @@ struct StringTools
 		return true;
 	}
 
+	// copy the chars from `src` to `dst` until a null is hit or max_count is reached
+	// will NOT put any null char in `dst`
+	static inline constexpr size_t copy(char_type *dst, const char_type *src, size_t max_count) {
+		size_t index = 0;
+		for (; index < max_count && src[index] != 0; index++)
+		{
+			dst[index] = src[index];
+		}
+
+		return index;
+	}
+
 	static inline string_type to_lower(const string_type &str) {
 		return _modify(str, [](char_type c) { return (char_type)tolower(c); });
 	}
