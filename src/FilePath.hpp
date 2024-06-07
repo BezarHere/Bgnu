@@ -53,11 +53,11 @@ public:
 
 	operator string_type() const;
 
-	FilePath get_parent() const;
-	string_type get_filename() const;
+	FilePath parent() const;
+	string_type filename() const;
 
-	string_type get_name() const;
-	string_type get_extension() const;
+	string_type name() const;
+	string_type extension() const;
 
 	string_blob get_text() const;
 

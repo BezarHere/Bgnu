@@ -214,7 +214,7 @@ FilePath::operator string_type() const {
 	return string_type(m_internal->text.data(), m_internal->text_length);
 }
 
-FilePath FilePath::get_parent() const {
+FilePath FilePath::parent() const {
 	if (m_internal->segments_count == 0)
 	{
 		return *this;
@@ -223,7 +223,7 @@ FilePath FilePath::get_parent() const {
 	return FilePath(m_internal, 0, m_internal->segments_count - 1);
 }
 
-FilePath::string_type FilePath::get_filename() const {
+FilePath::string_type FilePath::filename() const {
 	if (!is_valid())
 	{
 		return "";
@@ -234,7 +234,7 @@ FilePath::string_type FilePath::get_filename() const {
 	return string_type(m_internal->text.data() + last_segment.begin, last_segment.length());
 }
 
-FilePath::string_type FilePath::get_name() const {
+FilePath::string_type FilePath::name() const {
 	if (!is_valid())
 	{
 		return "";
@@ -255,7 +255,7 @@ FilePath::string_type FilePath::get_name() const {
 	);
 }
 
-FilePath::string_type FilePath::get_extension() const {
+FilePath::string_type FilePath::extension() const {
 	if (!is_valid())
 	{
 		return EmptyString;
