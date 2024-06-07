@@ -2,8 +2,6 @@
 #include "FieldDataReader.hpp"
 
 
-
-
 Project Project::from_data(const FieldVar::Dict &data, ErrorReport &result) {
 	Project project{};
 
@@ -58,6 +56,70 @@ Project Project::from_data(const FieldVar::Dict &data, ErrorReport &result) {
 	return project;
 }
 
+vector<FilePath::iterator_entry> Project::get_available_files() const {
+	vector<FilePath::iterator_entry> entries{};
+	vector<FilePath::iterator> iterators{};
+
+	entries.reserve(1024);
+
+	iterators.push_back(this->source_dir.create_iterator());
+
+	while (!iterators.empty())
+	{
+		const auto current_iter = iterators.back();
+		iterators.pop_back();
+
+		for (const auto &path : current_iter)
+		{
+			if (path.is_directory())
+			{
+				iterators.emplace_back(path);
+				continue;
+			}
+
+			if (path.is_regular_file())
+			{
+				entries.push_back(path);
+				continue;
+			}
+
+			// skips other non-regular files
+		}
+	}
+
+	return entries;
+}
+
+vector<FilePath> Project::get_source_files() const {
+	vector<FilePath> result_paths{};
+
+	for (const auto &p : get_available_files())
+	{
+		FilePath path = p;
+
+		if (is_matching_source(path.get_text()))
+		{
+			result_paths.push_back(std::move(path));
+		}
+
+	}
+
+	return result_paths;
+}
+
+bool Project::is_matching_source(const StrBlob &path) const {
+	for (const Glob &glob : m_source_selectors)
+	{
+		if (glob.test(path))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 Error ProjectOutputData::ensure_available() const {
-	return Error();
+	this->path.parent().create_directory();
+	this->cache_dir.create_directory();
+	return Error::Ok;
 }
