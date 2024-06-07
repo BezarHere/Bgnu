@@ -51,13 +51,15 @@ Error commands::BuildCommand::execute(ArgumentReader &reader) {
 		return Error::Failure;
 	}
 
-	auto project_file_data = FieldFile::load(input_file_path);
+	const FilePath project_dir = input_file_path.parent();
+	const FieldVar project_file_data = FieldFile::load(input_file_path);
 
 	// std::cout << '\n' << "project file data: " << FieldFile::write(project_file_data.get_dict()) << '\n';
 	FieldFile::dump(string(input_file_path) + string("-out"), project_file_data.get_dict());
 
 	ErrorReport report{};
 	Project project = Project::from_data(project_file_data.get_dict(), report);
+	project.source_dir = project_dir;
 
 	if (report.code != Error::Ok)
 	{
@@ -76,6 +78,12 @@ Error commands::BuildCommand::execute(ArgumentReader &reader) {
 	}
 
 	project.get_output().ensure_available();
+
+	std::cout << "paths: \n";
+	for (const auto &path : project.get_source_files())
+	{
+		std::cout << path << '\n';
+	}
 
 	return Error::Ok;
 }
