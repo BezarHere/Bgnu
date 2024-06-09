@@ -230,4 +230,28 @@ struct StringTools
 		return range(source, &iswspace);
 	}
 
+	static constexpr ALWAYS_INLINE bool is_directory_separator(const char_type character) {
+		return character == '\\' || character == '/';
+	}
+
+	static constexpr ALWAYS_INLINE bool is_whitespace(const char_type character) {
+		return iswspace(character);
+	}
+
+	static constexpr ALWAYS_INLINE bool is_printable(const char_type character) {
+		return isprint(character);
+	}
+
+	static constexpr ALWAYS_INLINE bool is_newline(const char_type character) {
+		return character == '\n' || character == '\r';
+	}
+
+	static constexpr ALWAYS_INLINE bool is_eof(const char_type character) {
+		return character == 0;
+	}
+
+	static constexpr ALWAYS_INLINE bool is_ascii(const char_type character) {
+		return character < 0x7f;
+	}
+
 };
