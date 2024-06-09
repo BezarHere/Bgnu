@@ -97,7 +97,7 @@ struct StringTools
 
 	template <typename CountPred>
 	static inline size_t count(const char_type *start, const size_t max_count, CountPred &&pred) {
-		for (size_t i = 0; i < max_count; i++)
+		for (size_t i = 0; i < max_count && start[i]; i++)
 		{
 			if (!pred(start[i]))
 			{
@@ -105,6 +105,19 @@ struct StringTools
 			}
 		}
 		return max_count;
+	}
+
+	// `count_` needs to be the length of the string, unlike count's `max_count` argument
+	template <typename CountPred>
+	static inline size_t rcount(const char_type *start, const size_t count_, CountPred &&pred) {
+		for (size_t i = 1; i <= count_; i++)
+		{
+			if (!pred(start[count_ - i]))
+			{
+				return i - 1;
+			}
+		}
+		return count_;
 	}
 
 	static inline string_type narrow(const wide_char_type *src_str, const size_t max_count) {
