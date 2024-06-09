@@ -436,7 +436,7 @@ void FilePath::build_segments(Internal &internals) {
 
 	for (size_t i = 0; i < internals.text_length; i++)
 	{
-		if (is_directory_separator(internals.text[i]) || i == internals.text_length - 1)
+		if (StringTools::is_directory_separator(internals.text[i]) || i == internals.text_length - 1)
 		{
 			// we could just break after reaching the segment limit
 			// but that will leave an undefined behavior unchecked
@@ -463,7 +463,7 @@ void FilePath::build_segments(Internal &internals) {
 }
 
 FilePath::string_type FilePath::_resolve_path(const string_blob &text, const string_blob &base) {
-	const bool root_start = is_directory_separator(text[0]);
+	const bool root_start = StringTools::is_directory_separator(text[0]);
 
 	string_type result_str{};
 	result_str.reserve(MaxPathLength * 2);
@@ -484,7 +484,7 @@ FilePath::string_type FilePath::_resolve_path(const string_blob &text, const str
 	// start after the first char, if it can be processed then it had been above 
 	for (size_t i = 1; i <= text.size; i++)
 	{
-		if (is_directory_separator(text[i]) || i == text.size)
+		if (StringTools::is_directory_separator(text[i]) || i == text.size)
 		{
 			const string_blob segment_source = text.slice(last_anchor, i);
 
@@ -547,7 +547,7 @@ bool FilePath::preprocess(Blob<TextBlock::value_type> &text) {
 
 	for (size_t i = 0; i < text.size; i++)
 	{
-		if (is_directory_separator(text[i]))
+		if (StringTools::is_directory_separator(text[i]))
 		{
 			if (last_dir_separator == i - 1)
 			{

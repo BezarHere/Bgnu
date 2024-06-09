@@ -122,7 +122,7 @@ size_t Glob::run_match_all(size_t start_index, const StrBlob &source) const {
 
 	// two conditions:
 	// * one, to break processing on failure (no frames)
-	// * two to break on success (all segments matched those creating frames)
+	// * two to break on success (all segments matched thus creating frames)
 	while (!frames.empty() && frames.back().segment_index < m_segments.size)
 	{
 
@@ -270,7 +270,7 @@ size_t Glob::test_segment(size_t index, const StrBlob &source) const {
 
 	case SegmentType::DirectorySeparator:
 		{
-			size_t count = StringTools::count(source.data, source.size, FilePath::is_directory_separator);
+			size_t count = StringTools::count(source.data, source.size, StringTools::is_directory_separator);
 			return count;
 		}
 
@@ -314,7 +314,7 @@ size_t Glob::test_segment(size_t index, const StrBlob &source) const {
 				source.data,
 				std::min(source.size, segment.range.length()),
 				// only continue if we found anything except directory separators ('?' can't match dir seps)
-				inner::InvertOp(&FilePath::is_directory_separator)
+				inner::InvertOp(&StringTools::is_directory_separator)
 			);
 
 			if (count == segment.range.length())
@@ -367,7 +367,7 @@ void Glob::_clear() {
 size_t Glob::test_any_name(const StrBlob &source) {
 	for (size_t i = 0; i < source.size; i++)
 	{
-		if (FilePath::is_directory_separator(source[i]))
+		if (StringTools::is_directory_separator(source[i]))
 		{
 			return i;
 		}
@@ -386,9 +386,9 @@ Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
 
 	for (size_t i = 0; i < blob.size; i++)
 	{
-		if (FilePath::is_directory_separator(blob[i]))
+		if (StringTools::is_directory_separator(blob[i]))
 		{
-			size_t count = StringTools::count(&blob[i], blob.size - i, FilePath::is_directory_separator);
+			size_t count = StringTools::count(&blob[i], blob.size - i, StringTools::is_directory_separator);
 			i += count - 1;
 			segments.emplace_back(SegmentType::DirectorySeparator, IndexRange(i, i + count));
 			continue;
@@ -485,6 +485,7 @@ Glob::Segment parse_char_selector(const StrBlob &blob) {
 		}
 	}
 
+	// no closing ']' found
 	if (end == blob.size)
 	{
 		//? should this print out an error?

@@ -97,7 +97,6 @@ public:
 	static string_type _parent_directory();
 	static string_type _executable_path();
 
-	static constexpr bool is_directory_separator(const char_type character);
 	static constexpr bool is_valid_filename_char(const char_type character);
 	static constexpr bool is_valid_path_char(const char_type character);
 
@@ -129,10 +128,6 @@ private:
 	Internal *m_internal;
 };
 
-inline constexpr bool FilePath::is_directory_separator(const char_type character) {
-	return character == '\\' || character == '/';
-}
-
 inline constexpr bool FilePath::is_valid_filename_char(const char_type character) {
 	switch (character)
 	{
@@ -149,7 +144,7 @@ inline constexpr bool FilePath::is_valid_filename_char(const char_type character
 }
 
 inline constexpr bool FilePath::is_valid_path_char(const char_type character) {
-	return is_valid_filename_char(character) || is_directory_separator(character);
+	return is_valid_filename_char(character) || StringTools::is_directory_separator(character);
 }
 
 inline constexpr bool FilePath::is_valid_drive_root(const string_blob &path) {
@@ -176,7 +171,7 @@ inline constexpr size_t FilePath::_get_last_separator(const string_blob &source)
 	for (size_t r = 2; r < source.size; r++)
 	{
 		const size_t i = source.size - r;
-		if (is_directory_separator(source[i]))
+		if (StringTools::is_directory_separator(source[i]))
 		{
 			return i;
 		}

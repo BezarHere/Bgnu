@@ -59,7 +59,7 @@ private:
 
 	static inline constexpr bool is_char_reserved(string_char character) {
 		return character == string_char('*') ||
-			FilePath::is_directory_separator(character) ||
+			StringTools::is_directory_separator(character) ||
 			character == string_char('[');
 	}
 
