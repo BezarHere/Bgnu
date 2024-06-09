@@ -16,7 +16,14 @@ using std::array;
 typedef std::string string;
 typedef string::value_type string_char;
 
-typedef Blob<const string::value_type> StrBlob;
+// mutable blob of string_chars
+typedef Blob<string_char> MutableStrBlob;
+// immutable blob of string_chars (const string_char)
+typedef Blob<const string_char> StrBlob;
+// mutable blob of string_chars that are expected to be modified externally
+typedef Blob<volatile string_char> VolatileStrBlob;
+// immutable blob of string_chars that are expected to be modified externally but not internally
+typedef Blob<const volatile string_char> CVolatileStrBlob;
 
 static constexpr size_t npos = (size_t)-1;
 
