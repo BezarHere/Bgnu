@@ -155,7 +155,7 @@ struct StringTools
 		{
 			Logger::error(
 				"Error while widening string \"%S\" max count=%llu, errno=%d",
-				dst_str,
+				dst_str.c_str(),
 				max_count,
 				error
 			);
@@ -266,5 +266,26 @@ struct StringTools
 	static constexpr ALWAYS_INLINE bool is_ascii(const char_type character) {
 		return character < 0x7f;
 	}
+
+	template <typename _Pred>
+	static inline StrBlob trim(const StrBlob &source, _Pred &&trim_pred) {
+		size_t leading_c = count(source.begin(), source.length(), trim_pred);
+
+		if (leading_c >= source.size)
+		{
+			return {source.end(), 0};
+		}
+
+		size_t trailing_c = rcount(source.begin() + leading_c, source.length() - leading_c, trim_pred);
+
+		if (trailing_c + leading_c >= source.size)
+		{
+			return {source.begin() + leading_c, 0};
+		}
+
+		return {source.begin() + leading_c, source.end() - trailing_c};
+	}
+
+	static inline StrBlob trim(const StrBlob &source) { return trim(source, &is_whitespace); }
 
 };
