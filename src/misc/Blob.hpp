@@ -23,16 +23,6 @@ struct Blob final
 		}
 	}
 
-	// copy non-const value_type blobs
-	inline constexpr Blob(const Blob<std::remove_const_t<value_type>> &copy)
-		: size{copy.size}, data{copy.data} {
-	}
-
-	// copy non-volatile value_type blobs
-	inline constexpr Blob(const Blob<std::remove_volatile_t<value_type>> &copy)
-		: size{copy.size}, data{copy.data} {
-	}
-
 	template <size_type N>
 	inline constexpr Blob(value_type(&memory)[N]) noexcept : size{N}, data{memory} {}
 
