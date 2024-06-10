@@ -273,14 +273,14 @@ struct StringTools
 
 		if (leading_c >= source.size)
 		{
-			return {source.end(), 0};
+			return StrBlob(source.end(), (size_t)0);
 		}
 
 		size_t trailing_c = rcount(source.begin() + leading_c, source.length() - leading_c, trim_pred);
 
 		if (trailing_c + leading_c >= source.size)
 		{
-			return {source.begin() + leading_c, 0};
+			return StrBlob(source.begin() + leading_c, (size_t)0);
 		}
 
 		return {source.begin() + leading_c, source.end() - trailing_c};
