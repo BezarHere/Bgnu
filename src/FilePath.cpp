@@ -325,6 +325,20 @@ FilePath FilePath::join_path(const string_blob &path) const {
 	return FilePath(result);
 }
 
+std::ifstream FilePath::stream_read() const {
+	return std::ifstream(
+		m_internal->text.data(),
+		std::ios::openmode::_S_in | std::ios::openmode::_S_bin
+	);
+}
+
+std::ofstream FilePath::stream_write() const {
+	return std::ofstream(
+		m_internal->text.data(),
+		std::ios::openmode::_S_out | std::ios::openmode::_S_bin
+	);
+}
+
 errno_t FilePath::create_file() const {
 
 	return errno_t();

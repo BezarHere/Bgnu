@@ -4,6 +4,7 @@
 #include <array>
 #include <string>
 #include <memory>
+#include <fstream>
 #include <filesystem>
 #include "StringTools.hpp"
 
@@ -72,6 +73,9 @@ public:
 	inline FilePath join_path(const char_type *path) const {
 		return join_path(string_blob(path, string_type::traits_type::length(path)));
 	}
+
+	std::ifstream stream_read() const;
+	std::ofstream stream_write() const;
 
 	errno_t create_file() const;
 	errno_t create_directory() const;
