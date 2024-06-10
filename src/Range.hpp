@@ -36,6 +36,12 @@ struct TRange
 		return {begin + value, end + value};
 	}
 
+	// constructs a blob ranging from `base + begin` to `base + end`
+	template <typename _V>
+	ALWAYS_INLINE constexpr Blob<_V> to_blob(_V *base) const noexcept {
+		return {base + begin, base + end};
+	}
+
 	_T begin{};
 	_T end{};
 };
