@@ -26,9 +26,12 @@ vector<string> SourceTools::get_dependencies(const StrBlob &file, SourceType typ
 				}
 			}
 
-			return
+			return results;
 		}
+
+	default:
+		Logger::error("get_dependencies() of type %d is not implemented", (int)type);
+		return {};
 	}
-	return;
 }
 
