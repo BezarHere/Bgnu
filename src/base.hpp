@@ -10,6 +10,9 @@
 
 #define HAS_FLAG(field, flag) (((field) & (flag)) == (flag))
 
+template <typename _T1, typename _T2 = _T1>
+using pair = std::pair<_T1, _T2>;
+
 using std::vector;
 using std::array;
 
