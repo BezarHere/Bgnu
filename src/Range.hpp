@@ -1,5 +1,6 @@
 #pragma once
 #include "base.hpp"
+#include <iostream>
 
 /// @brief inclusive begin, exclusive end range
 /// @tparam _T the range value type
@@ -50,3 +51,11 @@ using FloatRange = TRange<float>;
 using IntRange = TRange<int>;
 using IndexRange = TRange<size_t>;
 
+
+namespace std
+{
+	template <typename _T>
+	ostream &operator<<(ostream &stream, const TRange<_T> &value) {
+		return stream << '[' << value.begin << ", " << value.end << ')';
+	}
+}
