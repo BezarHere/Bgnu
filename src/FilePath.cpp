@@ -176,7 +176,7 @@ FilePath::Internal::Internal(const Internal &from, const IndexRange &segments_ra
 	{
 		//? do something
 	}
-	
+
 
 }
 
@@ -337,6 +337,51 @@ std::ofstream FilePath::stream_write(bool binary) const {
 		m_internal->text.data(),
 		std::ios::openmode::_S_out | std::ios::openmode(binary ? std::ios::openmode::_S_bin : 0)
 	);
+}
+
+string FilePath::read_string(streamsize max_size) const {
+	auto stream = stream_read(false);
+
+	string output{};
+
+	stream.seekg(0, std::ios::end);
+
+	const streamsize size = \
+		std::min<streamsize>(stream.tellg() + std::streamoff(1), max_size);
+
+	if (size <= 0)
+	{
+		return "";
+	}
+
+	output.resize((size_t)size);
+
+	stream.seekg(0, std::ios::beg);
+
+	stream.read(output.data(), size);
+	return output;
+}
+
+void FilePath::write(const StrBlob &value) const {
+	if (value.size > static_cast<size_t>(streamsize_max))
+	{
+		char msg[inner::ExceptionBufferSz]{0};
+
+		sprintf_s(
+			msg,
+			"Can not write %llu bytes of memory, max is %llu bytes!",
+			value.size,
+			static_cast<size_t>(streamsize_max)
+		);
+
+		throw std::length_error(msg);
+	}
+
+	auto stream = stream_write(false);
+
+	stream.write(value.data, static_cast<streamsize>(value.size));
+
+	stream.close();
 }
 
 errno_t FilePath::create_file() const {

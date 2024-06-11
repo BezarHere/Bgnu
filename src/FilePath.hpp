@@ -77,6 +77,9 @@ public:
 	std::ifstream stream_read(bool binary = true) const;
 	std::ofstream stream_write(bool binary = true) const;
 
+	string read_string(streamsize max_size = streamsize_max) const;
+	void write(const StrBlob &value) const;
+
 	errno_t create_file() const;
 	errno_t create_directory() const;
 
