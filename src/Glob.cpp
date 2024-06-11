@@ -112,8 +112,8 @@ size_t Glob::run_match_all(size_t start_index, const StrBlob &source) const {
 	// genres limit, hopefully never reached
 	constexpr size_t RunMatchAllLimit = 1024;
 
-	// forces the vectors to use the {size_t, allocator_type} ctor to ensure capacity on init
-	vector<MatchFrame> frames{m_segments.size, vector<MatchFrame>::allocator_type()};
+	vector<MatchFrame> frames{};
+	frames.reserve(m_segments.size);
 
 	// start segment, start of source
 	frames.emplace_back(start_index, 0);
