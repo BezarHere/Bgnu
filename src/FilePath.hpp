@@ -74,8 +74,8 @@ public:
 		return join_path(string_blob(path, string_type::traits_type::length(path)));
 	}
 
-	std::ifstream stream_read() const;
-	std::ofstream stream_write() const;
+	std::ifstream stream_read(bool binary = true) const;
+	std::ofstream stream_write(bool binary = true) const;
 
 	errno_t create_file() const;
 	errno_t create_directory() const;

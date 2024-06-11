@@ -106,10 +106,9 @@ FilePath::Internal::Internal(const string_type &str)
 		//? do something
 	}
 
-	Blob<TextBlock::value_type> blob{text.data(), text_length};
-
 	// build the segments
 	FilePath::build_segments(*this);
+
 }
 
 FilePath::Internal::Internal(const Internal &from, const IndexRange &segments_range)
@@ -177,6 +176,7 @@ FilePath::Internal::Internal(const Internal &from, const IndexRange &segments_ra
 	{
 		//? do something
 	}
+	
 
 }
 
@@ -325,17 +325,17 @@ FilePath FilePath::join_path(const string_blob &path) const {
 	return FilePath(result);
 }
 
-std::ifstream FilePath::stream_read() const {
+std::ifstream FilePath::stream_read(bool binary) const {
 	return std::ifstream(
 		m_internal->text.data(),
-		std::ios::openmode::_S_in | std::ios::openmode::_S_bin
+		std::ios::openmode::_S_in | std::ios::openmode(binary ? std::ios::openmode::_S_bin : 0)
 	);
 }
 
-std::ofstream FilePath::stream_write() const {
+std::ofstream FilePath::stream_write(bool binary) const {
 	return std::ofstream(
 		m_internal->text.data(),
-		std::ios::openmode::_S_out | std::ios::openmode::_S_bin
+		std::ios::openmode::_S_out | std::ios::openmode(binary ? std::ios::openmode::_S_bin : 0)
 	);
 }
 
@@ -561,6 +561,13 @@ bool FilePath::preprocess(Blob<TextBlock::value_type> &text) {
 
 	for (size_t i = 0; i < text.size; i++)
 	{
+		// reached end, trim text by setting drag_offset
+		if (!text[i])
+		{
+			drag_offset = text.size - i;
+			break;
+		}
+
 		if (StringTools::is_directory_separator(text[i]))
 		{
 			if (last_dir_separator == i - 1)
@@ -596,6 +603,7 @@ bool FilePath::preprocess(Blob<TextBlock::value_type> &text) {
 
 	text.size -= drag_offset;
 	text[text.size] = char_type();
+
 
 	return true;
 }
