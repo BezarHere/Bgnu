@@ -21,6 +21,13 @@ void CPreprocessor::gather_all_tks(const StrBlob &source, vector<Token> &output)
 
 		size_t end = std::max(token.name.end, token.value.end);
 
+		// std::cout << "token n1: \"" << string(token.name.begin + source.data, token.name.length()) << '"' << '\n';
+		// std::cout << "token v1: \"" << string(token.value.begin + source.data, token.value.length()) << '"' << '\n';
+
+		// offset token to the entire source (NOTE THAT: end is calculated before shifting the token)
+		token.name = token.name.shifted(index);
+		token.value = token.value.shifted(index);
+
 		if (token.type == Type::None)
 		{
 			break;
@@ -36,9 +43,24 @@ CPreprocessor::Token CPreprocessor::get_next_tk(const StrBlob &source) {
 
 	for (size_t i = 0; i < source.size - 1; i++)
 	{
-		if (StringTools::is_newline(source[i]) && !StringTools::is_newline(source[i + 1]))
+		if ((StringTools::is_newline(source[i]) || i == 0) && !StringTools::is_newline(source[i + 1]))
 		{
-			return _read_tk_inline(source.slice(i + 1));
+
+			const size_t read_start = i + (i ? 1 : 0);
+
+			// + 1 to i if it's not zero
+			Token token = _read_tk_inline(source.slice(read_start));
+			token.name = token.name.shifted(read_start);
+			token.value = token.value.shifted(read_start);
+
+			/*
+			std::cout << "TOK PARSED N: " << token.name
+				<< " \"" << string(source.data + token.name.begin, token.name.length()) << "\"\n";
+			
+			std::cout << "TOK PARSED V: " << token.value
+				<< " \"" << string(source.data + token.value.begin, token.value.length()) << "\"\n";
+			*/
+			return token;
 		}
 	}
 
@@ -86,8 +108,10 @@ CPreprocessor::Token CPreprocessor::_read_tk_inline(const StrBlob &source) {
 			}
 		}
 
+
 		if (hashtag_pos == npos && source[index] == '#')
 		{
+
 			hashtag_pos = index;
 		}
 
@@ -97,12 +121,15 @@ CPreprocessor::Token CPreprocessor::_read_tk_inline(const StrBlob &source) {
 	{
 		return Token();
 	}
+
 	const StrBlob line = source.slice(hashtag_pos + 1, index);
 	string_char *escaped = new string_char[line.size + 1]{0};
 
 	size_t length = _escape(line, {escaped, line.size});
 
 	Token token = _parse_tk({escaped, length});
+	token.name = token.name.shifted(hashtag_pos + 1);
+	token.value = token.value.shifted(hashtag_pos + 1);
 
 	delete[] escaped;
 
