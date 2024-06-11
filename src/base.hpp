@@ -19,6 +19,8 @@ using std::array;
 typedef std::string string;
 typedef string::value_type string_char;
 
+using std::streamsize;
+
 // mutable blob of string_chars
 typedef Blob<string_char> MutableStrBlob;
 // immutable blob of string_chars (const string_char)
@@ -29,6 +31,7 @@ typedef Blob<volatile string_char> VolatileStrBlob;
 typedef Blob<const volatile string_char> CVolatileStrBlob;
 
 static constexpr size_t npos = (size_t)-1;
+static constexpr streamsize streamsize_max = std::numeric_limits<streamsize>::max();
 
 
 #ifdef _MSC_VER
