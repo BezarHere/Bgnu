@@ -1,10 +1,15 @@
 #include "BuildCommand.hpp"
 #include "../FieldFile.hpp"
+#include "../SourceTools.hpp"
 
 const string RebuildArgs[] = {"-r", "--rebuild"};
 const string ResaveArgs[] = {"--resave"};
 
 constexpr const char *InputFilePrefix = "-i=";
+
+typedef std::map<string, vector<string>> dependency_map;
+
+static void dump_dep_map(const dependency_map &map, const FilePath &cache_folder);
 
 Error commands::BuildCommand::execute(ArgumentReader &reader) {
 
@@ -79,15 +84,68 @@ Error commands::BuildCommand::execute(ArgumentReader &reader) {
 
 	project.get_output().ensure_available();
 
-	std::cout << "paths: \n";
+
+	std::map<string, vector<string>> dependencies{};
+
 	for (const auto &path : project.get_source_files())
 	{
-		std::cout << path << '\n';
+		auto stream = path.stream_read(false);
+
+		string output{};
+
+		stream.seekg(0, std::ios::end);
+		// TODO: size check, like, loading a 3gb file to memory is quite bad
+		output.resize(stream.tellg() + std::streamoff(1));
+		stream.seekg(0, std::ios::beg);
+
+		stream.read(output.data(), static_cast<std::streamsize>(output.size()));
+
+		auto deps = SourceTools::get_dependencies({output.data(), output.size()}, SourceType::C);
+		dependencies.insert_or_assign(
+			string(path),
+			deps
+		);
+
+
+		// std::cout << output << '\n';
+
+		// size_t newlines = 0;
+
+		// for (string_char c : output)
+		// {
+		// 	if (StringTools::is_newline(c))
+		// 	{
+		// 		newlines++;
+		// 	}
+		// }
+
+		// std::cout << "newlines " << newlines << ": at " << path << '\n';
 	}
+
+	dump_dep_map(dependencies, project.get_output().cache_dir);
 
 	return Error::Ok;
 }
 
 FilePath commands::BuildCommand::_default_filepath() {
 	return FilePath::get_working_directory().join_path(".bgnu");
+}
+
+void dump_dep_map(const dependency_map &map, const FilePath &cache_folder) {
+	FilePath output_path = cache_folder.join_path(".deps");
+	std::ofstream stream = output_path.stream_write(false);
+
+	// We can do it by converting 'map' to field var and save it
+	// sadly, im too lazy rn
+
+	for (const auto &[name, deps] : map)
+	{
+		stream << '"' << name << "\":\n[\n";
+		for (const auto &dep_name : deps)
+		{
+			stream << "  \"" << dep_name << "\",\n";
+		}
+		stream << "]\n\n";
+	}
+
 }
