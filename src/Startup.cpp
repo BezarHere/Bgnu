@@ -36,20 +36,20 @@ int Startup::start(ArgumentReader reader) {
 
 	Error error;
 
-	try
-	{
+	// try
+	// {
 		error = command->execute(command_input);
-	}
-	catch (std::exception &e)
-	{
-		Logger::error(
-			"Command '%s' has raised an exception: what='%s'",
-			to_cstr(command->name),
-			to_cstr(e.what())
-		);
+	// }
+	// catch (std::exception &e)
+	// {
+	// 	Logger::error(
+	// 		"Command '%s' has raised an exception: what='%s'",
+	// 		to_cstr(command->name),
+	// 		to_cstr(e.what())
+	// 	);
 
-		throw;
-	}
+	// 	throw;
+	// }
 
 	Logger::_pop_state();
 	Console::pop_state();
