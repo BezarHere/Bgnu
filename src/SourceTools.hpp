@@ -10,6 +10,7 @@ enum class SourceType
 
 class SourceTools
 {
+public:
 	static vector<string> get_dependencies(const StrBlob &file, SourceType type);
 };
 
