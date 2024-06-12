@@ -210,6 +210,20 @@ FilePath &FilePath::operator=(FilePath &&move) noexcept {
 	return *this;
 }
 
+bool FilePath::operator==(const FilePath &other) const {
+	// NOTE: internals of this and other are assumed to be not null
+
+	if (m_internal->text_length != other.m_internal->text_length)
+	{
+		return false;
+	}
+
+	return StringTools::equal(
+		m_internal->text.data(), other.m_internal->text.data(),
+		m_internal->text_length
+	);
+}
+
 FilePath::operator string_type() const {
 	return string_type(m_internal->text.data(), m_internal->text_length);
 }

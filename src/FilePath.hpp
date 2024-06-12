@@ -52,6 +52,8 @@ public:
 	FilePath &operator=(const FilePath &assign);
 	FilePath &operator=(FilePath &&move) noexcept;
 
+	bool operator==(const FilePath &other) const;
+
 	operator string_type() const;
 
 	FilePath parent() const;
