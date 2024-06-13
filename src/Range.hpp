@@ -40,6 +40,7 @@ struct TRange
 	// constructs a blob ranging from `base + begin` to `base + end`
 	template <typename _V>
 	ALWAYS_INLINE constexpr Blob<_V> to_blob(_V *base) const noexcept {
+		static_assert(std::is_integral_v<_T>, "only integral ranges can create blobs");
 		return {base + begin, base + end};
 	}
 
