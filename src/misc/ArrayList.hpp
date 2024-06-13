@@ -15,6 +15,9 @@ public:
 	constexpr ArrayList() = default;
 	constexpr ~ArrayList();
 
+	template <typename E, size_t N>
+	constexpr bool operator==(const ArrayList<E, N> &other); 
+
 	template <std::size_t _N, std::enable_if_t<_N <= _Sz>>
 	constexpr ArrayList(const std::array<_T, _N> &array);
 
@@ -26,6 +29,9 @@ public:
 
 	inline constexpr bool empty() const { return m_count == 0; }
 	inline constexpr bool full() const { return m_count == capacity(); }
+
+	inline constexpr value_type *data() { return m_array; }
+	inline constexpr const value_type *data() const { return m_array; }
 
 	inline constexpr value_type *begin() { return m_array; }
 	inline constexpr const value_type *begin() const { return m_array; }
@@ -65,6 +71,31 @@ public:
 
 	void pop_back();
 
+	// returns the actual amount of elements added, might even be zero if the ArrayList is full
+	size_t extend(const value_type *begin, size_t count);
+
+	// returns the actual amount of elements added, might even be zero if the ArrayList is full
+	inline size_t extend(const value_type *begin, const value_type *end) {
+		if (begin > end)
+		{
+			throw std::runtime_error("can not extend ArrayList, begin > end");
+		}
+
+		return extend(begin, end - begin);
+	}
+
+	void clear();
+
+	inline constexpr void _set_size(size_type new_size) {
+		if (new_size > max_size())
+		{
+			throw std::length_error("new_size too large");
+		}
+
+		m_count = newsize;
+	}
+	void resize(size_type new_size);
+
 private:
 	inline constexpr void _destroy(const size_type pos) {
 		m_array[pos].~value_type();
@@ -90,6 +121,25 @@ private:
 	size_type m_count = 0;
 	array_type m_array;
 };
+
+template<typename _T, std::size_t _Sz>
+template<typename E, size_t N>
+inline constexpr bool ArrayList<_T, _Sz>::operator==(const ArrayList<E, N> &other) {
+	if (size() != other.size())
+	{
+		return false;
+	}
+
+	for (size_t i = 0; i < size(); i++)
+	{
+		if (this->operator[](i) != other[i])
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
 
 template<typename _T, std::size_t _Sz>
 template<std::size_t _N, std::enable_if_t<_N <= _Sz>>
@@ -155,6 +205,52 @@ inline void ArrayList<_T, _Sz>::pop_back() {
 	}
 
 	--m_count;
-	
+
 	_destroy(m_count);
+}
+
+template<typename _T, std::size_t _Sz>
+inline size_t ArrayList<_T, _Sz>::extend(const value_type *begin, size_t count) {
+	count = std::min(capacity() - m_count, count);
+
+	for (size_t i = m_count; i < count; i++)
+	{
+		_construct(i, begin[i]);
+	}
+
+	m_count += count;
+}
+
+template<typename _T, std::size_t _Sz>
+inline void ArrayList<_T, _Sz>::clear() {
+	_destroy_all();
+	m_count = 0;
+}
+
+template<typename _T, std::size_t _Sz>
+inline void ArrayList<_T, _Sz>::resize(size_type new_size) {
+	if (new_size == size())
+	{
+		return;
+	}
+
+	if (new_size < size())
+	{
+		if constexpr (!std::is_trivially_destructible_v<_T>)
+		{
+			for (size_t i = new_size; i < size(); i++)
+			{
+				_destroy(i);
+			}
+		}
+
+		_set_size(new_size);
+	}
+
+	for (size_t i = size(); i < new_size; i++)
+	{
+		_construct(i);
+	}
+
+	_set_size(new_size);
 }
