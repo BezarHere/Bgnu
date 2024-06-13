@@ -7,7 +7,7 @@ const string ResaveArgs[] = {"--resave"};
 
 constexpr const char *InputFilePrefix = "-i=";
 
-typedef std::map<string, vector<string>> dependency_map;
+typedef SourceProcessor::dependency_map dependency_map;
 
 static void dump_dep_map(const dependency_map &map, const FilePath &cache_folder);
 
@@ -100,7 +100,8 @@ Error commands::BuildCommand::execute(ArgumentReader &reader) {
 
 		stream.read(output.data(), static_cast<std::streamsize>(output.size()));
 
-		auto deps = SourceTools::get_dependencies({output.data(), output.size()}, SourceType::C);
+		vector<string> deps{};
+		SourceTools::get_dependencies({output.data(), output.size()}, SourceType::C, deps);
 		dependencies.insert_or_assign(
 			string(path),
 			deps
