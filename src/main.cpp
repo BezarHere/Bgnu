@@ -10,5 +10,14 @@ int main(int argc, const char *argv[]) {
 		Logger::debug("arg no.%d: '%s'", i, argv[i]);
 	}
 
+	// string path;
+	// std::cin >> path;
+
+	// FilePath fpath{path};
+
+	// std::cout << '\n' << "original: " << fpath << '\n';
+	// fpath.resolve();
+	// std::cout << '\n' << "resolved: " << fpath << '\n';
+	
 	return Startup::start(ArgumentReader(argv + 1, std::max(argc - 1, 0)));
 }
