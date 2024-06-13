@@ -65,176 +65,91 @@ get_segment_relation_type(const FilePath::string_blob &segment);
 // also, returned blob might not have a null char at it's end
 static FilePath::string_blob get_root_path(const FilePath::string_blob &base);
 
-struct FilePath::Internal
-{
-	Internal(const string_type &str);
-	Internal(const Internal &from, const IndexRange &segments_range);
 
-	inline Blob<const SegmentBlock::value_type> get_segments() const {
-		return {segments.data(), segments_count};
-	}
+FilePath::FilePath(const string_blob &str) {
 
-	inline string_blob get_text() const {
-		return {text.data(), text_length};
-	}
+	// copy string
+	m_text.extend(str.data, str.length());
 
-	size_t segments_count;
-	SegmentBlock segments;
-
-	size_t text_length;
-	TextBlock text;
-};
-
-FilePath::Internal::Internal(const string_type &str)
-	: segments_count{}, text_length{str.length()} {
-
-	// is the path too long? (long strings might not be actual paths)
-	if (text_length >= MaxPathLength)
+	// can't write to the entire text region, need to place a null at back
+	if (m_text.full())
 	{
-		Logger::error(
-			"Path source too long: \"%s\" is %llu chars, max is %llu chars; truncating.",
-			to_cstr(str), text_length, MaxPathLength - 1
-		);
-		text_length = MaxPathLength - 1;
+		m_text.pop_back();
 	}
 
-	string_type::traits_type::copy(text.data(), str.c_str(), text_length);
-	text[text_length] = char_type{};
+	// + null end
+	m_text.emplace_back();
 
-	if (FilePath::preprocess(text.data(), text_length))
+	size_t preprocessed_size = m_text.size() - 1;
+
+	if (FilePath::preprocess(m_text.data(), preprocessed_size))
 	{
 		//? do something
 	}
 
-	// build the segments
-	FilePath::build_segments(*this);
+	// m_text data is modified inplace by FilePath::preprocess, no need to copy anything
+	// just resize to fit
+	m_text.resize(preprocessed_size);
+	// + null end
+	m_text.emplace_back();
 
-}
-
-FilePath::Internal::Internal(const Internal &from, const IndexRange &segments_range)
-	: segments_count{}, text_length{} {
-
-
-	for (size_t i = segments_range.begin; i < segments_range.end; ++i)
-	{
-
-		// checks for too many segments
-		if (segments_count >= MaxPathSegCount)
-		{
-			Logger::error(
-				"FilePath::Internal: Too many segments to copy from \"%.*s\", range = %llu to %llu",
-				from.text_length,
-				from.text,
-				segments_range.begin,
-				segments_range.end
-			);
-			break;
-		}
-
-
-		// current segment to process
-		const IndexRange &segment = from.segments[i];
-
-		// copy segment
-		segments[segments_count++] = segment;
-
-		// check if we should add a directory separator
-		if (text_length)
-		{
-			text[text_length++] = DirectorySeparator;
-		}
-
-		// checks for text overflow
-		if (text_length + segment.length() >= MaxPathLength)
-		{
-			Logger::error(
-				("FilePath::Internal: Text overflow, can not copy %llu [%llu] chars"
-				 " from \"%.*s\", range = %llu to %llu"),
-
-				segment.length(),
-				text_length + segment.length(),
-				from.text_length,
-				from.text,
-				segments_range.begin,
-				segments_range.end
-			);
-			break;
-		}
-
-		// copy the segment text
-		string_type::traits_type::copy(
-			&text[text_length],
-			&from.text[segment.begin],
-			segment.length()
-		);
-		text_length += segment.length();
-	}
-
-	text[text_length] = char_type{};
-
-	if (FilePath::preprocess(text.data(), text_length))
-	{
-		//? do something
-	}
-
-
-}
-
-FilePath::FilePath(const string_type &str) : m_internal{new Internal(str)} {
+	// build the separators
+	FilePath::calculate_separators(string_blob(m_text.data(), m_text.size()), m_separators);
 }
 
 FilePath::~FilePath() {
-	delete m_internal;
 }
 
-FilePath::FilePath(const FilePath &copy) : m_internal{new Internal(*copy.m_internal)} {
-}
-
-FilePath::FilePath(FilePath &&move) noexcept : m_internal{move.m_internal} {
-	move.m_internal = nullptr;
-}
-
-FilePath &FilePath::operator=(const FilePath &assign) {
-	if (std::addressof(assign) == this)
+bool FilePath::operator<(const FilePath &other) const {
+	const size_t search_c = std::min(m_text.size(), other.m_text.size());
+	for (size_t i = 0; i < search_c; i++)
 	{
-		return *this;
+		if (m_text[i] == other.m_text[i])
+		{
+			continue;
+		}
+
+		if (m_text[i] > other.m_text[i])
+		{
+			return false;
+		}
+
+		return true;
 	}
-
-	*m_internal = *assign.m_internal;
-	return *this;
-}
-
-FilePath &FilePath::operator=(FilePath &&move) noexcept {
-	m_internal = move.m_internal;
-	move.m_internal = nullptr;
-	return *this;
+	return false;
 }
 
 bool FilePath::operator==(const FilePath &other) const {
-	// NOTE: internals of this and other are assumed to be not null
-
-	if (m_internal->text_length != other.m_internal->text_length)
+	if (m_text.size() != other.m_text.size())
 	{
 		return false;
 	}
 
 	return StringTools::equal(
-		m_internal->text.data(), other.m_internal->text.data(),
-		m_internal->text_length
+		m_text.data(), other.m_text.data(),
+		m_text.size()
 	);
 }
 
+FilePath &FilePath::operator+=(const FilePath &right) {
+
+}
+
+FilePath FilePath::operator+(const FilePath &right) const {
+	// return FilePath();
+}
+
 FilePath::operator string_type() const {
-	return string_type(m_internal->text.data(), m_internal->text_length);
+	return string_type(m_text.data(), m_text.size());
 }
 
 FilePath FilePath::parent() const {
-	if (m_internal->segments_count == 0)
+	if (!is_valid())
 	{
 		return *this;
 	}
 
-	return FilePath(m_internal, 0, m_internal->segments_count - 1);
+	return FilePath(*this).pop_path();
 }
 
 FilePath::string_type FilePath::filename() const {
@@ -243,9 +158,10 @@ FilePath::string_type FilePath::filename() const {
 		return "";
 	}
 
-	const IndexRange &last_segment = m_internal->segments[m_internal->segments_count - 1];
+	// position of last directory separator + 1 (e.g. after it)
+	const separator_index last = m_separators.back() + 1;
 
-	return string_type(m_internal->text.data() + last_segment.begin, last_segment.length());
+	return string_type(m_text.data() + last, m_text.size() - last);
 }
 
 FilePath::string_type FilePath::name() const {
@@ -254,13 +170,15 @@ FilePath::string_type FilePath::name() const {
 		return "";
 	}
 
-	const IndexRange &last_segment = m_internal->segments[m_internal->segments_count - 1];
+	// position of last directory separator + 1 (e.g. after it)
+	const separator_index last = m_separators.back() + 1;
 
-	const char_type *last_seg_text = m_internal->text.data() + last_segment.begin;
+	const char_type *last_seg_text = m_text.data() + last;
+	const size_t last_seg_len = m_text.size() - last;
 
 	const size_t extension_start = find_extension(
 		last_seg_text,
-		last_segment.length()
+		last_seg_len
 	);
 
 	return string_type(
@@ -275,32 +193,34 @@ FilePath::string_type FilePath::extension() const {
 		return EmptyString;
 	}
 
+	// position of last directory separator + 1 (e.g. after it)
+	const separator_index last = m_separators.back() + 1;
 
-	const IndexRange &last_segment = m_internal->segments[m_internal->segments_count - 1];
-
-	const char_type *last_seg_text = m_internal->text.data() + last_segment.begin;
+	const char_type *last_seg_text = m_text.data() + last;
+	const size_t last_seg_len = m_text.size() - last;
 
 	const size_t extension_start = find_extension(
 		last_seg_text,
-		last_segment.length()
+		last_seg_len
 	);
 
 	return string_type(
 		last_seg_text + extension_start,
-		last_segment.length() - extension_start
+		last_seg_len - extension_start
 	);
 }
 
 FilePath::string_blob FilePath::get_text() const {
-	return m_internal->get_text();
+	// excludes the null end
+	return {m_text.data(), m_text.size() - 1};
 }
 
-Blob<const FilePath::segment_type> FilePath::get_segments() const {
-	return m_internal->get_segments();
+Blob<const FilePath::separator_index> FilePath::get_separators() const {
+	return {m_separators.data(), m_separators.size()};
 }
 
 FilePath::iterator FilePath::create_iterator() const {
-	return iterator(m_internal->text.data());
+	return iterator(m_text.data());
 }
 
 FilePath FilePath::join_path(const string_blob &path) const {
@@ -309,46 +229,61 @@ FilePath FilePath::join_path(const string_blob &path) const {
 		return *this;
 	}
 
-	if (path.size >= MaxPathLength)
-	{
-		Logger::error(
-			"path to join \"%s\" is too long (%llu chars), max path length is %llu chars",
-			path.data,
-			path.size,
-			MaxPathLength - 1
-		);
+	FilePath copy = *this;
+	copy.add_path(path);
+	return copy;
+}
 
+FilePath &FilePath::add_path(const string_blob &path) {
+
+
+	if (!StringTools::is_directory_separator(path[0]))
+	{
+		// 'back()' should be the null end (hopefully)
+		m_text.back() = DirectorySeparator;
+	}
+
+	m_separators.push_back(m_text.size());
+
+	m_text.extend(path.data, path.length());
+
+	if (m_text.full())
+	{
+		m_text.back() = char_type();
+	}
+	else
+	{
+		m_text.emplace_back();
+	}
+
+	return *this;
+}
+
+FilePath &FilePath::pop_path() {
+	if (!is_valid())
+	{
 		return *this;
 	}
 
-	const volatile StrBlob source = get_text();
+	separator_index last = m_separators.back();
+	m_separators.pop_back();
 
-	string_type result{};
-	result.resize(source.size + 1 + path.size);
+	m_text.resize(last);
+	m_text.emplace_back();
 
-
-	char_type *start = result.data();
-	string_type::traits_type::copy(start, source.data, source.size);
-	start += source.size;
-
-	*start = DirectorySeparator;
-	start++;
-
-	string_type::traits_type::copy(start, path.data, path.size);
-
-	return FilePath(result);
+	return *this;
 }
 
 std::ifstream FilePath::stream_read(bool binary) const {
 	return std::ifstream(
-		m_internal->text.data(),
+		m_text.data(),
 		std::ios::openmode::_S_in | std::ios::openmode(binary ? std::ios::openmode::_S_bin : 0)
 	);
 }
 
 std::ofstream FilePath::stream_write(bool binary) const {
 	return std::ofstream(
-		m_internal->text.data(),
+		m_text.data(),
 		std::ios::openmode::_S_out | std::ios::openmode(binary ? std::ios::openmode::_S_bin : 0)
 	);
 }
@@ -405,32 +340,36 @@ errno_t FilePath::create_file() const {
 
 errno_t FilePath::create_directory() const {
 	std::error_code err_code;
-	fs::create_directories(fs::path(m_internal->text.data()), err_code);
+	fs::create_directories(fs::path(m_text.data()), err_code);
 
 	return errno_t();
 }
 
 bool FilePath::exists() const {
-	return std::filesystem::exists(string(m_internal->text.data(), m_internal->text_length));
+	return std::filesystem::exists(string(m_text.data(), m_text.size()));
 }
 
 bool FilePath::is_file() const {
-	return std::filesystem::is_regular_file(string(m_internal->text.data(), m_internal->text_length));
+	return std::filesystem::is_regular_file(string(m_text.data(), m_text.size()));
 }
 
 bool FilePath::is_directory() const {
-	return std::filesystem::is_directory(string(m_internal->text.data(), m_internal->text_length));
+	return std::filesystem::is_directory(string(m_text.data(), m_text.size()));
 }
 
 bool FilePath::is_valid() const {
-	return m_internal && m_internal->segments_count && m_internal->text_length;
+	return !(m_separators.empty() || m_text.empty());
 }
 
 void FilePath::resolve(const FilePath &base) {
-	string_type resolved_str = _resolve_path(m_internal->get_text(), base.get_text());
+	string_type resolved_str = _resolve_path(
+		string_blob(m_text.begin(), m_text.end() - 1),
+		base.get_text()
+	);
 
-	m_internal->~Internal();
-	new (m_internal) Internal(resolved_str);
+	// will haunt me later, my future self wouldn't know what hit 'em
+	this->~FilePath();
+	new (this) FilePath(resolved_str);
 }
 
 const FilePath &FilePath::get_working_directory() {
@@ -499,38 +438,27 @@ FilePath::string_blob FilePath::_get_parent(const string_blob &source) {
 	return string_blob(source.data, anchor);
 }
 
-FilePath::FilePath(Internal *data, size_t start, size_t end)
-	: m_internal{new Internal(*data, IndexRange(start, end))} {
-}
+void FilePath::calculate_separators(const string_blob &text, SeparatorArray &out) {
 
-void FilePath::build_segments(Internal &internals) {
+	// out.data[out.count++] = npos; // first separator
 
-	size_t anchor = 0;
-
-	for (size_t i = 0; i < internals.text_length; i++)
+	for (size_t i = 0; i < text.size; i++)
 	{
-		if (StringTools::is_directory_separator(internals.text[i]) || i == internals.text_length - 1)
+		if (StringTools::is_directory_separator(text[i]))
 		{
 			// we could just break after reaching the segment limit
 			// but that will leave an undefined behavior unchecked
-			if (internals.segments_count >= MaxPathSegCount)
+			if (out.full())
 			{
 				Logger::error(
 					"FilePath: Too many segments for \"%.*s\"",
-					internals.text_length,
-					internals.text
+					text.size,
+					text.data
 				);
 				break;
 			}
 
-			// we have some characters between the index and the anchor
-			if (i - anchor > 0)
-			{
-				internals.segments[internals.segments_count++] = IndexRange(anchor, i);
-			}
-
-			// start anchor after this directory separator
-			anchor = i + 1;
+			out.push_back(i);
 		}
 	}
 }
@@ -612,7 +540,7 @@ FilePath::string_type FilePath::_resolve_path(const string_blob &text, const str
 	return result_str;
 }
 
-bool FilePath::preprocess(Blob<TextBlock::value_type> &text) {
+bool FilePath::preprocess(Blob<TextArray::value_type> &text) {
 	bool driver_column = false;
 
 	size_t drag_offset = 0;

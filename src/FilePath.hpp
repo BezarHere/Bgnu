@@ -8,6 +8,8 @@
 #include <filesystem>
 #include "StringTools.hpp"
 
+#include "misc/ArrayList.hpp"
+
 struct FilePath;
 
 struct FilePath
@@ -16,7 +18,7 @@ public:
 	typedef std::filesystem::directory_iterator iterator;
 	typedef iterator::value_type iterator_entry;
 
-	static constexpr size_t MaxPathLength = 256;
+	static constexpr size_t MaxPathLength = 512;
 	static constexpr size_t MaxPathSegCount = MaxPathLength / 8;
 
 	using string_type = string;
@@ -26,33 +28,40 @@ public:
 	static constexpr char_type NullChar = '\0';
 	static constexpr const char_type *EmptyString = &NullChar;
 
-	typedef IndexRange segment_type;
-
 	typedef Blob<char_type> mutable_string_blob;
 	typedef Blob<const char_type> string_blob;
 
-	typedef std::array<char_type, MaxPathLength> TextBlock;
-	typedef std::array<segment_type, MaxPathSegCount> SegmentBlock;
+	typedef size_t separator_index;
+
+	typedef ArrayList<char_type, MaxPathLength> TextArray;
+	typedef ArrayList<separator_index, MaxPathSegCount> SeparatorArray;
 
 public:
 	static const FilePath &get_working_directory();
 	static const FilePath &get_parent_directory();
 	static const FilePath &get_executable_path();
 
-	FilePath(const string_type &str);
-	inline FilePath(const char_type *cstr) : FilePath(string_type(cstr)) {}
+	FilePath(const string_blob &str);
+	inline FilePath(const string_type &str) : FilePath(string_blob(str.data(), str.length())) {}
+	inline FilePath(const char_type *cstr)
+		: FilePath(string_blob(cstr, StringTools::length(cstr, MaxPathLength - 1))) {
+	}
 	// narrowing will have gonky behavior
 	inline FilePath(const iterator_entry &entry)
 		: FilePath(StringTools::convert(entry.path().c_str(), npos)) {
 	}
 	~FilePath();
 
-	FilePath(const FilePath &copy);
-	FilePath(FilePath &&move) noexcept;
-	FilePath &operator=(const FilePath &assign);
-	FilePath &operator=(FilePath &&move) noexcept;
+	FilePath(const FilePath &copy) = default;
+	FilePath(FilePath &&move) noexcept = default;
+	FilePath &operator=(const FilePath &assign) = default;
+	FilePath &operator=(FilePath &&move) noexcept = default;
 
+	bool operator<(const FilePath &other) const;
 	bool operator==(const FilePath &other) const;
+
+	FilePath &operator+=(const FilePath &right);
+	FilePath operator+(const FilePath &right) const;
 
 	operator string_type() const;
 
@@ -64,7 +73,7 @@ public:
 
 	string_blob get_text() const;
 
-	Blob<const segment_type> get_segments() const;
+	Blob<const separator_index> get_separators() const;
 
 	iterator create_iterator() const;
 
@@ -75,6 +84,22 @@ public:
 	inline FilePath join_path(const char_type *path) const {
 		return join_path(string_blob(path, string_type::traits_type::length(path)));
 	}
+
+	FilePath &add_path(const string_blob &path);
+
+	inline FilePath &add_path(const FilePath &path) {
+		return add_path(path.get_text());
+	}
+
+	inline FilePath &add_path(const string_type &path) {
+		return add_path(string_blob(path.data(), path.size()));
+	}
+
+	inline FilePath &add_path(const char_type *path) {
+		return add_path(string_blob(path, string_type::traits_type::length(path)));
+	}
+
+	FilePath &pop_path();
 
 	std::ifstream stream_read(bool binary = true) const;
 	std::ofstream stream_write(bool binary = true) const;
@@ -119,22 +144,21 @@ public:
 	static constexpr size_t _get_last_separator(const string_blob &source);
 
 private:
-	struct Internal;
-	FilePath(Internal *data, size_t start, size_t end);
 
-	static void build_segments(Internal &internals);
+	static void calculate_separators(const string_blob &text, SeparatorArray &out);
 	static string_type _resolve_path(const string_blob &text, const string_blob &base);
-	static bool preprocess(Blob<TextBlock::value_type> &text);
+	static bool preprocess(Blob<TextArray::value_type> &text);
 
-	static inline bool preprocess(TextBlock::value_type *text, size_t &length) {
-		Blob<TextBlock::value_type> blob{text, length};
+	static inline bool preprocess(TextArray::value_type *text, size_t &length) {
+		Blob<TextArray::value_type> blob{text, length};
 		bool result = preprocess(blob);
 		length = blob.length();
 		return result;
 	}
 
 private:
-	Internal *m_internal;
+	TextArray m_text;
+	SeparatorArray m_separators;
 };
 
 inline constexpr bool FilePath::is_valid_filename_char(const char_type character) {
