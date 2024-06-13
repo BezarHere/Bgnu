@@ -92,7 +92,7 @@ public:
 			throw std::length_error("new_size too large");
 		}
 
-		m_count = newsize;
+		m_count = new_size;
 	}
 	void resize(size_type new_size);
 
@@ -183,7 +183,7 @@ template<typename _T, std::size_t _Sz>
 inline ArrayList<_T, _Sz>::value_type &ArrayList<_T, _Sz>::push_back(value_type &&move) {
 	if constexpr (std::is_move_constructible_v<_T>)
 	{
-		return emplace_back(std::forward(move));
+		return emplace_back(std::forward<value_type>(move));
 	}
 	else if constexpr (std::is_copy_constructible_v<_T>)
 	{
@@ -213,12 +213,13 @@ template<typename _T, std::size_t _Sz>
 inline size_t ArrayList<_T, _Sz>::extend(const value_type *begin, size_t count) {
 	count = std::min(capacity() - m_count, count);
 
-	for (size_t i = m_count; i < count; i++)
+	for (size_t i = 0; i < count; i++)
 	{
-		_construct(i, begin[i]);
+		_construct(i + m_count, begin[i]);
 	}
 
 	m_count += count;
+	return count;
 }
 
 template<typename _T, std::size_t _Sz>
