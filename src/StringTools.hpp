@@ -120,6 +120,18 @@ struct StringTools
 		return count_;
 	}
 
+	static constexpr inline size_t length(const char_type *start, const size_t max_count = npos) {
+		for (size_t i = 0; i < max_count; i++)
+		{
+			if (start[i] == 0)
+			{
+				return i;
+			}
+		}
+
+		return max_count;
+	}
+
 	static inline string_type narrow(const wide_char_type *src_str, const size_t max_count) {
 		const size_t dst_sz = wcsnlen_s(src_str, max_count) * 2 + 1;
 		string_type dst_str{};
