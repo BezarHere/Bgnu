@@ -69,7 +69,7 @@ static FilePath::string_blob get_root_path(const FilePath::string_blob &base);
 FilePath::FilePath(const string_blob &str) {
 
 	// copy string
-	m_text.extend(str.data, str.length());
+	m_text.extend(str.data, StringTools::length(str.data, str.length()));
 
 	// can't write to the entire text region, need to place a null at back
 	if (m_text.full())
