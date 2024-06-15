@@ -47,6 +47,7 @@ struct BuildConfigurationReader
 	void read_warning_info(WarningReportInfo &info);
 
 	void read_strings_named(const string &name, vector<string> &out);
+	void read_paths_named(const string &name, vector<FilePath> &out);
 
 	template <typename _Traits>
 	inline typename _Traits::enum_type _read_enum(const string &name, const _Traits &traits) {
@@ -230,9 +231,38 @@ void BuildConfiguration::_put_misc(vector<string> &output) const {
 }
 
 void BuildConfiguration::_put_includes(vector<string> &output) const {
+	for (const auto &include_dir : include_directories)
+	{
+		output.emplace_back("-I");
+
+		output.emplace_back();
+		output.back().append("\"");
+		output.back().append(include_dir);
+		output.back().append("\"");
+	}
 }
 
 void BuildConfiguration::_put_libraries(vector<string> &output) const {
+	for (const auto &lib_dir : library_directories)
+	{
+		std::cout << lib_dir << '\n';
+		output.emplace_back("-L");
+
+		output.emplace_back();
+		output.back().append("\"");
+		output.back().append(lib_dir);
+		output.back().append("\"");
+	}
+
+	for (const auto &lib_dir : library_names)
+	{
+		output.emplace_back("-l");
+
+		output.emplace_back();
+		output.back().append("\"");
+		output.back().append(lib_dir);
+		output.back().append("\"");
+	}
 }
 
 void BuildConfiguration::build_arguments(vector<string> &output,
@@ -277,12 +307,12 @@ void BuildConfiguration::build_link_arguments(vector<string> &output,
 
 	for (const StrBlob &blob : files)
 	{
-		output.emplace_back('"');
+		output.emplace_back(1, '"');
 		output.back().append(blob.begin(), blob.length());
 		output.back().append(1, '"');
 	}
 
-	output.emplace_back('"');
+	output.emplace_back(1, '"');
 	output.back().append(ouput_file.begin(), ouput_file.length());
 	output.back().append(1, '"');
 
@@ -335,6 +365,15 @@ BuildConfiguration BuildConfiguration::from_data(FieldDataReader reader, ErrorRe
 
 	CHECK_REPORT(
 		bc_reader.read_strings_named("lib_names", config.library_names);
+	);
+
+
+	CHECK_REPORT(
+		bc_reader.read_paths_named("lib_dirs", config.library_directories);
+	);
+
+	CHECK_REPORT(
+		bc_reader.read_paths_named("include_dirs", config.include_directories);
 	);
 
 	return config;
@@ -449,6 +488,16 @@ void BuildConfigurationReader::read_strings_named(const string &name, vector<str
 		break;
 	}
 
+}
+
+void BuildConfigurationReader::read_paths_named(const string &name, vector<FilePath> &out) {
+	vector<string> paths_str{};
+	read_strings_named(name, paths_str);
+
+	for (const auto &path : paths_str)
+	{
+		out.emplace_back(path);
+	}
 }
 
 #pragma region(enum names)
