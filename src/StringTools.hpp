@@ -133,7 +133,7 @@ struct StringTools
 	}
 
 	static inline string_type narrow(const wide_char_type *src_str, const size_t max_count) {
-		const size_t dst_sz = wcsnlen_s(src_str, max_count) * 2 + 1;
+		const size_t dst_sz = wcsnlen_s(src_str, max_count) * sizeof(*src_str) + 1;
 		string_type dst_str{};
 		dst_str.resize(dst_sz);
 
@@ -151,11 +151,13 @@ struct StringTools
 			);
 		}
 
+		dst_str.resize(chars_converted);
+
 		return dst_str;
 	}
 
 	static inline wide_string_type widen(const char_type *src_str, const size_t max_count) {
-		const size_t dst_sz = mblen(src_str, max_count) + 1;
+		const size_t dst_sz = mblen(src_str, max_count) * sizeof(*src_str) + 1;
 		wide_string_type dst_str{};
 		dst_str.resize(dst_sz);
 
@@ -172,6 +174,8 @@ struct StringTools
 				error
 			);
 		}
+
+		dst_str.resize(chars_converted);
 
 		return dst_str;
 	}
