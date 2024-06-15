@@ -96,10 +96,11 @@ vector<FilePath> Project::get_source_files() const {
 	for (const auto &p : get_available_files())
 	{
 		FilePath path = p;
+		
 
 		if (is_matching_source(path.get_text()))
 		{
-			result_paths.push_back(std::move(path));
+			result_paths.push_back(path);
 		}
 
 	}
