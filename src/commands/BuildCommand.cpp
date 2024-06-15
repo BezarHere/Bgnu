@@ -8,8 +8,10 @@ const string ResaveArgs[] = {"--resave"};
 constexpr const char *InputFilePrefix = "-i=";
 
 typedef SourceProcessor::dependency_map dependency_map;
+typedef vector<vector<string>> build_args_list;
 
 static void dump_dep_map(const dependency_map &map, const FilePath &cache_folder);
+static void dump_build_args(const build_args_list &list, const FilePath &cache_folder);
 
 Error commands::BuildCommand::execute(ArgumentReader &reader) {
 
@@ -59,8 +61,7 @@ Error commands::BuildCommand::execute(ArgumentReader &reader) {
 	const FilePath project_dir = input_file_path.parent();
 	const FieldVar project_file_data = FieldFile::load(input_file_path);
 
-	// std::cout << '\n' << "project file data: " << FieldFile::write(project_file_data.get_dict()) << '\n';
-	FieldFile::dump(string(input_file_path) + string("-out"), project_file_data.get_dict());
+	// FieldFile::dump(string(input_file_path) + string("-out"), project_file_data.get_dict());
 
 	ErrorReport report{};
 	Project project = Project::from_data(project_file_data.get_dict(), report);
@@ -82,10 +83,13 @@ Error commands::BuildCommand::execute(ArgumentReader &reader) {
 		return Error::NoConfig;
 	}
 
+	const BuildConfiguration &build_cfg = project.get_build_configs().at("debug");
+
 	project.get_output().ensure_available();
 
 
 	std::map<string, vector<string>> dependencies{};
+	build_args_list build_args{};
 
 	for (const auto &path : project.get_source_files())
 	{
@@ -101,29 +105,29 @@ Error commands::BuildCommand::execute(ArgumentReader &reader) {
 		stream.read(output.data(), static_cast<std::streamsize>(output.size()));
 
 		vector<string> deps{};
-		SourceTools::get_dependencies({output.data(), output.size()}, SourceType::C, deps);
+		SourceTools::get_dependencies({output.data(), output.size()}, SourceFileType::C, deps);
+
+		// the path seems to have an extra null at the end
+		// don't know why tho
 		dependencies.insert_or_assign(
-			string(path),
+			string(path.get_text().data),
 			deps
 		);
 
 
-		// std::cout << output << '\n';
+		const FilePath output_path = project.get_output().cache_dir.join_path(path.name());
 
-		// size_t newlines = 0;
-
-		// for (string_char c : output)
-		// {
-		// 	if (StringTools::is_newline(c))
-		// 	{
-		// 		newlines++;
-		// 	}
-		// }
-
-		// std::cout << "newlines " << newlines << ": at " << path << '\n';
+		build_args.emplace_back();
+		build_cfg.build_arguments(
+			build_args.back(),
+			path.get_text(),
+			output_path.get_text(),
+			SourceFileType::CPP
+		);
 	}
 
 	dump_dep_map(dependencies, project.get_output().cache_dir);
+	dump_build_args(build_args, project.get_output().cache_dir);
 
 	return Error::Ok;
 }
@@ -135,6 +139,8 @@ FilePath commands::BuildCommand::_default_filepath() {
 void dump_dep_map(const dependency_map &map, const FilePath &cache_folder) {
 	FilePath output_path = cache_folder.join_path(".deps");
 	std::ofstream stream = output_path.stream_write(false);
+
+	const std::streampos start = stream.tellp();
 
 	// We can do it by converting 'map' to field var and save it
 	// sadly, im too lazy rn
@@ -149,4 +155,32 @@ void dump_dep_map(const dependency_map &map, const FilePath &cache_folder) {
 		stream << "]\n\n";
 	}
 
+	Logger::verbose("dumped the dependency map: size=%lld bytes", stream.tellp() - start);
+}
+
+void dump_build_args(const build_args_list &list, const FilePath &cache_folder) {
+	FilePath output_path = cache_folder.join_path(".args");
+	std::ofstream stream = output_path.stream_write(false);
+
+	const std::streampos start = stream.tellp();
+
+	// We can do it by converting 'map' to field var and save it
+	// sadly, im too lazy rn
+
+	for (const auto &args : list)
+	{
+		bool first = true;
+		for (const auto &arg : args)
+		{
+			if (!first)
+			{
+				stream << ' ';
+			}
+			first = false;
+			stream << arg;
+		}
+		stream << '\n';
+	}
+
+	Logger::verbose("dumped the build argument list: size=%lld bytes", stream.tellp() - start);
 }
