@@ -242,19 +242,18 @@ FilePath &FilePath::add_path(const string_blob &path) {
 		// 'back()' should be the null end (hopefully)
 		m_text.back() = DirectorySeparator;
 	}
-
-	m_separators.push_back(m_text.size());
-
+	
 	m_text.extend(path.data, path.length());
 
-	if (m_text.full())
-	{
-		m_text.back() = char_type();
-	}
-	else
-	{
-		m_text.emplace_back();
-	}
+	size_t size = m_text.size();
+	preprocess(m_text.data(), size);
+
+	m_text.resize(size + 1);
+	m_text.back() = 0;
+
+	m_separators.clear();
+
+	calculate_separators({m_text.data(), m_text.size() - 1}, m_separators);
 
 	return *this;
 }
