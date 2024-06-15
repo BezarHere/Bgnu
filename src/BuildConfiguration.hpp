@@ -4,6 +4,7 @@
 #include "FilePath.hpp"
 #include "misc/Error.hpp"
 #include "Glob.hpp"
+#include "SourceTools.hpp" // for SourceFileType
 
 enum class OptimizationType : uint8_t
 {
@@ -30,9 +31,8 @@ enum class OptimizationDegree : uint8_t
 enum class WarningLevel : uint8_t
 {
 	None = 0,
-	Few,
-	Most,
-	All
+	All,
+	Extra
 };
 
 enum class StandardType : uint8_t
@@ -45,7 +45,6 @@ enum class StandardType : uint8_t
 	C17,
 	C23,
 
-	Cpp99,
 	Cpp11,
 	Cpp14,
 	Cpp17,
@@ -78,12 +77,32 @@ struct OptimizationInfo
 
 struct WarningReportInfo
 {
-	WarningLevel level = WarningLevel::Most;
+	WarningLevel level = WarningLevel::All;
 	bool pedantic = false;
 };
 
 struct BuildConfiguration
 {
+	void _put_predefines(vector<string> &output) const;
+	void _put_flags(vector<string> &output) const;
+
+	void _put_standards(vector<string> &output, SourceFileType type) const;
+	void _put_optimization(vector<string> &output) const;
+	void _put_warnings(vector<string> &output) const;
+
+	void _put_misc(vector<string> &output) const;
+
+	void _put_includes(vector<string> &output) const;
+	void _put_libraries(vector<string> &output) const;
+
+	void _put_sub_args(vector<string> &output) const;
+
+	void build_arguments(vector<string> &output, const StrBlob &input_file,
+											 const StrBlob &output_file, SourceFileType type) const;
+
+	void build_link_arguments(vector<string> &output,
+														const Blob<const StrBlob> &files, const StrBlob &ouput_file) const;
+
 	static BuildConfiguration from_data(FieldDataReader reader, ErrorReport &report);
 
 	static const char *get_enum_name(OptimizationType opt_type);
@@ -100,7 +119,7 @@ struct BuildConfiguration
 
 	// values should be either a string OR a null 
 	FieldVar::Dict predefines;
-	
+
 	OptimizationInfo optimization = {};
 	WarningReportInfo warnings = {};
 

@@ -34,6 +34,8 @@ struct EnumTraits
 	ALWAYS_INLINE const string_type &name() const { return _name; }
 };
 
+static constexpr StandardType transform_standards(StandardType original, SourceFileType source_type);
+
 struct BuildConfigurationReader
 {
 	BuildConfigurationReader(const BuildConfiguration &_config, FieldDataReader &_reader, ErrorReport &_result)
@@ -88,8 +90,208 @@ struct BuildConfigurationReader
 	ErrorReport &result;
 };
 
+void BuildConfiguration::_put_predefines(vector<string> &output) const {
+	for (const auto &[name, value] : predefines)
+	{
+		if (value.is_null())
+		{
+			output.emplace_back("-D");
+			output.back().append(name);
+			continue;
+		}
 
+		const bool valid_string = \
+			value.is_convertible_to(FieldVarType::String)
+			|| value.is_type_simple(FieldVarType::String);
+
+		if (!valid_string)
+		{
+			Logger::error(
+				"Invalid predefine value named \"%s\" of type %s, skipping it...",
+				to_cstr(name),
+				value.get_type_name()
+			);
+
+			continue;
+		}
+
+		if (value.get_type() != FieldVarType::String)
+		{
+			output.emplace_back("-D");
+			output.back().append(name);
+			output.back().append("=\"");
+
+			// FIXME: escape the value before appending
+			output.back().append(value.copy_stringified().get_string());
+
+			output.back().append("\"");
+		}
+	}
+}
+
+void BuildConfiguration::_put_flags(vector<string> &output) const {
+	if (this->exit_on_errors)
+	{
+		output.emplace_back("-Wfatal-errors");
+	}
+
+}
+
+void BuildConfiguration::_put_standards(vector<string> &output, SourceFileType type) const {
+	StandardType standard_type = transform_standards(standard, type);
+
+	output.emplace_back("-std=");
+	output.back().append(get_enum_name(standard_type));
+}
+
+void BuildConfiguration::_put_optimization(vector<string> &output) const {
+
+	switch (optimization.type)
+	{
+	case OptimizationType::None:
+		output.emplace_back("-O0");
+		return;
+
+	case OptimizationType::Release:
+		output.emplace_back("-O");
+		output.back().append(1, '0' + (int)optimization.degree);
+		return;
+
+	case OptimizationType::Debug:
+		{
+			output.emplace_back("-Og");
+
+			output.emplace_back("-g");
+			if (optimization.degree != OptimizationDegree::None)
+			{
+				output.back().append(1, '0' + (int)optimization.degree);
+			}
+
+			return;
+		}
+
+	case OptimizationType::Size:
+		{
+			if ((int)optimization.degree >= (int)OptimizationDegree::High)
+			{
+				output.emplace_back("-Oz");
+				return;
+			}
+
+			output.emplace_back("-Os");
+			return;
+		}
+
+	case OptimizationType::SpeedUnreliable:
+		{
+			output.emplace_back("-Ofast");
+			return;
+		}
+
+	default:
+		return;
+	}
+}
+
+void BuildConfiguration::_put_warnings(vector<string> &output) const {
+	switch (warnings.level)
+	{
+	case WarningLevel::None:
+		{
+			break;
+		}
+	case WarningLevel::All:
+		{
+			output.emplace_back("-Wall");
+			break;
+		}
+	case WarningLevel::Extra:
+		{
+			output.emplace_back("-Wextra");
+			break;
+		}
+	}
+
+
+	if (warnings.pedantic)
+	{
+		output.emplace_back("-Wpedantic");
+	}
+}
+
+void BuildConfiguration::_put_misc(vector<string> &output) const {
+	if (simd_type == SIMDType::None)
+	{
+		return;
+	}
+
+	output.emplace_back("-m");
+	output.back().append(StringTools::to_lower(get_enum_name(simd_type)));
+}
+
+void BuildConfiguration::_put_includes(vector<string> &output) const {
+}
+
+void BuildConfiguration::_put_libraries(vector<string> &output) const {
+}
+
+void BuildConfiguration::build_arguments(vector<string> &output,
+																				 const StrBlob &input_file, const StrBlob &output_file,
+																				 SourceFileType type) const {
+	_put_predefines(output);
+
+	_put_optimization(output);
+	_put_standards(output, type);
+	_put_warnings(output);
+	_put_flags(output);
+	_put_misc(output);
+
+	_put_includes(output);
+
+	output.emplace_back("-c");
+
+	output.emplace_back("\"");
+	output.back().append(input_file.begin(), input_file.length());
+	output.back().append("\"");
+
+	output.emplace_back("-o");
+
+	output.emplace_back("\"");
+	output.back().append(output_file.begin(), output_file.length());
+	output.back().append("\"");
+
+	_put_libraries(output);
+}
+
+void BuildConfiguration::build_link_arguments(vector<string> &output,
+																							const Blob<const StrBlob> &files,
+																							const StrBlob &ouput_file) const {
+	_put_predefines(output);
+
+	_put_optimization(output);
+	_put_standards(output, SourceFileType::CPP);
+	_put_warnings(output);
+	_put_misc(output);
+
+	_put_includes(output);
+
+	for (const StrBlob &blob : files)
+	{
+		output.emplace_back('"');
+		output.back().append(blob.begin(), blob.length());
+		output.back().append(1, '"');
+	}
+
+	output.emplace_back('"');
+	output.back().append(ouput_file.begin(), ouput_file.length());
+	output.back().append(1, '"');
+
+	_put_libraries(output);
+}
+
+// used in from_data()
 #define CHECK_REPORT(expr) expr; if (report.code != Error::Ok) { return config; }
+
 BuildConfiguration BuildConfiguration::from_data(FieldDataReader reader, ErrorReport &report) {
 	BuildConfiguration config{};
 
@@ -271,12 +473,10 @@ constexpr array<const char *, 5> OptimizationDegreeNames = {
 	"extreme",
 };
 
-constexpr array<const char *, 4> WarningLevelNames = {
+constexpr array<const char *, 3> WarningLevelNames = {
 	"none",
-
-	"few",
-	"most",
 	"all",
+	"extra",
 };
 
 constexpr array<const char *, 13> StandardTypeNames = {
@@ -399,5 +599,119 @@ SIMDType BuildConfiguration::get_simd_type(const string &name) {
 
 #pragma endregion
 
+constexpr StandardType transform_standards(StandardType original, SourceFileType source_type) {
+	typedef StandardType E;
+	typedef SourceFileType S;
+
+	switch (original)
+	{
+		// c (c99 will go to default)
+
+	case E::C11:
+		{
+			if (source_type == S::CPP)
+			{
+				return E::Cpp11;
+			}
+
+			return E::C11;
+		}
+
+	case E::C14:
+		{
+			if (source_type == S::CPP)
+			{
+				return E::Cpp14;
+			}
+
+			return E::C14;
+		}
+
+	case E::C17:
+		{
+			if (source_type == S::CPP)
+			{
+				return E::Cpp17;
+			}
+
+			return E::C17;
+		}
+
+		// case E::C20:
+		// {
+		// 	if (source_type == S::CPP)
+		// 	{
+		// 		return E::Cpp20;
+		// 	}
+
+		// 	return E::C20;
+		// }
+
+	case E::C23:
+		{
+			if (source_type == S::CPP)
+			{
+				return E::Cpp23;
+			}
+
+			return E::C23;
+		}
+
+		// c++
+
+	case E::Cpp11:
+		{
+			if (source_type == S::C)
+			{
+				return E::C11;
+			}
+
+			return E::Cpp11;
+		}
+
+	case E::Cpp14:
+		{
+			if (source_type == S::C)
+			{
+				return E::C14;
+			}
+
+			return E::Cpp14;
+		}
+
+	case E::Cpp17:
+		{
+			if (source_type == S::C)
+			{
+				return E::C17;
+			}
+
+			return E::Cpp17;
+		}
+
+	case E::Cpp20:
+		{
+			// if (source_type == S::C)
+			// {
+			// 	return E::C20;
+			// }
+
+			return E::Cpp20;
+		}
+
+	case E::Cpp23:
+		{
+			if (source_type == S::C)
+			{
+				return E::C23;
+			}
+
+			return E::Cpp23;
+		}
+
+	default:
+		return original;
+	}
+}
 
 
