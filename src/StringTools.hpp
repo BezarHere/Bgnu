@@ -151,7 +151,7 @@ struct StringTools
 			);
 		}
 
-		dst_str.resize(chars_converted);
+		dst_str.resize(strnlen(dst_str.c_str(), dst_str.size()));
 
 		return dst_str;
 	}
@@ -175,7 +175,7 @@ struct StringTools
 			);
 		}
 
-		dst_str.resize(chars_converted);
+		dst_str.resize(wcsnlen(dst_str.c_str(), dst_str.size()));
 
 		return dst_str;
 	}
