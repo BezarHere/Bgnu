@@ -9,7 +9,7 @@ void SourceTools::get_dependencies(const StrBlob &file, SourceFileType type,
 	switch (type)
 	{
 	case SourceFileType::C:
-		// case SourceType::CPP: // equal to SourceType::C
+	case SourceFileType::CPP:
 		{
 			vector<CPreprocessor::Token> tokens{};
 

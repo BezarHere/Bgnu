@@ -5,7 +5,7 @@
 enum class SourceFileType
 {
 	C,
-	CPP = C,
+	CPP,
 
 };
 
