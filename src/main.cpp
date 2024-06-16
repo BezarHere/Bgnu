@@ -15,15 +15,6 @@ int main(int argc, const char *argv[]) {
 		Logger::debug("arg no.%d: '%s'", i, argv[i]);
 	}
 
-	// string path;
-	// std::cin >> path;
-
-	// FilePath fpath{path};
-
-	// std::cout << '\n' << "original: " << fpath << '\n';
-	// fpath.resolve();
-	// std::cout << '\n' << "resolved: " << fpath << '\n';
-
 	const chrono::time_point pre_run_time = chrono::steady_clock::now();
 
 	int result = Startup::start(ArgumentReader(argv + 1, std::max(argc - 1, 0)));
