@@ -140,7 +140,7 @@ FilePath FilePath::operator+(const FilePath &right) const {
 }
 
 FilePath::operator string_type() const {
-	return string_type(m_text.data(), m_text.size());
+	return string_type(m_text.data(), m_text.size() - 1);
 }
 
 FilePath FilePath::parent() const {
