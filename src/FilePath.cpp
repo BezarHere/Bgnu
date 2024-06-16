@@ -82,19 +82,24 @@ FilePath::FilePath(const string_blob &str) {
 
 	size_t preprocessed_size = m_text.size() - 1;
 
-	if (FilePath::preprocess(m_text.data(), preprocessed_size))
+	if (FilePath::_preprocess(m_text.data(), preprocessed_size))
 	{
 		//? do something
 	}
 
-	// m_text data is modified inplace by FilePath::preprocess, no need to copy anything
+	// m_text data is modified inplace by FilePath::_preprocess, no need to copy anything
 	// just resize to fit
 	m_text.resize(preprocessed_size);
 	// + null end
 	m_text.emplace_back();
 
 	// build the separators
-	FilePath::calculate_separators(string_blob(m_text.data(), m_text.size()), m_separators);
+	FilePath::_calculate_separators(string_blob(m_text.data(), m_text.size()), m_separators);
+}
+
+FilePath::FilePath(const string_blob &str, const string_blob &base)
+	: FilePath(_resolve_path(str, base)) {
+
 }
 
 FilePath::~FilePath() {
@@ -242,18 +247,18 @@ FilePath &FilePath::add_path(const string_blob &path) {
 		// 'back()' should be the null end (hopefully)
 		m_text.back() = DirectorySeparator;
 	}
-	
+
 	m_text.extend(path.data, path.length());
 
 	size_t size = m_text.size();
-	preprocess(m_text.data(), size);
+	_preprocess(m_text.data(), size);
 
 	m_text.resize(size + 1);
 	m_text.back() = 0;
 
 	m_separators.clear();
 
-	calculate_separators({m_text.data(), m_text.size() - 1}, m_separators);
+	_calculate_separators({m_text.data(), m_text.size() - 1}, m_separators);
 
 	return *this;
 }
@@ -360,7 +365,7 @@ bool FilePath::is_valid() const {
 	return !(m_separators.empty() || m_text.empty());
 }
 
-void FilePath::resolve(const FilePath &base) {
+FilePath &FilePath::resolve(const FilePath &base) {
 	string_type resolved_str = _resolve_path(
 		string_blob(m_text.begin(), m_text.end() - 1),
 		base.get_text()
@@ -369,6 +374,7 @@ void FilePath::resolve(const FilePath &base) {
 	// will haunt me later, my future self wouldn't know what hit 'em
 	this->~FilePath();
 	new (this) FilePath(resolved_str);
+	return *this;
 }
 
 const FilePath &FilePath::get_working_directory() {
@@ -437,7 +443,7 @@ FilePath::string_blob FilePath::_get_parent(const string_blob &source) {
 	return string_blob(source.data, anchor);
 }
 
-void FilePath::calculate_separators(const string_blob &text, SeparatorArray &out) {
+void FilePath::_calculate_separators(const string_blob &text, SeparatorArray &out) {
 
 	// out.data[out.count++] = npos; // first separator
 
@@ -463,6 +469,11 @@ void FilePath::calculate_separators(const string_blob &text, SeparatorArray &out
 }
 
 FilePath::string_type FilePath::_resolve_path(const string_blob &text, const string_blob &base) {
+	if (text.empty())
+	{
+		return "";
+	}
+
 	const bool root_start = StringTools::is_directory_separator(text[0]);
 
 	string_type result_str{};
@@ -481,8 +492,10 @@ FilePath::string_type FilePath::_resolve_path(const string_blob &text, const str
 
 	size_t last_anchor = 0;
 
+	const size_t text_count = std::min(MaxPathLength - 1, text.size);
+
 	// start after the first char, if it can be processed then it had been above 
-	for (size_t i = 1; i <= text.size; i++)
+	for (size_t i = 1; i <= text_count; i++)
 	{
 		if (StringTools::is_directory_separator(text[i]) || i == text.size)
 		{
@@ -539,7 +552,7 @@ FilePath::string_type FilePath::_resolve_path(const string_blob &text, const str
 	return result_str;
 }
 
-bool FilePath::preprocess(Blob<TextArray::value_type> &text) {
+bool FilePath::_preprocess(Blob<TextArray::value_type> &text) {
 	bool driver_column = false;
 
 	size_t drag_offset = 0;
