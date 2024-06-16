@@ -2,11 +2,20 @@
 #include "BuildConfiguration.hpp"
 #include <map>
 
+enum class BuildOutputType
+{
+	None,
+	Executable,
+	StaticLibrary,
+	DynamicLibrary,
+};
+
 struct ProjectOutputData
 {
 	// creates folders and stuff
 	Error ensure_available() const;
 
+	BuildOutputType type = BuildOutputType::Executable;
 	FilePath path = "out/main";
 	FilePath cache_dir = "out/cache/";
 };
