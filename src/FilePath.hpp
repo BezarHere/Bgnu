@@ -67,6 +67,8 @@ public:
 	* === === Lifetime (Ctors/Dtors/Copy Ctors) === ===
 	*/
 
+	inline FilePath() = default;
+
 	FilePath(const string_blob &str);
 	FilePath(const string_blob &str, const string_blob &base);
 
@@ -237,8 +239,8 @@ private:
 	}
 
 private:
-	TextArray m_text;
-	SeparatorArray m_separators;
+	TextArray m_text{};
+	SeparatorArray m_separators{};
 };
 
 /*
