@@ -117,14 +117,15 @@ Error commands::BuildCommand::execute(ArgumentReader &reader) {
 
 		const FilePath output_path = project.get_output().cache_dir.join_path(path.name());
 
-		build_args.emplace_back();
 		build_cfg.build_arguments(
-			build_args.back(),
+			build_args.emplace_back(),
 			path.get_text(),
 			output_path.get_text(),
 			SourceFileType::CPP
 		);
 	}
+
+	// TODO: link args with all the input files
 
 	dump_dep_map(dependencies, project.get_output().cache_dir);
 	dump_build_args(build_args, project.get_output().cache_dir);
