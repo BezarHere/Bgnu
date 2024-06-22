@@ -129,6 +129,7 @@ public:
 	string_type extension() const;
 
 	string_blob get_text() const;
+	inline const string_char *c_str() const { return m_text.data(); }
 
 	Blob<const separator_index> get_separators() const;
 
