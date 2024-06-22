@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <stack>
 #include <vector>
 #include <array>
 #include <cstdint>
@@ -17,6 +18,9 @@ using pair = std::pair<_T1, _T2>;
 
 using std::vector;
 using std::array;
+
+template <typename T>
+using vector_stack = std::stack<T, std::vector<T>>;
 
 typedef std::string string;
 typedef string::value_type string_char;
