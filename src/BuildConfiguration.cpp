@@ -299,7 +299,7 @@ void BuildConfiguration::build_link_arguments(vector<string> &output,
 	_put_predefines(output);
 
 	_put_optimization(output);
-	_put_standards(output, SourceFileType::CPP);
+	_put_standards(output, SourceFileType::None);
 	_put_warnings(output);
 	_put_misc(output);
 
@@ -651,6 +651,11 @@ SIMDType BuildConfiguration::get_simd_type(const string &name) {
 constexpr StandardType transform_standards(StandardType original, SourceFileType source_type) {
 	typedef StandardType E;
 	typedef SourceFileType S;
+
+	if (source_type == SourceFileType::None)
+	{
+		return original;
+	}
 
 	switch (original)
 	{
