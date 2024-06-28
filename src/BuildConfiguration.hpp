@@ -1,5 +1,6 @@
 #pragma once
 #include "base.hpp"
+#include "HashTools.hpp"
 #include "FieldDataReader.hpp"
 #include "FilePath.hpp"
 #include "misc/Error.hpp"
@@ -71,12 +72,20 @@ enum class SIMDType : uint8_t
 
 struct OptimizationInfo
 {
+	inline hash_t hash() const noexcept {
+		return HashTools::combine((int)type, (int)degree);
+	}
+
 	OptimizationType type = OptimizationType::Release;
 	OptimizationDegree degree = OptimizationDegree::High;
 };
 
 struct WarningReportInfo
 {
+	inline hash_t hash() const noexcept {
+		return HashTools::combine((int)level, (int)pedantic);
+	}
+
 	WarningLevel level = WarningLevel::All;
 	bool pedantic = false;
 };
@@ -102,6 +111,8 @@ struct BuildConfiguration
 
 	void build_link_arguments(vector<string> &output,
 														const Blob<const StrBlob> &files, const StrBlob &ouput_file) const;
+
+	hash_t hash() const;
 
 	static BuildConfiguration from_data(FieldDataReader reader, ErrorReport &report);
 

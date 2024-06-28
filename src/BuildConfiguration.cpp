@@ -3,6 +3,8 @@
 #include "FieldDataReader.hpp"
 #include "Logger.hpp"
 
+#include <algorithm>
+
 template <typename Type, typename ParseProc, typename StringifyProc, typename ValidateProc>
 struct EnumTraits
 {
@@ -317,6 +319,41 @@ void BuildConfiguration::build_link_arguments(vector<string> &output,
 	output.back().append(1, '"');
 
 	_put_libraries(output);
+}
+
+hash_t BuildConfiguration::hash() const {
+	HashDigester digester{};
+
+	digester += FieldVar::hash_dict(this->predefines);
+	digester += optimization;
+	digester += warnings;
+
+	digester += (hash_t)this->standard;
+
+	digester += (hash_t)this->exit_on_errors;
+	digester += (hash_t)this->print_stats;
+	digester += (hash_t)this->print_includes;
+	digester += (hash_t)this->dynamically_linkable;
+
+	digester += (hash_t)this->simd_type;
+
+	digester.add(preprocessor_args.data(), preprocessor_args.size());
+	digester.add(linker_args.data(), linker_args.size());
+	digester.add(assembler_args.data(), assembler_args.size());
+
+	digester.add(library_names.data(), preprocessor_args.size());
+
+	std::for_each(
+		library_directories.begin(), library_directories.end(),
+		[&digester](const FilePath &file_path) { digester.add(file_path.get_text()); }
+	);
+
+	std::for_each(
+		include_directories.begin(), include_directories.end(),
+		[&digester](const FilePath &file_path) { digester.add(file_path.get_text()); }
+	);
+
+	return digester.value;
 }
 
 // used in from_data()
