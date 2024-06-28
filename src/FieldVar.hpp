@@ -100,6 +100,10 @@ public:
 
 #ifdef FIELDVAR_HASH_DEF
 	hash_t hash() const;
+
+	static hash_t hash_string(const String &str);
+	static hash_t hash_array(const Array &arr);
+	static hash_t hash_dict(const Dict &dict);
 #endif
 
 private:
@@ -471,31 +475,39 @@ inline hash_t FieldVar::hash() const {
 		return m_int;
 
 	case FieldVarType::String:
-		return HashTools::hash({m_string.c_str(), m_string.length()});
+		return hash_string(m_string);
 	case FieldVarType::Array:
-		{
-			hash_t hash_val = HashTools::StartSeed;
-			for (const auto &value : m_array)
-			{
-				hash_val = HashTools::hash(value.hash(), hash_val);
-			}
-
-			return hash_val;
-		}
+		return hash_array(m_array);
 	case FieldVarType::Dict:
-		{
-			hash_t keys_hash = HashTools::StartSeed;
-			hash_t vals_hash = HashTools::StartSeed;
-			for (const auto &[key, value] : m_dict)
-			{
-				keys_hash = HashTools::hash({key.c_str(), key.length()}, keys_hash);
-				vals_hash = HashTools::hash(value.hash(), vals_hash);
-			}
-
-			return HashTools::hash(keys_hash, vals_hash);
-		}
+		return hash_dict(m_dict);
 	}
 	return HashTools::StartSeed;
+}
+
+inline hash_t FieldVar::hash_string(const String &str) {
+	return HashTools::hash({str.c_str(), str.length()});
+}
+
+inline hash_t FieldVar::hash_array(const Array &arr) {
+	hash_t hash_val = HashTools::StartSeed;
+	for (const auto &value : arr)
+	{
+		hash_val = HashTools::hash(value.hash(), hash_val);
+	}
+
+	return hash_val;
+}
+
+inline hash_t FieldVar::hash_dict(const Dict &dict) {
+	hash_t keys_hash = HashTools::StartSeed;
+	hash_t vals_hash = HashTools::StartSeed;
+	for (const auto &[key, value] : dict)
+	{
+		keys_hash = HashTools::hash({key.c_str(), key.length()}, keys_hash);
+		vals_hash = HashTools::hash(value.hash(), vals_hash);
+	}
+
+	return HashTools::hash(keys_hash, vals_hash);
 }
 #endif
 
