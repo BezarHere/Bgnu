@@ -2,6 +2,8 @@
 #include "misc/hash128.hpp"
 #include "base.hpp"
 
+#define FIELDVAR_HASH_DEF
+
 struct HashTools
 {
 	static constexpr hash_t StartSeed = 0x1C2A9FA99DEB1ULL;
