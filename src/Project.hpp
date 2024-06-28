@@ -15,6 +15,14 @@ struct ProjectOutputData
 	// creates folders and stuff
 	Error ensure_available() const;
 
+	inline hash_t hash() const {
+		return HashTools::combine(
+			(hash_t)type,
+			HashTools::hash(path.get_text()),
+			HashTools::hash(cache_dir.get_text())
+		);
+	}
+
 	BuildOutputType type = BuildOutputType::Executable;
 	FilePath path = "out/main";
 	FilePath cache_dir = "out/cache/";
@@ -35,6 +43,10 @@ public:
 	vector<FilePath> get_source_files() const;
 
 	bool is_matching_source(const StrBlob &path) const;
+
+	hash_t hash_own(HashDigester &digester) const;
+	hash_t hash_cfgs(HashDigester &digester) const;
+	hash_t hash() const;
 
 	FilePath source_dir = FilePath::get_working_directory();
 private:

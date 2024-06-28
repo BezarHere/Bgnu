@@ -96,7 +96,7 @@ vector<FilePath> Project::get_source_files() const {
 	for (const auto &p : get_available_files())
 	{
 		FilePath path = p;
-		
+
 
 		if (is_matching_source(path.get_text()))
 		{
@@ -117,6 +117,37 @@ bool Project::is_matching_source(const StrBlob &path) const {
 		}
 	}
 	return false;
+}
+
+hash_t Project::hash_own(HashDigester &digester) const {
+	digester += m_output;
+
+	for (const auto &glob : m_source_selectors)
+	{
+		digester.add(glob.get_source().c_str(), glob.get_source().length());
+	}
+
+	return digester.value;
+}
+
+hash_t Project::hash_cfgs(HashDigester &digester) const {
+
+	for (const auto &[name, cfg] : m_build_configurations)
+	{
+		digester.add(name.c_str(), name.length());
+		digester += cfg;
+	}
+
+	return digester.value;
+}
+
+hash_t Project::hash() const {
+	HashDigester digester;
+
+	hash_own(digester);
+	hash_cfgs(digester);
+
+	return digester.value;
 }
 
 Error ProjectOutputData::ensure_available() const {
