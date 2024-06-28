@@ -98,6 +98,10 @@ public:
 		return get_name_for_type(m_type);
 	}
 
+#ifdef FIELDVAR_HASH_DEF
+	hash_t hash() const;
+#endif
+
 private:
 	template <typename Transformer>
 	inline void _handle(Transformer &&transformer) {
@@ -125,6 +129,7 @@ private:
 
 	inline void *_union_ptr() { return &m_bool; }
 	inline const void *_union_ptr() const { return &m_bool; }
+
 
 private:
 	FieldVarType m_type;
@@ -450,5 +455,49 @@ inline const FieldVar::Dict &FieldVar::get_dict() const {
 
 	throw fieldvar_access_violation(*this, FieldVarType::Dict);
 }
+
+#ifdef FIELDVAR_HASH_DEF
+inline hash_t FieldVar::hash() const {
+	switch (m_type)
+	{
+	case FieldVarType::Null:
+		return 0;
+
+	case FieldVarType::Boolean:
+		return m_bool;
+
+	case FieldVarType::Integer:
+	case FieldVarType::Real: // access the bytes, not the value
+		return m_int;
+
+	case FieldVarType::String:
+		return HashTools::hash({m_string.c_str(), m_string.length()});
+	case FieldVarType::Array:
+		{
+			hash_t hash_val = HashTools::StartSeed;
+			for (const auto &value : m_array)
+			{
+				hash_val = HashTools::hash(value.hash(), hash_val);
+			}
+
+			return hash_val;
+		}
+	case FieldVarType::Dict:
+		{
+			hash_t keys_hash = HashTools::StartSeed;
+			hash_t vals_hash = HashTools::StartSeed;
+			for (const auto &[key, value] : m_dict)
+			{
+				keys_hash = HashTools::hash({key.c_str(), key.length()}, keys_hash);
+				vals_hash = HashTools::hash(value.hash(), vals_hash);
+			}
+
+			return HashTools::hash(keys_hash, vals_hash);
+		}
+	}
+	return HashTools::StartSeed;
+}
+#endif
+
 
 #pragma endregion
