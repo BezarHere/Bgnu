@@ -30,6 +30,10 @@ public:
 		return test(StrBlob(cstr, string::traits_type::length(cstr)));
 	}
 
+	inline const string &get_source() const {
+		return m_source;
+	}
+
 	template <typename _T>
 	inline bool operator()(_T &&value) const { return test(value); }
 
