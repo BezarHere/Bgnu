@@ -7,10 +7,11 @@
 		"gonky",
 		"pfile",
 		"predefines",
+		"rcount",
 		"Resave",
 		"Typeless",
 		"valist"
-	],
+	],,
 	"files.associations": {
 		"*.json": "jsonc",
 		"*.args": "makefile",
@@ -74,7 +75,8 @@
 		"map": "cpp",
 		"cinttypes": "cpp",
 		"bitset": "cpp",
-		"regex": "cpp"
+		"regex": "cpp",
+		"ranges": "cpp"
 	},
 	"C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
 		"readability-implicit-bool-conversion",
