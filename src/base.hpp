@@ -26,7 +26,6 @@ typedef std::string string;
 typedef string::value_type string_char;
 
 using std::streamsize;
-typedef uint64_t hash_t;
 
 // mutable blob of string_chars
 typedef Blob<string_char> MutableStrBlob;
