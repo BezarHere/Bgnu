@@ -11,7 +11,7 @@ enum class FieldVarType : char
 	Boolean,
 	Integer,
 	Real,
-	
+
 	String,
 	Array,
 	Dict,
@@ -63,6 +63,10 @@ public:
 		copy.stringify();
 		return copy;
 	}
+
+	inline String &get_string();
+	inline Array &get_array();
+	inline Dict &get_dict();
 
 	inline Bool get_bool() const;
 	inline Int get_int() const;
@@ -391,6 +395,33 @@ inline FieldVar::Real FieldVar::get_real() const {
 	default:
 		return m_bool;
 	}
+}
+
+inline FieldVar::String &FieldVar::get_string() {
+	if (m_type == FieldVarType::String)
+	{
+		return m_string;
+	}
+
+	throw fieldvar_access_violation(*this, FieldVarType::String);
+}
+
+inline FieldVar::Array &FieldVar::get_array() {
+	if (m_type == FieldVarType::Array)
+	{
+		return m_array;
+	}
+
+	throw fieldvar_access_violation(*this, FieldVarType::Array);
+}
+
+inline FieldVar::Dict &FieldVar::get_dict() {
+	if (m_type == FieldVarType::Dict)
+	{
+		return m_dict;
+	}
+
+	throw fieldvar_access_violation(*this, FieldVarType::Dict);
 }
 
 inline const FieldVar::String &FieldVar::get_string() const {
