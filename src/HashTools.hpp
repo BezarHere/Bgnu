@@ -124,6 +124,10 @@ struct HashDigester
 		return add(obj);
 	}
 
+	inline hash_t hash() const noexcept {
+		return value;
+	}
+
 	hash_t value = HashTools::StartSeed;
 };
 
