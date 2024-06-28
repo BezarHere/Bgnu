@@ -1,6 +1,7 @@
 #pragma once
 #include "base.hpp"
 #include "Console.hpp"
+#include "misc/Error.hpp"
 
 #define LOG_ASSERT(condition) if (!(condition)) Logger::_assert_fail(#condition, nullptr)
 #define LOG_ASSERT_V(condition, ...) \
@@ -76,6 +77,10 @@ public:
 		fputc('\n', stderr);
 
 		Console::pop_state();
+	}
+
+	static inline void error(const ErrorReport &report) {
+		return error("ERR[%d]: %s", (int)report.code, report.message.c_str());
 	}
 
 	static inline void warning(const char *format, ...) {
