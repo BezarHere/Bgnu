@@ -1,5 +1,6 @@
 #pragma once
 #include "SourceTools.hpp"
+#include "BuildCache.hpp"
 
 
 class SourceProcessor
@@ -17,9 +18,17 @@ public:
 		vector<FilePath> included_directories;
 	};
 
+	struct InputFilePath
+	{
+		FilePath path;
+		SourceFileType source_type;
+	};
+
 	typedef std::map<string, vector<dependency_name>> dependency_map;
 	typedef std::map<FilePath, DependencyInfo> dependency_info_map;
 	typedef std::map<FilePath, hash_t> rainbow_table;
+	typedef BuildCache::file_record_table file_record_table;
+	typedef vector<pair<FilePath, hash_t>> file_change_list;
 
 	enum Flags : uint8_t
 	{
@@ -30,9 +39,14 @@ public:
 
 	void process();
 
-	void add_file(const FilePath &filepath);
+	void add_file(const InputFilePath &input);
+	inline dependency_info_map &get_dependency_info_map() { return m_info_map; }
+	inline const dependency_info_map &get_dependency_info_map() const { return m_info_map; }
 
 	hash_t get_file_hash(const FilePath &filepath) const;
+	bool has_file_hash(const FilePath &filepath) const;
+
+	const file_change_list &gen_file_change_table() const;
 
 	const dependency_map &gen_dependency_map() const;
 
@@ -42,22 +56,24 @@ public:
 	inline void remove_flags(Flags flags) { m_flags = Flags((int)m_flags & ~(int)flags); }
 	inline void clear_flags() { m_flags = eFlag_None; }
 
+	
+
+	vector<FilePath> included_directories;
+	file_record_table file_records;
 private:
+
 	bool _is_processing_path(const FilePath &filepath) const;
 	void _push_processing_path(const FilePath &filepath);
 	void _pop_processing_path(const FilePath &filepath);
-	void _process_dependencies(const FilePath &filepath);
+	void _process_input(const InputFilePath &input);
 
-	static FilePath _find_dependency(const size_t name_index,
-																	 const FilePath &file,
-																	 const DependencyInfo &info);
+	FilePath _find_dependency(const dependency_name &name, const FilePath &file, SourceFileType type) const;
 
 	static bool _dependency_exists(const FilePath &path, SourceFileType type);
 
 private:
-	SourceFileType m_type;
 	Flags m_flags;
-	vector<FilePath> m_inputs;
-	vector<FilePath> m_loading_stack;
+	vector_stack<InputFilePath> m_inputs;
+	vector_stack<FilePath> m_loading_stack;
 	dependency_info_map m_info_map;
 };

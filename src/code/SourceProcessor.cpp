@@ -1,31 +1,71 @@
 #include "SourceProcessor.hpp"
-
-
-void SourceProcessor::add_file(const FilePath &filepath, const DependencyInfo &dep) {
-	m_info_map.insert_or_assign(filepath, dep);
-	m_info_map.at(filepath).hash = 0;
-}
+#include "FileTools.hpp"
 
 void SourceProcessor::process() {
+	while (!m_inputs.empty())
+	{
+		const InputFilePath input = m_inputs.top();
+		m_inputs.pop();
+		_process_input(input);
+	}
+}
+
+void SourceProcessor::add_file(const InputFilePath &input) {
+	m_inputs.push(input);
+
+	if (m_inputs.top().source_type == SourceFileType::None)
+	{
+		m_inputs.top().source_type = SourceTools::get_default_file_type(m_inputs.top().path);
+	}
 }
 
 hash_t SourceProcessor::get_file_hash(const FilePath &filepath) const {
 	return m_info_map.at(filepath).hash;
 }
 
-bool SourceProcessor::_is_processing_path(const FilePath &filepath) const {
-	for (const FilePath &path : m_loading_stack)
+bool SourceProcessor::has_file_hash(const FilePath &filepath) const {
+	return m_info_map.find(filepath) != m_info_map.end();
+}
+
+const SourceProcessor::file_change_list &SourceProcessor::gen_file_change_table() const {
+	file_change_list list{};
+
+	for (const auto &[key, value] : m_info_map)
 	{
-		if (path == filepath)
+		const auto iter_pos = this->file_records.find(key);
+
+		// no record of this file
+		if (iter_pos == file_records.end())
 		{
-			return true;
+			list.emplace_back(key, value.hash);
+		}
+
+		// record has an invalid hash
+		if (iter_pos->second.hash != value.hash)
+		{
+			list.emplace_back(key, value.hash);
 		}
 	}
-	return false;
+
+	return list;
+}
+
+const SourceProcessor::dependency_map &SourceProcessor::gen_dependency_map() const {
+	dependency_map map;
+	for (const auto &[key, value] : m_info_map)
+	{
+		map[key] = value.sub_dependencies;
+	}
+	return map;
+}
+
+
+bool SourceProcessor::_is_processing_path(const FilePath &filepath) const {
+	return m_loading_stack.top() == filepath;
 }
 
 void SourceProcessor::_push_processing_path(const FilePath &filepath) {
-	m_loading_stack.push_back(filepath);
+	m_loading_stack.push(filepath);
 }
 
 void SourceProcessor::_pop_processing_path(const FilePath &filepath) {
@@ -38,77 +78,107 @@ void SourceProcessor::_pop_processing_path(const FilePath &filepath) {
 		return;
 	}
 
-	if (m_loading_stack.back() != filepath)
+	if (m_loading_stack.top() != filepath)
 	{
 		Logger::error(
 			"Ill-loading stack: expected the top to be \"%s\", but it is \"%s\"",
 			filepath.c_str(),
-			m_loading_stack.back().c_str()
+			m_loading_stack.top().c_str()
 		);
 		return;
 	}
 
-	m_loading_stack.pop_back();
+	m_loading_stack.pop();
 }
 
-void SourceProcessor::_process_dependencies(const FilePath &filepath) {
-	const DependencyInfo &dep_info = m_info_map.at(filepath);
+void SourceProcessor::_process_input(const InputFilePath &input) {
+	DependencyInfo &dep_info = m_info_map.insert_or_assign(input.path, DependencyInfo()).first->second;
+	dep_info.type = input.source_type;
 
-	_push_processing_path(filepath);
+	_push_processing_path(input.path);
+
+	const Buffer _raw_input_buf = FileTools::read_all(input.path, FileTools::FileKind::Text);
+
+	SourceTools::get_dependencies(
+		_raw_input_buf.to_blob<const string_char>(),
+		dep_info.type,
+		dep_info.sub_dependencies
+	);
+
+	vector<hash_t> hashes{};
 
 	for (size_t i = 0; i < dep_info.sub_dependencies.size(); i++)
 	{
-		FilePath dependency_path = _find_dependency(i, filepath, dep_info);
+		FilePath dependency_path = _find_dependency(
+			dep_info.sub_dependencies[i],
+			input.path,
+			dep_info.type
+		);
 
 		if (!dependency_path.exists())
 		{
 			(has_flags(eFlag_WarnAbsentDependencies) ? Logger::warning : Logger::error)(
 				"dependency named \"%s\" couldn't be found for file at \"%s\"",
 				dep_info.sub_dependencies[i].c_str(),
-				filepath.get_text().data
+				input.path.c_str()
 				);
-
 			continue;
 		}
 
-		// this path is being processed, but given we encounter it here, there is an include cycle
-		// skip processing (any compiler will abort compiling this)
-		if (_is_processing_path(filepath))
+		// the path is already processed or being processed (from a recursive caller)
+		// we do this to eliminate inf recursion
+		if (has_file_hash(dependency_path))
 		{
+			hashes.push_back(get_file_hash(dependency_path));
 			continue;
 		}
 
-		DependencyInfo map;
+		InputFilePath sub_input;
+		sub_input.path = dependency_path;
+		sub_input.source_type = SourceTools::get_default_file_type(sub_input.path);
 
-		map.type = dep_info.type;
-		map.
+		// sanity checks (might be bad)
+		if (SourceTools::is_compatable_types(sub_input.source_type, input.source_type))
+		{
+			sub_input.source_type = input.source_type;
+		}
 
-
-			add_file()
+		// process sub dependency
+		_process_input(sub_input);
+		// add it's hash
+		hashes.push_back(get_file_hash(dependency_path));
 	}
 
-	_pop_processing_path(filepath);
+	const hash_t combine_hash = _calc_hash(
+		{
+			(const uint8_t *)hashes.data(),
+			hashes.size() * sizeof(hash_t)
+		}
+	);
+
+	dep_info.hash = _calc_hash(_raw_input_buf.to_blob<const uint8_t>(), combine_hash);
+
+	_pop_processing_path(input.path);
 }
 
-FilePath SourceProcessor::_find_dependency(const size_t name_index,
+FilePath SourceProcessor::_find_dependency(const dependency_name &name,
 																					 const FilePath &file,
-																					 const DependencyInfo &info) {
-	const dependency_name &name = info.sub_dependencies[name_index];
+																					 SourceFileType type) const {
 
 	// is the dependency path local to the file?
-	{
-		FilePath local_path = FilePath(name, file);
 
-		if (_dependency_exists(local_path, info.type))
-		{
-			return local_path;
-		}
+	FilePath local_path = FilePath(name, file.parent());
+
+	if (_dependency_exists(local_path, type))
+	{
+		return local_path;
 	}
 
-	for (const auto &dir : info.included_directories)
+
+	for (const auto &dir : this->included_directories)
 	{
 		FilePath dir_path = FilePath(name, dir);
-		if (_dependency_exists(dir_path, info.type))
+		if (_dependency_exists(dir_path, type))
 		{
 			return dir_path;
 		}
