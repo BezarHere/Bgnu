@@ -72,16 +72,42 @@ struct HashTools
 		0x9A15FE25A41AE366, 0x418EAF529F214B55, 0x516C700609E35445, 0x944D0DF0CDEB0C07
 	};
 
+	static constexpr hash_t hash(const hash_t &left, const hash_t &right);
+
 	inline static hash_t hash(const StrBlob &data, hash_t seed = StartSeed);
 
 	// only recommend for simple types
 	template <typename T>
-	inline static hash_t hash(const T *obj, hash_t seed = StartSeed);
+	inline static hash_t hash(const T &obj, hash_t seed = StartSeed);
+
+	// only recommend for simple types
+	template <typename T>
+	inline static hash_t hash(const Blob<const T> &objs, hash_t seed = StartSeed);
 
 	// only recommend for simple types
 	template <typename T, size_t N>
-	inline static hash_t hash(const T (&objs)[N], hash_t seed = StartSeed);
+	inline static hash_t hash(const T(&objects)[N], hash_t seed = StartSeed);
 };
+
+struct HashDigester
+{
+	inline HashDigester() = default;
+	inline HashDigester(const hash_t &seed) : value{seed} {}
+
+	template <typename... _Args>
+	inline HashDigester &add(_Args &&...args) {
+
+		value = HashTools::hash(std::forward<_Args>(args)..., value);
+
+		return *this;
+	}
+
+	hash_t value = HashTools::StartSeed;
+};
+
+inline constexpr hash_t HashTools::hash(const hash_t &left, const hash_t &right) {
+	return (left ^ StartSeed) ^ ~_rotr64(right, 21);
+}
 
 inline hash_t HashTools::hash(const StrBlob &data, hash_t seed) {
 	for (size_t i = 0; i < data.size; i++)
@@ -93,11 +119,20 @@ inline hash_t HashTools::hash(const StrBlob &data, hash_t seed) {
 }
 
 template<typename T>
-inline hash_t HashTools::hash(const T *obj, hash_t seed) {
-	return hash(StrBlob((const string_char *)obj, sizeof(T)), seed);
+inline hash_t HashTools::hash(const T &obj, hash_t seed) {
+	return hash(hash_t(obj.hash()), seed);
+}
+
+template<typename T>
+inline hash_t HashTools::hash(const Blob<const T> &objs, hash_t seed) {
+	for (size_t i = 0; i < objs.size; i++)
+	{
+		seed = hash(hash_t(obj.hash()), seed);
+	}
+	return hash_t();
 }
 
 template<typename T, size_t N>
-inline hash_t HashTools::hash(const T(&objs)[N], hash_t seed) {
-	return hash(StrBlob((const string_char *)objs, sizeof(T) * N), seed);
+inline hash_t HashTools::hash(const T(&objects)[N], hash_t seed) {
+	return hash({objects, N}, seed);
 }
