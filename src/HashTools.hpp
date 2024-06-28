@@ -74,7 +74,16 @@ struct HashTools
 		0x9A15FE25A41AE366, 0x418EAF529F214B55, 0x516C700609E35445, 0x944D0DF0CDEB0C07
 	};
 
-	static constexpr hash_t hash(const hash_t &left, const hash_t &right);
+	static constexpr hash_t hash(hash_t left, hash_t right);
+
+	static inline constexpr hash_t combine(hash_t left, hash_t right) {
+		return hash(left, right);
+	}
+
+	template <typename... _Hashes>
+	static inline constexpr hash_t combine(hash_t left, hash_t right, _Hashes &&...hashes) {
+		return combine(left, right, std::forward<_Hashes>(hashes)...);
+	}
 
 	inline static hash_t hash(const StrBlob &data, hash_t seed = StartSeed);
 
@@ -85,6 +94,12 @@ struct HashTools
 	// only recommend for simple types
 	template <typename T>
 	inline static hash_t hash(const Blob<const T> &objs, hash_t seed = StartSeed);
+
+	// only recommend for simple types
+	template <typename T>
+	inline static hash_t hash(const T *objs, size_t count, hash_t seed = StartSeed) {
+		return hash({objs, count}, seed);
+	}
 
 	// only recommend for simple types
 	template <typename T, size_t N>
@@ -104,10 +119,15 @@ struct HashDigester
 		return *this;
 	}
 
+	template <typename T>
+	inline HashDigester &operator+=(const T &obj) {
+		return add(obj);
+	}
+
 	hash_t value = HashTools::StartSeed;
 };
 
-inline constexpr hash_t HashTools::hash(const hash_t &left, const hash_t &right) {
+inline constexpr hash_t HashTools::hash(hash_t left, hash_t right) {
 	return (left ^ StartSeed) ^ ~_rotr64(right, 21);
 }
 
