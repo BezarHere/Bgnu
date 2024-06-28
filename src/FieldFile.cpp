@@ -718,7 +718,8 @@ void FieldFileWriter::write(const FieldVar::Dict &data, bool striped) {
 	for (const auto &kv : data)
 	{
 		write_indent();
-		stream << kv.first << ": ";
+		write(kv.first);
+		stream << ": ";
 		write(kv.second);
 		stream << '\n';
 	}
