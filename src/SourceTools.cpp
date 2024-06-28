@@ -35,3 +35,10 @@ void SourceTools::get_dependencies(const StrBlob &file, SourceFileType type,
 	}
 }
 
+FilePath SourceTools::get_intermediate_filepath(const FilePath &filepath, const FilePath &dst_dir) {
+	char buffer[BUFSIZ] = {};
+	sprintf_s(buffer, "%s.%X", filepath.name().c_str(), gen_hash(filepath.get_text()));
+	return dst_dir.join_path(buffer);
+}
+
+
