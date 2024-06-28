@@ -35,8 +35,9 @@ struct StringTools
 	}
 
 	template <typename Comparer = std::equal_to<char_type>>
-	static ALWAYS_INLINE bool _equal(const char_type *left, const char_type *right,
-																	 const size_t max_count, const Comparer &comparer = {}) {
+	static ALWAYS_INLINE
+		constexpr bool _equal(const char_type *left, const char_type *right,
+													const size_t max_count, const Comparer &comparer = {}) {
 		if (max_count == 0)
 		{
 			return true;

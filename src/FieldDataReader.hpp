@@ -27,6 +27,8 @@ public:
 
 	// will throw an exception if the reader can't be created
 	// branching will fail if the value at 'name' isn't a dict (something else or does not exist)
+	// also, not specifying the new_context parameter will result in a reader with context equal to
+	// "<current context>::<sub-reader data name (i.e name parameter)>" (ex: foo.branch_reader("bar") -> foo::bar)
 	FieldDataReader branch_reader(const FieldVar::String &name, const string &new_context = "") const;
 
 	inline const string &get_context() const noexcept { return _context; }
