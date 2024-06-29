@@ -70,8 +70,15 @@ public:
 		return string_type(begin(), size());
 	}
 
+	inline const char_type *c_str() const { return m_ref->get(); }
+	inline char_type *data() { return m_ref->get(); }
+	inline const char_type *data() const { return m_ref->get(); }
+
+	basic_string_cursor operator+(const offset_type offset);
+	inline basic_string_cursor operator-(const offset_type offset) { return *this + (-offset); }
+
 private:
-	struct ref
+	struct string_ref
 	{
 		inline char_type *get() { return reinterpret_cast<char_type *>(this + 1); }
 		inline const char_type *get() const { return reinterpret_cast<const char_type *>(this + 1); }
@@ -81,14 +88,14 @@ private:
 		// data
 	};
 
-	inline basic_string_cursor(ref *_ref, size_t index) : m_index{index}, m_ref{_ref} {
+	inline basic_string_cursor(string_ref *_ref, size_t index) : m_index{index}, m_ref{_ref} {
 		(void)_incref();
 	}
 
-	static ref *_alloc_ref(size_t str_size);
-	static void _free_ref(ref *ptr);
+	static string_ref *_alloc_ref(size_t str_size);
+	static void _free_ref(string_ref *ptr);
 
-	inline ref *_incref() {
+	inline string_ref *_incref() {
 		if (m_ref)
 		{
 			++(m_ref->ref_counter);
@@ -103,7 +110,7 @@ private:
 			return;
 		}
 
-		// only this object holds ref
+		// only this object holds string_ref
 		if (m_ref->ref_counter <= 1)
 		{
 			_free_ref(m_ref);
@@ -116,7 +123,7 @@ private:
 	}
 
 	size_t m_index = 0;
-	ref *m_ref = nullptr;
+	string_ref *m_ref = nullptr;
 };
 
 typedef basic_string_cursor<std::string::value_type> string_cursor;
@@ -196,10 +203,17 @@ inline basic_string_cursor<_T> basic_string_cursor<_T>::slice(size_t start) cons
 }
 
 template<typename _T>
-inline basic_string_cursor<_T>::ref *basic_string_cursor<_T>::_alloc_ref(size_t str_size) {
-	const size_t memory_size = sizeof(typename ref) + ((str_size + 1) * sizeof(char_type));
-	ref *ptr = reinterpret_cast<ref *>(::operator new[](memory_size));
-	new (ptr) ref{};
+inline basic_string_cursor<_T> basic_string_cursor<_T>::operator+(const offset_type offset) {
+	basic_string_cursor copy = *this;
+	copy.move(offset);
+	return copy;
+}
+
+template<typename _T>
+inline basic_string_cursor<_T>::string_ref *basic_string_cursor<_T>::_alloc_ref(size_t str_size) {
+	const size_t memory_size = sizeof(string_ref) + ((str_size + 1) * sizeof(char_type));
+	string_ref *ptr = reinterpret_cast<string_ref *>(::operator new[](memory_size));
+	new (ptr) string_ref{};
 	ptr->ref_counter = 1;
 	ptr->len = str_size;
 	ptr->get()[str_size] = char_type();
@@ -207,6 +221,15 @@ inline basic_string_cursor<_T>::ref *basic_string_cursor<_T>::_alloc_ref(size_t 
 }
 
 template<typename _T>
-inline void basic_string_cursor<_T>::_free_ref(ref *ptr) {
+inline void basic_string_cursor<_T>::_free_ref(string_ref *ptr) {
 	::operator delete[](reinterpret_cast<void *>(ptr));
+}
+
+namespace std
+{
+	template <typename _T>
+	inline basic_ostream<_T> &operator<<(basic_ostream<_T> &stream,
+																			 const basic_string_cursor<_T> &str_cur) {
+		return stream.write(str_cur.c_str(), str_cur.size());
+	}
 }
