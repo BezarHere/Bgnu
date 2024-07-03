@@ -82,7 +82,7 @@ struct HashTools
 
 	template <typename... _Hashes>
 	static inline constexpr hash_t combine(hash_t left, hash_t right, _Hashes &&...hashes) {
-		return combine(left, right, std::forward<_Hashes>(hashes)...);
+		return combine(hash(left, right), std::forward<_Hashes>(hashes)...);
 	}
 
 	inline static hash_t hash(const StrBlob &data, hash_t seed = StartSeed);
@@ -98,7 +98,7 @@ struct HashTools
 	// only recommend for simple types
 	template <typename T>
 	inline static hash_t hash(const T *objs, size_t count, hash_t seed = StartSeed) {
-		return hash({objs, count}, seed);
+		return hash(Blob<const T>{objs, count}, seed);
 	}
 
 	// only recommend for simple types
@@ -132,13 +132,13 @@ struct HashDigester
 };
 
 inline constexpr hash_t HashTools::hash(hash_t left, hash_t right) {
-	return (left ^ StartSeed) ^ ~_rotr64(right, 21);
+	return (left ^ StartSeed) ^ ~Math::rotr(right, 21);
 }
 
 inline hash_t HashTools::hash(const StrBlob &data, hash_t seed) {
 	for (size_t i = 0; i < data.size; i++)
 	{
-		seed ^= _rotr64(CipherTable[(uint8_t)data[i]], (int)i);
+		seed ^= Math::rotr(CipherTable[(uint8_t)data[i]], (int)i);
 	}
 
 	return seed;
@@ -151,11 +151,11 @@ inline hash_t HashTools::hash(const T &obj, hash_t seed) {
 
 template<typename T>
 inline hash_t HashTools::hash(const Blob<const T> &objs, hash_t seed) {
-	for (size_t i = 0; i < objs.size; i++)
+	for (const auto &obj : objs)
 	{
 		seed = hash(hash_t(obj.hash()), seed);
 	}
-	return hash_t();
+	return seed;
 }
 
 template<typename T, size_t N>

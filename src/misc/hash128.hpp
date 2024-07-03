@@ -1,7 +1,8 @@
 #pragma once
-#include <inttypes.h>
+#include "utility/Math.hpp"
 #include <limits>
 #include <array>
+
 
 typedef uint64_t hash_t;
 
@@ -11,8 +12,8 @@ struct Hash128
 	static constexpr uint64_t high64_mask = 0xFFFFFFFF'00000000;
 	static constexpr uint32_t low32_mask = 0xFFFF;
 	static constexpr uint32_t high32_mask = 0xFFFF'0000;
-	static constexpr uint16_t low16_mask = 0xFF;
-	static constexpr uint16_t high16_mask = 0xFF'00;
+	static constexpr uint32_t low16_mask = 0xFF;
+	static constexpr uint32_t high16_mask = 0xFF'00;
 	static constexpr uint8_t low8_mask = 0xF;
 	static constexpr uint8_t high8_mask = 0xF'0;
 
