@@ -46,9 +46,9 @@ public:
 	hash_t get_file_hash(const FilePath &filepath) const;
 	bool has_file_hash(const FilePath &filepath) const;
 
-	const file_change_list &gen_file_change_table() const;
+	file_change_list gen_file_change_table() const;
 
-	const dependency_map &gen_dependency_map() const;
+	dependency_map gen_dependency_map() const;
 
 	inline Flags get_flags() const { return m_flags; }
 	inline bool has_flags(Flags flags) const { return ((int)m_flags & (int)flags) != 0; }

@@ -27,7 +27,7 @@ bool SourceProcessor::has_file_hash(const FilePath &filepath) const {
 	return m_info_map.find(filepath) != m_info_map.end();
 }
 
-const SourceProcessor::file_change_list &SourceProcessor::gen_file_change_table() const {
+SourceProcessor::file_change_list SourceProcessor::gen_file_change_table() const {
 	file_change_list list{};
 
 	for (const auto &[key, value] : m_info_map)
@@ -50,7 +50,7 @@ const SourceProcessor::file_change_list &SourceProcessor::gen_file_change_table(
 	return list;
 }
 
-const SourceProcessor::dependency_map &SourceProcessor::gen_dependency_map() const {
+SourceProcessor::dependency_map SourceProcessor::gen_dependency_map() const {
 	dependency_map map;
 	for (const auto &[key, value] : m_info_map)
 	{
@@ -105,7 +105,7 @@ void SourceProcessor::_process_input(const InputFilePath &input) {
 		dep_info.sub_dependencies
 	);
 
-	vector<hash_t> hashes{};
+	HashDigester hash_digest;
 
 	for (size_t i = 0; i < dep_info.sub_dependencies.size(); i++)
 	{
@@ -117,11 +117,14 @@ void SourceProcessor::_process_input(const InputFilePath &input) {
 
 		if (!dependency_path.exists())
 		{
-			(has_flags(eFlag_WarnAbsentDependencies) ? Logger::warning : Logger::error)(
-				"dependency named \"%s\" couldn't be found for file at \"%s\"",
-				dep_info.sub_dependencies[i].c_str(),
-				input.path.c_str()
+			if (has_flags(eFlag_WarnAbsentDependencies))
+			{
+				Logger::warning(
+					"dependency named \"%s\" couldn't be found for file at \"%s\"",
+					dep_info.sub_dependencies[i].c_str(),
+					input.path.c_str()
 				);
+			}
 			continue;
 		}
 
@@ -129,7 +132,7 @@ void SourceProcessor::_process_input(const InputFilePath &input) {
 		// we do this to eliminate inf recursion
 		if (has_file_hash(dependency_path))
 		{
-			hashes.push_back(get_file_hash(dependency_path));
+			hash_digest += get_file_hash(dependency_path);
 			continue;
 		}
 
@@ -146,17 +149,10 @@ void SourceProcessor::_process_input(const InputFilePath &input) {
 		// process sub dependency
 		_process_input(sub_input);
 		// add it's hash
-		hashes.push_back(get_file_hash(dependency_path));
+		hash_digest += get_file_hash(dependency_path);
 	}
 
-	const hash_t combine_hash = _calc_hash(
-		{
-			(const uint8_t *)hashes.data(),
-			hashes.size() * sizeof(hash_t)
-		}
-	);
-
-	dep_info.hash = _calc_hash(_raw_input_buf.to_blob<const uint8_t>(), combine_hash);
+	dep_info.hash = hash_digest.value;
 
 	_pop_processing_path(input.path);
 }
