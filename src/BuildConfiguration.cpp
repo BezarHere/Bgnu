@@ -337,11 +337,25 @@ hash_t BuildConfiguration::hash() const {
 
 	digester += (hash_t)this->simd_type;
 
-	digester.add(preprocessor_args.data(), preprocessor_args.size());
-	digester.add(linker_args.data(), linker_args.size());
-	digester.add(assembler_args.data(), assembler_args.size());
 
-	digester.add(library_names.data(), preprocessor_args.size());
+	std::for_each(
+		preprocessor_args.begin(), preprocessor_args.end(),
+		[&digester](const string &str) { digester.add(str.c_str(), str.length()); }
+	);
+	std::for_each(
+		linker_args.begin(), linker_args.end(),
+		[&digester](const string &str) { digester.add(str.c_str(), str.length()); }
+	);
+	std::for_each(
+		assembler_args.begin(), assembler_args.end(),
+		[&digester](const string &str) { digester.add(str.c_str(), str.length()); }
+	);
+
+	std::for_each(
+		library_names.begin(), library_names.end(),
+		[&digester](const string &str) { digester.add(str.c_str(), str.length()); }
+	);
+	
 
 	std::for_each(
 		library_directories.begin(), library_directories.end(),
