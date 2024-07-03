@@ -2,6 +2,7 @@
 #include "base.hpp"
 #include "FieldDataReader.hpp"
 #include "FilePath.hpp"
+#include "HashTools.hpp"
 
 struct BuildCache
 {
@@ -14,8 +15,8 @@ struct BuildCache
 	};
 	typedef std::map<FilePath, FileRecord> file_record_table;
 
-	static inline BuildCache load(const FieldDataReader &data, ErrorReport &error);
-	inline FieldVar::Dict write() const;
+	static BuildCache load(const FieldDataReader &data, ErrorReport &error);
+	FieldVar::Dict write() const;
 
 	hash_t build_hash = 0;
 	hash_t config_hash = 0;

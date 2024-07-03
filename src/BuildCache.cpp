@@ -11,7 +11,7 @@ static inline ErrorReport load_file_record_table(BuildCache::file_record_table &
 
 static inline ErrorReport load_file_record(BuildCache::FileRecord &record, const FieldDataReader &data);
 
-inline BuildCache BuildCache::load(const FieldDataReader &data, ErrorReport &error) {
+BuildCache BuildCache::load(const FieldDataReader &data, ErrorReport &error) {
 
 
 	BuildCache cache;
@@ -34,7 +34,7 @@ inline BuildCache BuildCache::load(const FieldDataReader &data, ErrorReport &err
 		*hash_ptr_info.first = var.get_int();
 	}
 
-	const FieldVar records_data = data.try_get_array<FieldVarType::Dict>("file_records");
+	const FieldVar records_data = data.try_get_value<FieldVarType::Dict>("file_records");
 
 	if (records_data.is_null())
 	{
@@ -49,7 +49,7 @@ inline BuildCache BuildCache::load(const FieldDataReader &data, ErrorReport &err
 	return cache;
 }
 
-inline FieldVar::Dict BuildCache::write() const {
+FieldVar::Dict BuildCache::write() const {
 	FieldVar::Dict dict{};
 
 	dict["build_hash"] = FieldVar::Int(this->build_hash);
@@ -64,12 +64,12 @@ inline FieldVar::Dict BuildCache::write() const {
 	{
 		FieldVar::Dict record_dict{};
 
-		record_dict.insert_or_assign("source_file", record.source_file.c_str());
-		record_dict.insert_or_assign("build_time", FieldVar::Int(record.build_time));
-		record_dict.insert_or_assign("last_source_write_time", FieldVar::Int(record.last_source_write_time));
-		record_dict.insert_or_assign("hash", FieldVar::Int(record.hash));
+		record_dict.emplace("source_file", record.source_file.c_str());
+		record_dict.emplace("build_time", FieldVar::Int(record.build_time));
+		record_dict.emplace("last_source_write_time", FieldVar::Int(record.last_source_write_time));
+		record_dict.emplace("hash", FieldVar::Int(record.hash));
 
-		records.insert_or_assign(path.c_str(), record_dict);
+		records.insert_or_assign(path.c_str(), FieldVar(record_dict));
 	}
 
 	dict["file_records"] = FieldVar{records};
