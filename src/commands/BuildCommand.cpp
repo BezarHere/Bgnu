@@ -5,6 +5,8 @@
 #include "BuildCache.hpp"
 #include "FileTools.hpp"
 
+#include <chrono>
+
 const string RebuildArgs[] = {"-r", "--rebuild"};
 const string ResaveArgs[] = {"--resave"};
 
@@ -12,6 +14,13 @@ constexpr const char *InputFilePrefix = "-i=";
 
 typedef SourceProcessor::dependency_map dependency_map;
 typedef vector<vector<string>> build_args_list;
+
+static inline int64_t get_build_time() {
+	using namespace std;
+	return (int64_t)chrono::duration_cast<chrono::microseconds>(
+		chrono::steady_clock::now().time_since_epoch()
+	).count();
+}
 
 static void dump_dep_map(const dependency_map &map, const FilePath &cache_folder);
 static void dump_build_args(const build_args_list &list, const FilePath &cache_folder);
@@ -108,6 +117,7 @@ namespace commands
 
 		const SourceProcessor::file_change_list changed_files = processor.gen_file_change_table();
 		build_args_list build_args{};
+		BuildCache new_cache = m_build_cache;
 
 		for (const auto &[path, hash] : changed_files)
 		{
@@ -115,8 +125,18 @@ namespace commands
 				path,
 				m_project.get_output().cache_dir
 			);
-
 			output_path = FilePath(output_path.c_str() + string(".o"));
+
+			BuildCache::FileRecord record;
+			record.build_time = get_build_time();
+			record.hash = hash;
+			record.source_file = path;
+			record.last_source_write_time = get_build_time();
+
+			new_cache.file_records.insert_or_assign(
+				output_path, record
+			);
+
 
 			build_cfg.build_arguments(
 				build_args.emplace_back(),
@@ -126,8 +146,17 @@ namespace commands
 			);
 		}
 
-		BuildCache new_cache = m_build_cache;
+
+		new_cache.config_hash = m_project.hash();
+		new_cache.build_hash = build_cfg.hash();
+
+
 		m_build_cache = new_cache;
+		
+		m_project.get_output().ensure_available();
+		_write_build_cache();
+
+
 
 		// TODO: link args with all the input files
 
@@ -139,6 +168,11 @@ namespace commands
 
 	FilePath BuildCommand::_default_filepath() {
 		return FilePath::get_working_directory().join_path(".bgnu");
+	}
+
+	void BuildCommand::_write_build_cache() const {
+		const auto data = m_build_cache.write();
+		FieldFile::dump(_get_build_cache_path(), data);
 	}
 
 	void BuildCommand::_load_build_cache() {
