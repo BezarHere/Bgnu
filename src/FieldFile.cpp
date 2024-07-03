@@ -1,4 +1,6 @@
 #include "FieldFile.hpp"
+#include "FileTools.hpp"
+#include "misc/StringCursor.hpp"
 #include "Logger.hpp"
 #include <fstream>
 #include <string.h>
@@ -48,22 +50,22 @@ enum class TKType : uint8_t
 	String,
 };
 
-struct TKPos
+struct SourcePosition
 {
-	inline TKPos() {}
-	inline TKPos(uint16_t p_line, uint16_t p_column) : line{p_line}, column{p_column} {}
+	inline SourcePosition() {}
+	inline SourcePosition(uint32_t p_line, uint32_t p_column) : line{p_line}, column{p_column} {}
 
-	uint16_t line = 0, column = 0;
+	uint32_t line = 0, column = 0;
 };
 
 struct Token
 {
 	TKType type;
 
-	const char *str;
+	string_cursor str;
 	size_t length;
 
-	TKPos pos;
+	SourcePosition pos;
 };
 
 enum StringParseFlags : uint8_t
@@ -72,6 +74,29 @@ enum StringParseFlags : uint8_t
 	eStrPFlag_Multiline = 0x01,
 	eStrPFlag_Literal = 0x02,
 };
+
+
+namespace std
+{
+	ostream &operator<<(ostream &stream, const SourcePosition &pos) {
+		return stream << pos.line << ':' << pos.column;
+	}
+
+	ostream &operator<<(ostream &stream, const Token &tk) {
+		return stream
+			<< "TK('"
+			<< string(tk.str.c_str(), tk.length)
+			<< "' ["
+			<< tk.str.position()
+			<< ':'
+			<< tk.length
+			<< "], "
+			<< tk.pos
+			<< ", "
+			<< (int)tk.type
+			<< ')';
+	}
+}
 
 class Tokenizer
 {
@@ -84,26 +109,32 @@ public:
 
 	inline void put_all(vector<Token> &output) {
 		const size_t old_index = index;
+		// std::cout << "tokens output start: " << output.size() << '\n';
 
 		while (index < m_length)
 		{
-			output.emplace_back(get_next());
+			output.push_back(get_next());
 			if (output.back().type == TKType::Eof)
+			{
 				break;
+			}
+
+			// std::cout << "token: " << output.back() << ", str pos: " << index << ' ' << output.size() << '\n';
 		}
 
+		// std::cout << "tokens count: " << output.size() << " str pos: " << index << '\n';
 		index = old_index;
 	}
 
-	inline TKPos get_pos() const noexcept { return {line, uint16_t(index - line_start)}; }
+	inline SourcePosition get_pos() const noexcept { return {line + 1U, uint32_t(index - line_start) + 1U}; }
 
 	size_t index = 0;
-	uint16_t line = 0;
+	uint32_t line = 0;
 	size_t line_start = 0;
 
 
 private:
-	inline const char *_get_current_str() const { return m_source + index; }
+	inline string_cursor _get_current_str() const { return {m_source, index}; }
 
 	template <typename Pred>
 	inline size_t _get_length(Pred &&pred) const {
@@ -136,6 +167,12 @@ private:
 
 inline Token Tokenizer::get_next() {
 	Token token = _read_tk();
+
+	// found end of file
+	if (token.type == TKType::Eof)
+	{
+		return token;
+	}
 
 	if (token.length == 0)
 	{
@@ -268,17 +305,6 @@ inline Token Tokenizer::_read_tk() const {
 	return Token();
 }
 
-namespace std
-{
-	ostream &operator<<(ostream &stream, const TKPos &pos) {
-		return stream << pos.line << ':' << pos.column;
-	}
-
-	ostream &operator<<(ostream &stream, const Token &tk) {
-		return stream << "TK('" << string(tk.str, tk.length) << "' [" << tk.length << "], " << tk.pos << ", " << (int)tk.type << ')';
-	}
-}
-
 #pragma endregion
 
 #pragma region(parser)
@@ -333,13 +359,14 @@ private:
 		if (amount == 0)
 		{
 			//! ERROR?
+			amount++;
 		}
 
 		current_index += amount;
 	}
 
 	ALWAYS_INLINE bool _can_read() const {
-		return current_index < m_size - 1;
+		return current_index < m_size - 1 && m_size > 0;
 	}
 
 	inline void _skip_useless() {
@@ -402,7 +429,7 @@ FieldVar::String Parser::_parse_var_string() {
 
 	if (tk.type != TKType::String)
 	{
-		return {tk.str, tk.length};
+		return {tk.str.c_str(), tk.length};
 	}
 
 	if (tk.length < 2)
@@ -410,14 +437,14 @@ FieldVar::String Parser::_parse_var_string() {
 		return {};
 	}
 
-	return {tk.str + 1, tk.length - 2};
+	return {tk.str.c_str() + 1, tk.length - 2};
 }
 
 FieldVar Parser::_parse_var_identifier() {
 	const Token &token = get_tk();
 	_advance_tk();
 
-	const char *token_str = token.str;
+	const char *token_str = token.str.c_str();
 	constexpr const char null_str[] = "null";
 	constexpr const char true_str[] = "true";
 	constexpr const char false_str[] = "false";
@@ -443,7 +470,7 @@ FieldVar Parser::_parse_var_identifier() {
 FieldVar::Real Parser::_parse_var_number() {
 	// TODO: error detection
 
-	float val = strtof(get_tk().str, nullptr);
+	float val = strtof(get_tk().str.c_str(), nullptr);
 
 	// read this token, now we advance
 	_advance_tk();
@@ -455,10 +482,14 @@ FieldVar Parser::_parse_var_simple() {
 	_skip_useless();
 
 	if (get_tk().type == TKType::String)
+	{
 		return _parse_var_string();
+	}
 
-	if (is_number_identifier(get_tk().str, get_tk().length))
+	if (is_number_identifier(get_tk().str.c_str(), get_tk().length))
+	{
 		return _parse_var_number();
+	}
 
 	return _parse_var_identifier();
 }
@@ -525,7 +556,9 @@ FieldVar::Dict Parser::_parse_var_dict(const bool body_dict) {
 		_skip_empty();
 
 		// parse next tokens as value key pairs to the constructed dict
+		// std::cout << "1: " << current_index << ' ' << *current() << '\n';
 		dict.emplace(_parse_var_kv());
+		// std::cout << "2: " << current_index << ' ' << *current() << '\n';
 
 		expecting_separator = true;
 	}
@@ -636,6 +669,7 @@ public:
 
 	void write(FieldVar::Null data);
 	void write(FieldVar::Bool data);
+	void write(FieldVar::Int data);
 	void write(FieldVar::Real data);
 
 	void write(const FieldVar::String &data);
@@ -666,6 +700,10 @@ void FieldFileWriter::write(FieldVar::Null data) {
 
 void FieldFileWriter::write(FieldVar::Bool data) {
 	stream << (data ? "true" : "false");
+}
+
+void FieldFileWriter::write(FieldVar::Int data) {
+	stream << data;
 }
 
 void FieldFileWriter::write(FieldVar::Real data) {
@@ -742,6 +780,9 @@ void FieldFileWriter::write(const FieldVar &data) {
 	case FieldVarType::Boolean:
 		write(data.get_bool());
 		return;
+	case FieldVarType::Integer:
+		write(data.get_int());
+		return;
 	case FieldVarType::Real:
 		write(data.get_real());
 		return;
@@ -762,23 +803,14 @@ void FieldFileWriter::write(const FieldVar &data) {
 
 #pragma endregion
 
-FieldVar FieldFile::load(const string &filepath) {
-	std::ifstream file{filepath, std::ios::in};
-
-	file.seekg(0, std::ios::seekdir::_S_end);
-	std::streamsize size = file.tellg();
-
-	file.seekg(0, std::ios::seekdir::_S_beg);
-
-	string text;
-	text.resize(size);
-	file.read(text.data(), size);
-	text.resize(size);
+FieldVar FieldFile::load(const FilePath &filepath) {
+	const string text = FileTools::read_str(filepath);
+	// std::cout << "\n\n[[[\n" << text << "\n]]]" << text.size() << "\n\n";
 
 	return read(text.c_str(), text.length());
 }
 
-FieldVar FieldFile::read(const char *source, size_t length) {
+FieldVar FieldFile::read(const string_char *source, size_t length) {
 	Tokenizer tokenizer{source, length};
 
 	vector<Token> tokens{};
@@ -790,7 +822,7 @@ FieldVar FieldFile::read(const char *source, size_t length) {
 	return FieldVar(parser.parse());
 }
 
-void FieldFile::dump(const string &filepath, const FieldVar::Dict &data) {
+void FieldFile::dump(const FilePath &filepath, const FieldVar::Dict &data) {
 	string source = write(data);
 
 	std::ofstream out{filepath};
