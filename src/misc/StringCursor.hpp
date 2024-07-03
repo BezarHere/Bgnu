@@ -10,11 +10,15 @@ public:
 	typedef std::basic_string<char_type> string_type;
 	typedef std::streamoff offset_type;
 
+	typedef string_type::traits_type traits_type;
+
 	basic_string_cursor() = default;
 	basic_string_cursor(size_t size);
-	basic_string_cursor(const char_type *str, size_t size);
+	
+	basic_string_cursor(const char_type *str, size_t index);
+
 	inline basic_string_cursor(const char_type *str)
-		: basic_string_cursor(str, string_type::traits_type::length(str)) {
+		: basic_string_cursor(str, 0) {
 	}
 
 	template <size_t N>
@@ -65,17 +69,20 @@ public:
 	void move(offset_type offset);
 	basic_string_cursor slice(size_t start) const;
 
-	inline operator string_type() const {
+	inline explicit operator string_type() const {
 		if (empty()) return string_type();
 		return string_type(begin(), size());
 	}
 
-	inline const char_type *c_str() const { return m_ref->get(); }
-	inline char_type *data() { return m_ref->get(); }
-	inline const char_type *data() const { return m_ref->get(); }
+	inline const char_type *c_str() const { return m_ref->get() + m_index; }
+	inline char_type *data() { return m_ref->get() + m_index; }
+	inline const char_type *data() const { return m_ref->get() + m_index; }
 
 	basic_string_cursor operator+(const offset_type offset);
 	inline basic_string_cursor operator-(const offset_type offset) { return *this + (-offset); }
+
+	inline char_type *origin() { return m_ref->get(); }
+	inline const char_type *origin() const { return m_ref->get(); }
 
 private:
 	struct string_ref
@@ -138,9 +145,11 @@ inline basic_string_cursor<_T>::basic_string_cursor(size_t size)
 }
 
 template<typename _T>
-inline basic_string_cursor<_T>::basic_string_cursor(const char_type *str, size_t size)
-	: m_index{0}, m_ref{_alloc_ref(size)} {
-	memcpy(m_ref->get(), str, sizeof(char_type) * size);
+inline basic_string_cursor<_T>::basic_string_cursor(const char_type *str, size_t index)
+	: m_index{index} {
+	const size_t len = traits_type::length(str);
+	m_ref = _alloc_ref(len);
+	memcpy(m_ref->get(), str, sizeof(char_type) * len);
 }
 
 template<typename _T>
