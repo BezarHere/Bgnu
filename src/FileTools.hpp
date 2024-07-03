@@ -66,6 +66,7 @@ namespace FileTools
 		const std::streamsize size = std::min(MaxReadSize, end - begin);
 
 		Buffer buffer{(size + kind_offset) * _get_unit_size(kind)};
+		memset(buffer, 0, buffer.size());
 
 		input.read(
 			reinterpret_cast<decltype(input)::char_type *>(buffer.get()),
@@ -75,8 +76,10 @@ namespace FileTools
 	}
 
 	static inline string read_str(const FilePath &filepath) {
-		const Buffer buf = read_all(filepath, FileKind::Text);
-		return string(reinterpret_cast<const string_char *>(buf.get()));
+		std::ifstream file{filepath};
+		std::ostringstream ss;
+		ss << file.rdbuf();
+		return ss.str();
 	}
 
 }
