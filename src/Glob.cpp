@@ -96,7 +96,16 @@ bool Glob::test(const StrBlob &path) const {
 		return false;
 	}
 
-	return run_match_all(0, path);
+	const size_t len = run_match_all(0, path);
+
+	if (len == 0)
+	{
+		return false;
+	}
+
+	// std::cout << "glob: " << path << " equals " << len << '\n';
+
+	return len == path.length();
 }
 
 
@@ -181,7 +190,13 @@ size_t Glob::run_match_all(size_t start_index, const StrBlob &source) const {
 	}
 
 	// empty frames mean that the no way segments could match the source
-	return !frames.empty();
+	if (frames.empty())
+	{
+		return 0;
+	}
+
+	// returns the length matched
+	return frames.back().source_pos;
 }
 
 size_t Glob::run_match(size_t index, const StrBlob &source, size_t skip, size_t *next_match) const {

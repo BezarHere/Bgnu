@@ -7,6 +7,7 @@
 
 void SourceTools::get_dependencies(const StrBlob &file, SourceFileType type,
 																	 vector<string> &out) {
+
 	switch (type)
 	{
 	case SourceFileType::C:
@@ -31,7 +32,12 @@ void SourceTools::get_dependencies(const StrBlob &file, SourceFileType type,
 		}
 
 	default:
-		Logger::error("get_dependencies() of type %d is not implemented", (int)type);
+		constexpr auto *msg = \
+			"get_dependencies() of type %d is not implemented and can't be reached," \
+			" given it's the default value. (bug?)";
+		Logger::error(
+			msg,
+			(int)type);
 		return;
 	}
 }

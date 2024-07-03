@@ -97,21 +97,15 @@ namespace commands
 			return Error::NoConfig;
 		}
 
-		const BuildConfiguration &build_cfg = m_project.get_build_configs().at("debug");
+		m_current_build_cfg = &m_project.get_build_configs().at("debug");
 
 		_load_build_cache();
 
-
 		m_project.get_output().ensure_available();
 
-		std::map<string, vector<string>> dependencies{};
 		SourceProcessor processor;
-		processor.file_records = m_build_cache.file_records;
 
-		for (const auto &path : m_project.get_source_files())
-		{
-			processor.add_file({path, SourceFileType::None});
-		}
+		_build_source_processor(processor);
 
 		processor.process();
 
@@ -138,7 +132,7 @@ namespace commands
 			);
 
 
-			build_cfg.build_arguments(
+			m_current_build_cfg->build_arguments(
 				build_args.emplace_back(),
 				path.get_text(),
 				output_path.get_text(),
@@ -148,19 +142,18 @@ namespace commands
 
 
 		new_cache.config_hash = m_project.hash();
-		new_cache.build_hash = build_cfg.hash();
+		new_cache.build_hash = m_current_build_cfg->hash();
 
 
 		m_build_cache = new_cache;
-		
+
 		m_project.get_output().ensure_available();
 		_write_build_cache();
 
 
-
 		// TODO: link args with all the input files
 
-		dump_dep_map(dependencies, m_project.get_output().cache_dir);
+		// dump_dep_map(dependencies, m_project.get_output().cache_dir);
 		dump_build_args(build_args, m_project.get_output().cache_dir);
 
 		return Error::Ok;
@@ -194,6 +187,23 @@ namespace commands
 		if (report.code != Error::Ok)
 		{
 			Logger::error(report);
+		}
+	}
+
+	void BuildCommand::_build_source_processor(SourceProcessor &processor) {
+		processor.file_records = m_build_cache.file_records;
+
+		for (const FilePath &path : m_current_build_cfg->include_directories)
+		{
+			processor.included_directories.emplace_back(
+				path.get_text(),
+				m_project.source_dir.get_text()
+			);
+		}
+
+		for (const auto &path : m_project.get_source_files())
+		{
+			processor.add_file({path, SourceFileType::None});
 		}
 	}
 }

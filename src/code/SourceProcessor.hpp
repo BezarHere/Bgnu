@@ -46,7 +46,7 @@ public:
 	hash_t get_file_hash(const FilePath &filepath) const;
 	bool has_file_hash(const FilePath &filepath) const;
 
-	file_change_list gen_file_change_table() const;
+	file_change_list gen_file_change_table(bool inputs_only = true) const;
 
 	dependency_map gen_dependency_map() const;
 
@@ -57,7 +57,6 @@ public:
 	inline void clear_flags() { m_flags = eFlag_None; }
 
 	
-
 	vector<FilePath> included_directories;
 	file_record_table file_records;
 private:
@@ -73,7 +72,8 @@ private:
 
 private:
 	Flags m_flags;
-	vector_stack<InputFilePath> m_inputs;
+	vector<InputFilePath> m_inputs;
+	vector_stack<InputFilePath> m_input_stack;
 	vector_stack<FilePath> m_loading_stack;
 	dependency_info_map m_info_map;
 };

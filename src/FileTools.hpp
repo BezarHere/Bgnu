@@ -65,7 +65,7 @@ namespace FileTools
 		const std::streampos kind_offset = (kind == FileKind::Binary) ? 0 : 1;
 		const std::streamsize size = std::min(MaxReadSize, end - begin);
 
-		Buffer buffer{(size + kind_offset) * _get_unit_size(kind)};
+		Buffer buffer{size_t((size + kind_offset) * _get_unit_size(kind))};
 		memset(buffer, 0, buffer.size());
 
 		input.read(

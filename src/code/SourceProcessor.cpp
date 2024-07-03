@@ -1,21 +1,23 @@
 #include "SourceProcessor.hpp"
 #include "FileTools.hpp"
+#include <set>
 
 void SourceProcessor::process() {
-	while (!m_inputs.empty())
+	while (!m_input_stack.empty())
 	{
-		const InputFilePath input = m_inputs.top();
-		m_inputs.pop();
+		const InputFilePath input = m_input_stack.top();
+		m_input_stack.pop();
 		_process_input(input);
 	}
 }
 
 void SourceProcessor::add_file(const InputFilePath &input) {
-	m_inputs.push(input);
+	m_inputs.push_back(input);
+	m_input_stack.push(input);
 
-	if (m_inputs.top().source_type == SourceFileType::None)
+	if (m_input_stack.top().source_type == SourceFileType::None)
 	{
-		m_inputs.top().source_type = SourceTools::get_default_file_type(m_inputs.top().path);
+		m_input_stack.top().source_type = SourceTools::get_default_file_type(m_input_stack.top().path);
 	}
 }
 
@@ -27,12 +29,30 @@ bool SourceProcessor::has_file_hash(const FilePath &filepath) const {
 	return m_info_map.find(filepath) != m_info_map.end();
 }
 
-SourceProcessor::file_change_list SourceProcessor::gen_file_change_table() const {
-	file_change_list list{};
+SourceProcessor::file_change_list SourceProcessor::gen_file_change_table(bool inputs_only) const {
 
-	for (const auto &[key, value] : m_info_map)
+	std::set<FilePath> file_paths;
+
+	if (inputs_only)
+	{
+		for (const InputFilePath &input : m_inputs)
+		{
+			file_paths.insert(input.path);
+		}
+	}
+	else
+	{
+		for (const auto &kv : m_info_map)
+		{
+			file_paths.insert(kv.first);
+		}
+	}
+
+	file_change_list list{};
+	for (const FilePath &key : file_paths)
 	{
 		const auto iter_pos = this->file_records.find(key);
+		const DependencyInfo &value = m_info_map.at(key);
 
 		// no record of this file
 		if (iter_pos == file_records.end())
@@ -184,6 +204,7 @@ FilePath SourceProcessor::_find_dependency(const dependency_name &name,
 }
 
 bool SourceProcessor::_dependency_exists(const FilePath &path, SourceFileType type) {
+	// std::cout << "dep: " << path << '\n';
 	switch (type)
 	{
 	case SourceFileType::C:
