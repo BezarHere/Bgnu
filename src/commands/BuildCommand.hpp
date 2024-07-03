@@ -1,6 +1,7 @@
 #pragma once
-#include "../Command.hpp"
-#include "../Project.hpp"
+#include "Command.hpp"
+#include "Project.hpp"
+#include "BuildCache.hpp"
 
 #include <regex>
 
@@ -18,6 +19,7 @@ namespace commands
 		static FilePath _default_filepath();
 
 	private:
+		void _write_build_cache() const;
 		void _load_build_cache();
 
 		inline FilePath _get_build_cache_path() const {
