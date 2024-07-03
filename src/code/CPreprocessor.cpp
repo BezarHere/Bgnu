@@ -1,4 +1,5 @@
 #include "CPreprocessor.hpp"
+#include "CodeTokenizer.hpp"
 
 
 constexpr CPreprocessor::Type CPreprocessor::_get_tk_type(const StrBlob &name) {
@@ -56,7 +57,7 @@ CPreprocessor::Token CPreprocessor::get_next_tk(const StrBlob &source) {
 			/*
 			std::cout << "TOK PARSED N: " << token.name
 				<< " \"" << string(source.data + token.name.begin, token.name.length()) << "\"\n";
-			
+
 			std::cout << "TOK PARSED V: " << token.value
 				<< " \"" << string(source.data + token.value.begin, token.value.length()) << "\"\n";
 			*/
@@ -68,13 +69,29 @@ CPreprocessor::Token CPreprocessor::get_next_tk(const StrBlob &source) {
 }
 
 string CPreprocessor::get_include_path(const StrBlob &value) {
-	StrBlob trimmed = StringTools::trim(
+	constexpr auto is_opening = [](string_char value) {return value == '"' || value == '<';};
+	constexpr auto is_closing = [](string_char value) {return value == '"' || value == '>';};
+
+	// pos of the opening quote/bracket
+	size_t opening = CodeTokenizer::match_unescaped(
 		value,
-		[](string_char value) {
-			return StringTools::is_whitespace(value) || value == '"' || value == '<' || value == '>';
-		}
+		is_opening
 	);
-	return string(trimmed.begin(), trimmed.length());
+
+	if (opening == npos)
+	{
+		return "";
+	}
+
+	opening = opening + 1;
+
+	// pos of the closing quote/bracket
+	const size_t closing = CodeTokenizer::match_unescaped(
+		value.slice(opening),
+		is_closing
+	) + opening;
+
+	return string(value.data + opening, closing - opening);
 }
 
 CPreprocessor::Token CPreprocessor::_read_tk_inline(const StrBlob &source) {
