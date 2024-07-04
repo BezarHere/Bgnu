@@ -58,6 +58,7 @@ SourceProcessor::file_change_list SourceProcessor::gen_file_change_table(bool in
 		if (iter_pos == file_records.end())
 		{
 			list.emplace_back(key, value.hash);
+			continue;
 		}
 
 		// record has an invalid hash
