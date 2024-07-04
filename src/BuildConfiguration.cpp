@@ -630,16 +630,16 @@ constexpr NamedEnum<OptimizationDegree> OptimizationDegreeNames[] = {
 	NamedEnum(OptimizationDegree::Medium, "medium"),
 	NamedEnum(OptimizationDegree::Medium, "med"),
 	NamedEnum(OptimizationDegree::Medium, "normal"),
-	
+
 	NamedEnum(OptimizationDegree::High, "high"),
 
 	NamedEnum(OptimizationDegree::Extreme, "extreme"),
 };
 
-constexpr array<const char *, 3> WarningLevelNames = {
-	"none",
-	"all",
-	"extra",
+constexpr NamedEnum<WarningLevel> WarningLevelNames[] = {
+	NamedEnum(WarningLevel::None, "none"),
+	NamedEnum(WarningLevel::All, "all"),
+	NamedEnum(WarningLevel::Extra, "extra"),
 };
 
 constexpr NamedEnum<StandardType> StandardTypeNames[] = {
@@ -675,102 +675,85 @@ constexpr NamedEnum<StandardType> StandardTypeNames[] = {
 	NamedEnum{StandardType::Latest, "latest"},
 };
 
-constexpr array<const char *, 9> SIMDTypeNames = {
-	"none",
+constexpr NamedEnum<SIMDType> SIMDTypeNames[] = {
+	NamedEnum(SIMDType::None, "none"),
 
-	"SSE",
-	"SSE2",
-	"SSE3",
-	"SSE3.1",
-	"SSE4",
+	NamedEnum(SIMDType::SSE2, "SSE"),
+	NamedEnum(SIMDType::SSE2, "SSE2"),
+	NamedEnum(SIMDType::SSE3, "SSE3"),
+	NamedEnum(SIMDType::SSE3_1, "SSE3.1"),
+	NamedEnum(SIMDType::SSE4, "SSE4"),
 
-	"AVX",
-	"AVX2",
-	"AVX512",
+	NamedEnum(SIMDType::AVX, "AVX"),
+	NamedEnum(SIMDType::AVX2, "AVX2"),
+	NamedEnum(SIMDType::AVX512, "AVX512"),
 };
 
-const char *BuildConfiguration::get_enum_name(OptimizationType opt_type) {
-	return OptimizationTypeNames[(int)opt_type].name;
+template <typename _T, size_t N>
+inline constexpr const string_char *_find_enum_name(const NamedEnum<_T>(&names)[N], _T value) {
+	for (size_t i = 0; i < N; i++)
+	{
+		if (names[i].value == value)
+		{
+			return names[i].name;
+		}
+	}
+
+	return "";
 }
 
-const char *BuildConfiguration::get_enum_name(OptimizationDegree opt_degree) {
-	return OptimizationDegreeNames[(int)opt_degree].name;
+template <typename _T, size_t N>
+inline constexpr _T _find_enum_value(const NamedEnum<_T>(&names)[N], const string_char *name, _T default_value = _T(0)) {
+
+	for (size_t i = 1; i < N; ++i)
+	{
+		if (StringTools::equal_insensitive(names[i].name, name))
+		{
+			return names[i].value;
+		}
+	}
+
+	return default_value;
 }
 
-const char *BuildConfiguration::get_enum_name(WarningLevel wrn_lvl) {
-	return WarningLevelNames[(int)wrn_lvl];
+const string_char *BuildConfiguration::get_enum_name(OptimizationType opt_type) {
+	return _find_enum_name(OptimizationTypeNames, opt_type);
 }
 
-const char *BuildConfiguration::get_enum_name(StandardType standard) {
-	return StandardTypeNames[(int)standard].name;
+const string_char *BuildConfiguration::get_enum_name(OptimizationDegree opt_degree) {
+	return _find_enum_name(OptimizationDegreeNames, opt_degree);
 }
 
-const char *BuildConfiguration::get_enum_name(SIMDType simd) {
-	return SIMDTypeNames[(int)simd];
+const string_char *BuildConfiguration::get_enum_name(WarningLevel wrn_lvl) {
+	return _find_enum_name(WarningLevelNames, wrn_lvl);
+}
+
+const string_char *BuildConfiguration::get_enum_name(StandardType standard) {
+	return _find_enum_name(StandardTypeNames, standard);
+}
+
+const string_char *BuildConfiguration::get_enum_name(SIMDType simd) {
+	return _find_enum_name(SIMDTypeNames, simd);
 }
 
 OptimizationType BuildConfiguration::get_optimization_type(const string &name) {
-
-	for (size_t i = 1; i < std::size(OptimizationTypeNames); ++i)
-	{
-		if (StringTools::equal_insensitive(OptimizationTypeNames[i].name, name.c_str(), name.size()))
-		{
-			return OptimizationTypeNames->value;
-		}
-	}
-
-	return OptimizationType::None;
+	return _find_enum_value(OptimizationTypeNames, name.c_str());
 }
 
 OptimizationDegree BuildConfiguration::get_optimization_degree(const string &name) {
-
-	for (size_t i = 1; i < std::size(OptimizationDegreeNames); ++i)
-	{
-		if (StringTools::equal_insensitive(OptimizationDegreeNames[i].name, name.c_str(), name.size()))
-		{
-			return OptimizationDegreeNames[i].value;
-		}
-	}
-
-	return OptimizationDegree::None;
+	return _find_enum_value(OptimizationDegreeNames, name.c_str());
 }
 
 WarningLevel BuildConfiguration::get_warning_level(const string &name) {
-
-	for (size_t i = 1; i < std::size(WarningLevelNames); ++i)
-	{
-		if (StringTools::equal_insensitive(WarningLevelNames[i], name.c_str(), name.size()))
-		{
-			return WarningLevelNames[i].value;
-		}
-	}
-
-	return WarningLevel::None;
+	return _find_enum_value(WarningLevelNames, name.c_str());
 }
 
 StandardType BuildConfiguration::get_standard_type(const string &name) {
-	for (size_t i = 1; i < std::size(StandardTypeNames); ++i)
-	{
-		if (StringTools::equal_insensitive(StandardTypeNames[i].name, name.c_str(), name.size()))
-		{
-			return StandardTypeNames[i].value;
-		}
-	}
-
-	return StandardType::None;
+	return _find_enum_value(StandardTypeNames, name.c_str());
 }
 
 SIMDType BuildConfiguration::get_simd_type(const string &name) {
-
-	for (size_t i = 1; i < std::size(SIMDTypeNames); ++i)
-	{
-		if (StringTools::equal_insensitive(SIMDTypeNames[i], name.c_str(), name.size()))
-		{
-			return SIMDType(i);
-		}
-	}
-
-	return SIMDType::None;
+	return _find_enum_value(SIMDTypeNames, name.c_str());
 }
 
 #pragma endregion
