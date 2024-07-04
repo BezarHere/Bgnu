@@ -84,11 +84,11 @@ struct StringTools
 		return _modify(str, [](char_type c) { return (char_type)toupper(c); });
 	}
 
-	static inline bool equal(const char_type *left, const char_type *right, const size_t max_count = npos) {
+	static constexpr bool equal(const char_type *left, const char_type *right, const size_t max_count = npos) {
 		return _equal(left, right, max_count, std::equal_to{});
 	}
 
-	static inline bool equal_insensitive(const char_type *left, const char_type *right, const size_t max_count = npos) {
+	static constexpr bool equal_insensitive(const char_type *left, const char_type *right, const size_t max_count = npos) {
 		return _equal(
 			left, right,
 			max_count,
