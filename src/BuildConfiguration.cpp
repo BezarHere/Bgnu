@@ -145,7 +145,6 @@ void BuildConfiguration::_put_standards(vector<string> &output, SourceFileType t
 
 	output.emplace_back("-std=");
 	output.back().append(get_enum_name(standard_type));
-	std::cout << "standard: " << (int)type << '\n';
 }
 
 void BuildConfiguration::_put_optimization(vector<string> &output) const {
@@ -383,6 +382,27 @@ BuildConfiguration BuildConfiguration::from_data(FieldDataReader reader, ErrorRe
 
 	CHECK_REPORT(bc_reader.read_optimization_info(config.optimization));
 	CHECK_REPORT(bc_reader.read_warning_info(config.warnings));
+
+	{
+		EnumTraits standard{
+		"standard version",
+		config.standard,
+		[](auto val) { return BuildConfiguration::get_standard_type(val); },
+		[](StandardType type) { return BuildConfiguration::get_enum_name(type); },
+		[](const StandardType type) { return type != StandardType::None; }
+		};
+		config.standard = bc_reader._read_enum("standard", standard);
+
+		EnumTraits simd_type{
+			"SIMD type",
+			config.simd_type,
+			[](auto val) { return BuildConfiguration::get_simd_type(val); },
+			[](SIMDType type) { return BuildConfiguration::get_enum_name(type); },
+			[](const SIMDType type) { return type != SIMDType::None; }
+		};
+
+		config.simd_type = bc_reader._read_enum("simd_type", simd_type);
+	}
 
 	typedef inner::NamedValue<bool *, string> NamedBool;
 
@@ -704,7 +724,6 @@ inline constexpr const string_char *_find_enum_name(const NamedEnum<_T>(&names)[
 
 template <typename _T, size_t N>
 inline constexpr _T _find_enum_value(const NamedEnum<_T>(&names)[N], const string_char *name, _T default_value = _T(0)) {
-
 	for (size_t i = 1; i < N; ++i)
 	{
 		if (StringTools::equal_insensitive(names[i].name, name))
