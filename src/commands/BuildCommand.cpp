@@ -97,7 +97,12 @@ namespace commands
 			return Error::NoConfig;
 		}
 
-		m_current_build_cfg = &m_project.get_build_configs().at("debug");
+		m_current_build_cfg_name = "debug";
+		m_current_build_cfg = &m_project.get_build_configs().at(
+			m_current_build_cfg_name ? m_current_build_cfg_name : "debug"
+		);
+
+		Logger::verbose("current build configuration: %s", m_current_build_cfg_name);
 
 		_load_build_cache();
 
@@ -131,6 +136,10 @@ namespace commands
 				output_path, record
 			);
 
+			Logger::verbose(
+				"adding \"%s\" -> \"%s\" to the build force",
+				path.c_str(), output_path.c_str()
+			);
 
 			m_current_build_cfg->build_arguments(
 				build_args.emplace_back(),

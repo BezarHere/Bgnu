@@ -35,7 +35,10 @@ namespace commands
 		bool m_resave = false;
 
 		Project m_project;
+		
+		const string_char *m_current_build_cfg_name = nullptr;
 		const BuildConfiguration *m_current_build_cfg;
+
 		ErrorReport m_report;
 		BuildCache m_build_cache;
 	};
