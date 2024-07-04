@@ -145,6 +145,7 @@ void BuildConfiguration::_put_standards(vector<string> &output, SourceFileType t
 
 	output.emplace_back("-std=");
 	output.back().append(get_enum_name(standard_type));
+	std::cout << "standard: " << (int)type << '\n';
 }
 
 void BuildConfiguration::_put_optimization(vector<string> &output) const {
@@ -247,7 +248,6 @@ void BuildConfiguration::_put_includes(vector<string> &output) const {
 void BuildConfiguration::_put_libraries(vector<string> &output) const {
 	for (const auto &lib_dir : library_directories)
 	{
-		std::cout << lib_dir << '\n';
 		output.emplace_back("-L");
 
 		output.emplace_back();
@@ -355,7 +355,7 @@ hash_t BuildConfiguration::hash() const {
 		library_names.begin(), library_names.end(),
 		[&digester](const string &str) { digester.add(str.c_str(), str.length()); }
 	);
-	
+
 
 	std::for_each(
 		library_directories.begin(), library_directories.end(),
@@ -553,24 +553,87 @@ void BuildConfigurationReader::read_paths_named(const string &name, vector<FileP
 
 #pragma region(enum names)
 
-constexpr array<const char *, 5> OptimizationTypeNames = {
-	"none",
+template <size_t MaxNameLn, size_t N>
+struct NameList
+{
+	static constexpr string_char separator = 0;
+	typedef string_char name_buf[MaxNameLn + 1];
+	constexpr NameList() = default;
+	template <size_t S>
+	constexpr NameList(const string_char(&str)[S]) {
+		size_t last = 0;
+		for (size_t i = 0; i < S; i++)
+		{
+			if (str[i] == separator)
+			{
+				// duplicate separator
+				if (i - last == 0)
+				{
+					last = i + 1;
+					continue;
+				}
 
-	"release",
-	"debug",
+				const size_t len = i - last;
+				for (size_t j = 0; j < len; j++)
+				{
+					names[count][j] = str[i + last];
+				}
+				last = i + 1;
+			}
+		}
 
-	"size",
-	"speed",
+		if (S - last > 0)
+		{
+			const size_t len = S - last;
+
+			for (size_t j = 0; j < len; j++)
+			{
+				names[count][j] = str[S + last];
+			}
+		}
+	}
+
+	const size_t count = 0;
+	array<name_buf, N> names;
 };
 
-constexpr array<const char *, 5> OptimizationDegreeNames = {
-	"none",
+template <typename Enum>
+struct NamedEnum
+{
+	constexpr NamedEnum(Enum _value, const string_char *_name)
+		: name{_name}, value{_value} {
+	}
 
-	"low",
-	"medium",
-	"high",
+	const string_char *name;
+	Enum value;
+};
 
-	"extreme",
+constexpr NamedEnum<OptimizationType> OptimizationTypeNames[] = {
+	NamedEnum(OptimizationType::None, "none"),
+
+	NamedEnum(OptimizationType::Release, "release"),
+	NamedEnum(OptimizationType::Release, "production"),
+	NamedEnum(OptimizationType::Debug, "debug"),
+	NamedEnum(OptimizationType::Debug, "testing"),
+
+	NamedEnum(OptimizationType::Size, "size"),
+	NamedEnum(OptimizationType::Size, "compress"),
+	NamedEnum(OptimizationType::SpeedUnreliable, "speed"),
+};
+
+constexpr NamedEnum<OptimizationDegree> OptimizationDegreeNames[] = {
+	NamedEnum(OptimizationDegree::None, "none"),
+	NamedEnum(OptimizationDegree::None, "never"),
+
+	NamedEnum(OptimizationDegree::Low, "low"),
+
+	NamedEnum(OptimizationDegree::Medium, "medium"),
+	NamedEnum(OptimizationDegree::Medium, "med"),
+	NamedEnum(OptimizationDegree::Medium, "normal"),
+	
+	NamedEnum(OptimizationDegree::High, "high"),
+
+	NamedEnum(OptimizationDegree::Extreme, "extreme"),
 };
 
 constexpr array<const char *, 3> WarningLevelNames = {
@@ -579,23 +642,37 @@ constexpr array<const char *, 3> WarningLevelNames = {
 	"extra",
 };
 
-constexpr array<const char *, 13> StandardTypeNames = {
-	"none",
+constexpr NamedEnum<StandardType> StandardTypeNames[] = {
+	NamedEnum{StandardType::None, "none"},
 
-	"C99",
-	"C11",
-	"C14",
-	"C17",
-	"C23",
+	NamedEnum{StandardType::C99, "C99"},
+	NamedEnum{StandardType::C11, "C11"},
+	NamedEnum{StandardType::C14, "C14"},
+	NamedEnum{StandardType::C17, "C17"},
+	NamedEnum{StandardType::C23, "C23"},
 
-	"Cpp99",
-	"Cpp11",
-	"Cpp14",
-	"Cpp17",
-	"Cpp20",
-	"Cpp23",
+	NamedEnum{StandardType::Cpp11, "Cpp11"},
+	NamedEnum{StandardType::Cpp14, "Cpp14"},
+	NamedEnum{StandardType::Cpp17, "Cpp17"},
+	NamedEnum{StandardType::Cpp20, "Cpp20"},
+	NamedEnum{StandardType::Cpp23, "Cpp23"},
 
-	"latest",
+	NamedEnum{StandardType::Cpp11, "C++11"},
+	NamedEnum{StandardType::Cpp14, "C++14"},
+	NamedEnum{StandardType::Cpp17, "C++17"},
+	NamedEnum{StandardType::Cpp20, "C++20"},
+	NamedEnum{StandardType::Cpp23, "C++23"},
+
+	NamedEnum{StandardType::Cpp23, "Cpp2x"},
+	NamedEnum{StandardType::Cpp23, "C++2x"},
+
+	NamedEnum{StandardType::C99, "STD99"},
+	NamedEnum{StandardType::Cpp11, "STD11"},
+	NamedEnum{StandardType::Cpp14, "STD14"},
+	NamedEnum{StandardType::Cpp17, "STD17"},
+	NamedEnum{StandardType::Cpp23, "STD23"},
+
+	NamedEnum{StandardType::Latest, "latest"},
 };
 
 constexpr array<const char *, 9> SIMDTypeNames = {
@@ -613,11 +690,11 @@ constexpr array<const char *, 9> SIMDTypeNames = {
 };
 
 const char *BuildConfiguration::get_enum_name(OptimizationType opt_type) {
-	return OptimizationTypeNames[(int)opt_type];
+	return OptimizationTypeNames[(int)opt_type].name;
 }
 
 const char *BuildConfiguration::get_enum_name(OptimizationDegree opt_degree) {
-	return OptimizationDegreeNames[(int)opt_degree];
+	return OptimizationDegreeNames[(int)opt_degree].name;
 }
 
 const char *BuildConfiguration::get_enum_name(WarningLevel wrn_lvl) {
@@ -625,7 +702,7 @@ const char *BuildConfiguration::get_enum_name(WarningLevel wrn_lvl) {
 }
 
 const char *BuildConfiguration::get_enum_name(StandardType standard) {
-	return StandardTypeNames[(int)standard];
+	return StandardTypeNames[(int)standard].name;
 }
 
 const char *BuildConfiguration::get_enum_name(SIMDType simd) {
@@ -634,11 +711,11 @@ const char *BuildConfiguration::get_enum_name(SIMDType simd) {
 
 OptimizationType BuildConfiguration::get_optimization_type(const string &name) {
 
-	for (size_t i = 1; i < OptimizationTypeNames.size(); ++i)
+	for (size_t i = 1; i < std::size(OptimizationTypeNames); ++i)
 	{
-		if (StringTools::equal_insensitive(OptimizationTypeNames[i], name.c_str(), name.size()))
+		if (StringTools::equal_insensitive(OptimizationTypeNames[i].name, name.c_str(), name.size()))
 		{
-			return OptimizationType(i);
+			return OptimizationTypeNames->value;
 		}
 	}
 
@@ -647,11 +724,11 @@ OptimizationType BuildConfiguration::get_optimization_type(const string &name) {
 
 OptimizationDegree BuildConfiguration::get_optimization_degree(const string &name) {
 
-	for (size_t i = 1; i < OptimizationDegreeNames.size(); ++i)
+	for (size_t i = 1; i < std::size(OptimizationDegreeNames); ++i)
 	{
-		if (StringTools::equal_insensitive(OptimizationDegreeNames[i], name.c_str(), name.size()))
+		if (StringTools::equal_insensitive(OptimizationDegreeNames[i].name, name.c_str(), name.size()))
 		{
-			return OptimizationDegree(i);
+			return OptimizationDegreeNames[i].value;
 		}
 	}
 
@@ -660,11 +737,11 @@ OptimizationDegree BuildConfiguration::get_optimization_degree(const string &nam
 
 WarningLevel BuildConfiguration::get_warning_level(const string &name) {
 
-	for (size_t i = 1; i < WarningLevelNames.size(); ++i)
+	for (size_t i = 1; i < std::size(WarningLevelNames); ++i)
 	{
 		if (StringTools::equal_insensitive(WarningLevelNames[i], name.c_str(), name.size()))
 		{
-			return WarningLevel(i);
+			return WarningLevelNames[i].value;
 		}
 	}
 
@@ -672,12 +749,11 @@ WarningLevel BuildConfiguration::get_warning_level(const string &name) {
 }
 
 StandardType BuildConfiguration::get_standard_type(const string &name) {
-
-	for (size_t i = 1; i < StandardTypeNames.size(); ++i)
+	for (size_t i = 1; i < std::size(StandardTypeNames); ++i)
 	{
-		if (StringTools::equal_insensitive(StandardTypeNames[i], name.c_str(), name.size()))
+		if (StringTools::equal_insensitive(StandardTypeNames[i].name, name.c_str(), name.size()))
 		{
-			return StandardType(i);
+			return StandardTypeNames[i].value;
 		}
 	}
 
@@ -686,7 +762,7 @@ StandardType BuildConfiguration::get_standard_type(const string &name) {
 
 SIMDType BuildConfiguration::get_simd_type(const string &name) {
 
-	for (size_t i = 1; i < SIMDTypeNames.size(); ++i)
+	for (size_t i = 1; i < std::size(SIMDTypeNames); ++i)
 	{
 		if (StringTools::equal_insensitive(SIMDTypeNames[i], name.c_str(), name.size()))
 		{
