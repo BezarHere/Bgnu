@@ -35,7 +35,7 @@ public:
 
 	inline FieldVar(FieldVarType type = FieldVarType::Null);
 
-	inline explicit FieldVar(Null) : m_type{FieldVarType::Null} {}
+	inline FieldVar(Null) : m_type{FieldVarType::Null} {}
 	inline FieldVar(Bool boolean) : m_type{FieldVarType::Boolean}, m_bool{boolean} {}
 	inline FieldVar(Int integer) : m_type{FieldVarType::Integer}, m_int{integer} {}
 	inline FieldVar(Real number) : m_type{FieldVarType::Real}, m_real{number} {}

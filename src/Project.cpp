@@ -7,6 +7,12 @@ Project Project::from_data(const FieldVar::Dict &data, ErrorReport &result) {
 
 	FieldDataReader reader{"Project", data};
 
+	result = load_various(project, reader);
+	if (result)
+	{
+		Logger::error(result);
+		return project;
+	}
 
 	const FieldVar &build_configs = reader.try_get_value<FieldVarType::Dict>("build_configurations");
 
@@ -54,6 +60,70 @@ Project Project::from_data(const FieldVar::Dict &data, ErrorReport &result) {
 	}
 
 	return project;
+}
+
+ErrorReport Project::load_various(Project &project, FieldDataReader &reader) {
+
+	const FieldVar::Array &src_slc = \
+		reader.try_get_array<FieldVarType::String>("source_selectors").get_array();
+
+	if (src_slc.empty())
+	{
+		Logger::verbose("found no specified source selectors, using default...");
+	}
+	else
+	{
+		Logger::verbose("found %llu source selectors", src_slc.size());
+		project.m_source_selectors.clear();
+	}
+
+
+	for (const auto &var : src_slc)
+	{
+		project.m_source_selectors.emplace_back(var.get_string());
+	}
+
+
+	const FieldVar &output_dir = reader.try_get_value<FieldVarType::String>("output_dir");
+	if (output_dir.is_null())
+	{
+		Logger::verbose(
+			"no specified output directory, using default: '%s'",
+			project.m_output.dir.c_str()
+		);
+	}
+	else
+	{
+		project.m_output.dir = output_dir.get_string();
+	}
+
+	const FieldVar &output_cache_dir = reader.try_get_value<FieldVarType::String>("output_cache_dir");
+	if (output_cache_dir.is_null())
+	{
+		Logger::verbose(
+			"no specified cache directory, using default: '%s'",
+			project.m_output.cache_dir.c_str()
+		);
+	}
+	else
+	{
+		project.m_output.cache_dir = output_cache_dir.get_string();
+	}
+
+	const FieldVar &output_name = reader.try_get_value<FieldVarType::String>("output_name");
+	if (output_name.is_null())
+	{
+		Logger::verbose(
+			"no specified output name, using default: '%s'",
+			project.m_output.name.c_str()
+		);
+	}
+	else
+	{
+		project.m_output.name = output_name.get_string();
+	}
+
+	return ErrorReport();
 }
 
 vector<FilePath::iterator_entry> Project::get_available_files() const {
@@ -150,8 +220,15 @@ hash_t Project::hash() const {
 	return digester.value;
 }
 
+
+
 Error ProjectOutputData::ensure_available() const {
-	this->path.parent().create_directory();
+	this->name.parent().create_directory();
 	this->cache_dir.create_directory();
+	this->dir.create_directory();
 	return Error::Ok;
+}
+
+FilePath ProjectOutputData::get_result_path() const {
+	return FilePath(this->name).resolve(this->dir.resolved_copy());
 }

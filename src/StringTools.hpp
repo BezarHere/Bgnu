@@ -6,7 +6,7 @@
 #include "Logger.hpp"
 
 
-struct StringTools
+struct string_tools
 {
 	using string_type = string;
 	using char_type = string_char;
@@ -304,5 +304,40 @@ struct StringTools
 	}
 
 	static inline StrBlob trim(const StrBlob &source) { return trim(source, &is_whitespace); }
+
+	template <typename _Pred>
+	static constexpr bool all_of(const char_type *cstr, const size_t max_count, _Pred &&pred) {
+		for (size_t i = 0; i < max_count && cstr[i]; i++)
+		{
+			if (!pred(cstr[i]))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+
+	template <typename _Pred>
+	static inline constexpr bool all_of(const char_type *cstr, _Pred &&pred) {
+		return all_of(cstr, npos, std::forward<_Pred>(pred));
+	}
+
+	template <typename _Pred>
+	static constexpr bool any_of(const char_type *cstr, const size_t max_count, _Pred &&pred) {
+		for (size_t i = 0; i < max_count && cstr[i]; i++)
+		{
+			if (pred(cstr[i]))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	template <typename _Pred>
+	static inline constexpr bool any_of(const char_type *cstr, _Pred &&pred) {
+		return any_of(cstr, npos, std::forward<_Pred>(pred));
+	}
 
 };

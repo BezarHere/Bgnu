@@ -15,17 +15,41 @@ struct ProjectOutputData
 	// creates folders and stuff
 	Error ensure_available() const;
 
+	// returns the final path of the binary/library
+	FilePath get_result_path() const;
+
 	inline hash_t hash() const {
 		return HashTools::combine(
 			(hash_t)type,
-			HashTools::hash(path.get_text()),
+			HashTools::hash(name.get_text()),
+			HashTools::hash(dir.get_text()),
 			HashTools::hash(cache_dir.get_text())
 		);
 	}
 
 	BuildOutputType type = BuildOutputType::Executable;
-	FilePath path = "out/main";
+	FilePath name = "out/main";
+	FilePath dir = "out";
 	FilePath cache_dir = "out/cache/";
+};
+
+struct ProjectModifier
+{
+	enum class ModifierType : uint8_t
+	{
+		Set,
+		Del,
+
+		Add,
+		Sub,
+		Mul,
+		Div,
+	};
+
+	ModifierType type;
+	Glob config_glob; // TODO: extended glob; separating to different globs ("GL*B1|GL*B2")
+	string name;
+	FieldVar var;
 };
 
 class Project
@@ -50,8 +74,13 @@ public:
 
 	FilePath source_dir = FilePath::get_working_directory();
 private:
+	static ErrorReport load_various(Project &project, FieldDataReader &reader);
+
+private:
 	ProjectOutputData m_output = {};
 	vector<Glob> m_source_selectors = {"**/*.c", "**/*.cpp", "**/*.cc", "**/*.cxx"};
+
+	vector<ProjectModifier> m_modifiers;
 
 	BuildConfigMap m_build_configurations;
 };

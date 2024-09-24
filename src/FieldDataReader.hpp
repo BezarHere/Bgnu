@@ -9,6 +9,7 @@ struct FieldDataReader
 {
 public:
 	static inline const FieldVar Default = FieldVar(std::nullptr_t());
+	static inline const FieldVar DefaultArray = FieldVar(FieldVarType::Array);
 
 	inline FieldDataReader(const string &context, const FieldVar::Dict &data)
 		: _context{context}, _data{data} {
@@ -23,7 +24,7 @@ public:
 	// if any element of the array isn't of the template type 
 	template <FieldVarType ElementFType>
 	inline const FieldVar &try_get_array(const FieldVar::String &name,
-																			 const FieldVar &default_value = Default) const;
+																			 const FieldVar &default_value = DefaultArray) const;
 
 	// will throw an exception if the reader can't be created
 	// branching will fail if the value at 'name' isn't a dict (something else or does not exist)

@@ -74,7 +74,7 @@ public:
 
 	inline FilePath(const string_type &str) : FilePath(string_blob(str.data(), str.length())) {}
 	inline FilePath(const char_type *cstr)
-		: FilePath(string_blob(cstr, StringTools::length(cstr, MaxPathLength - 1))) {
+		: FilePath(string_blob(cstr, string_tools::length(cstr, MaxPathLength - 1))) {
 	}
 
 	inline FilePath(const string_type &str, const string_type &base)
@@ -83,14 +83,14 @@ public:
 
 	inline FilePath(const char_type *cstr, const char_type *base)
 		: FilePath(
-			string_blob(cstr, StringTools::length(cstr, MaxPathLength - 1)),
-			string_blob(base, StringTools::length(base, MaxPathLength - 1))
+			string_blob(cstr, string_tools::length(cstr, MaxPathLength - 1)),
+			string_blob(base, string_tools::length(base, MaxPathLength - 1))
 		) {
 	}
 
 	// narrowing will have gonky behavior
 	inline FilePath(const iterator_entry &entry)
-		: FilePath(StringTools::convert(entry.path().c_str(), npos)) {
+		: FilePath(string_tools::convert(entry.path().c_str(), npos)) {
 	}
 
 	FilePath(const FilePath &copy) = default;
@@ -264,7 +264,7 @@ inline constexpr bool FilePath::is_valid_filename_char(const char_type character
 }
 
 inline constexpr bool FilePath::is_valid_path_char(const char_type character) {
-	return is_valid_filename_char(character) || StringTools::is_directory_separator(character);
+	return is_valid_filename_char(character) || string_tools::is_directory_separator(character);
 }
 
 inline constexpr bool FilePath::is_valid_drive_root(const string_blob &path) {
@@ -291,7 +291,7 @@ inline constexpr size_t FilePath::_get_last_separator(const string_blob &source)
 	for (size_t r = 2; r < source.size; r++)
 	{
 		const size_t i = source.size - r;
-		if (StringTools::is_directory_separator(source[i]))
+		if (string_tools::is_directory_separator(source[i]))
 		{
 			return i;
 		}

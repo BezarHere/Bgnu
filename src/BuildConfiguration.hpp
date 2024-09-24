@@ -7,6 +7,13 @@
 #include "Glob.hpp"
 #include "SourceTools.hpp" // for SourceFileType
 
+enum class CompilerType
+{
+	GCC,
+	CLANG,
+	MSVC,
+};
+
 enum class OptimizationType : uint8_t
 {
 	None = 0,
@@ -128,11 +135,15 @@ struct BuildConfiguration
 	static StandardType get_standard_type(const string &name);
 	static SIMDType get_simd_type(const string &name);
 
+	static const string_char *get_compiler_name(CompilerType type, SourceFileType file_type);
+
 	// values should be either a string OR a null 
 	FieldVar::Dict predefines;
 
 	OptimizationInfo optimization = {};
 	WarningReportInfo warnings = {};
+
+	CompilerType compiler_type = CompilerType::GCC;
 
 	StandardType standard = StandardType::Cpp17;
 

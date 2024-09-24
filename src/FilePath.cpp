@@ -69,7 +69,7 @@ static FilePath::string_blob get_root_path(const FilePath::string_blob &base);
 FilePath::FilePath(const string_blob &str) {
 
 	// copy string
-	m_text.extend(str.data, StringTools::length(str.data, str.length()));
+	m_text.extend(str.data, string_tools::length(str.data, str.length()));
 
 	// can't write to the entire text region, need to place a null at back
 	if (m_text.full())
@@ -130,7 +130,7 @@ bool FilePath::operator==(const FilePath &other) const {
 		return false;
 	}
 
-	return StringTools::equal(
+	return string_tools::equal(
 		m_text.data(), other.m_text.data(),
 		m_text.size()
 	);
@@ -141,7 +141,7 @@ FilePath &FilePath::operator+=(const FilePath &right) {
 }
 
 FilePath FilePath::operator+(const FilePath &right) const {
-	// return FilePath();
+	return this->join_path(right);
 }
 
 FilePath::operator string_type() const {
@@ -242,7 +242,7 @@ FilePath FilePath::join_path(const string_blob &path) const {
 FilePath &FilePath::add_path(const string_blob &path) {
 
 
-	if (!StringTools::is_directory_separator(path[0]))
+	if (!string_tools::is_directory_separator(path[0]))
 	{
 		// 'back()' should be the null end (hopefully)
 		m_text.back() = DirectorySeparator;
@@ -449,7 +449,7 @@ void FilePath::_calculate_separators(const string_blob &text, SeparatorArray &ou
 
 	for (size_t i = 0; i < text.size; i++)
 	{
-		if (StringTools::is_directory_separator(text[i]))
+		if (string_tools::is_directory_separator(text[i]))
 		{
 			// we could just break after reaching the segment limit
 			// but that will leave an undefined behavior unchecked
@@ -474,7 +474,7 @@ FilePath::string_type FilePath::_resolve_path(const string_blob &text, const str
 		return "";
 	}
 
-	const bool root_start = StringTools::is_directory_separator(text[0]);
+	const bool root_start = string_tools::is_directory_separator(text[0]);
 
 	string_type result_str{};
 	result_str.reserve(MaxPathLength * 2);
@@ -497,7 +497,7 @@ FilePath::string_type FilePath::_resolve_path(const string_blob &text, const str
 	// start after the first char, if it can be processed then it had been above 
 	for (size_t i = 1; i <= text_count; i++)
 	{
-		if (StringTools::is_directory_separator(text[i]) || i == text.size)
+		if (string_tools::is_directory_separator(text[i]) || i == text.size)
 		{
 			const string_blob segment_source = text.slice(last_anchor, i);
 
@@ -567,7 +567,7 @@ bool FilePath::_preprocess(Blob<TextArray::value_type> &text) {
 			break;
 		}
 
-		if (StringTools::is_directory_separator(text[i]))
+		if (string_tools::is_directory_separator(text[i]))
 		{
 			if (last_dir_separator == i - 1)
 			{

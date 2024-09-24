@@ -56,15 +56,22 @@ public:
 	inline void remove_flags(Flags flags) { m_flags = Flags((int)m_flags & ~(int)flags); }
 	inline void clear_flags() { m_flags = eFlag_None; }
 
-	
+	inline Blob<const InputFilePath> get_inputs() const { return {m_inputs.data(), m_inputs.size()}; }
+	inline std::map<FilePath, FilePath> get_file_records_src2out_map() const {
+		return m_file_records_src2out_map;
+	}
+
+	void set_file_records(const file_record_table &records);
+
 	vector<FilePath> included_directories;
-	file_record_table file_records;
 private:
 
 	bool _is_processing_path(const FilePath &filepath) const;
 	void _push_processing_path(const FilePath &filepath);
 	void _pop_processing_path(const FilePath &filepath);
 	void _process_input(const InputFilePath &input);
+
+	void _rebuild_file_record_src2out_map();
 
 	FilePath _find_dependency(const dependency_name &name, const FilePath &file, SourceFileType type) const;
 
@@ -76,4 +83,6 @@ private:
 	vector_stack<InputFilePath> m_input_stack;
 	vector_stack<FilePath> m_loading_stack;
 	dependency_info_map m_info_map;
+	file_record_table m_file_records;
+	std::map<FilePath, FilePath> m_file_records_src2out_map;
 };

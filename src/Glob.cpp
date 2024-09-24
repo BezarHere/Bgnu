@@ -285,7 +285,7 @@ size_t Glob::test_segment(size_t index, const StrBlob &source) const {
 
 	case SegmentType::DirectorySeparator:
 		{
-			size_t count = StringTools::count(source.data, source.size, StringTools::is_directory_separator);
+			size_t count = string_tools::count(source.data, source.size, string_tools::is_directory_separator);
 			return count;
 		}
 
@@ -313,7 +313,7 @@ size_t Glob::test_segment(size_t index, const StrBlob &source) const {
 					return inverted;
 				};
 
-			size_t selected_count = StringTools::count(source.data, source.size, proc);
+			size_t selected_count = string_tools::count(source.data, source.size, proc);
 			return selected_count;
 		}
 
@@ -325,11 +325,11 @@ size_t Glob::test_segment(size_t index, const StrBlob &source) const {
 				return 0;
 			}
 
-			size_t count = StringTools::count(
+			size_t count = string_tools::count(
 				source.data,
 				std::min(source.size, segment.range.length()),
 				// only continue if we found anything except directory separators ('?' can't match dir seps)
-				inner::InvertOp(&StringTools::is_directory_separator)
+				inner::InvertOp(&string_tools::is_directory_separator)
 			);
 
 			if (count == segment.range.length())
@@ -382,7 +382,7 @@ void Glob::_clear() {
 size_t Glob::test_any_name(const StrBlob &source) {
 	for (size_t i = 0; i < source.size; i++)
 	{
-		if (StringTools::is_directory_separator(source[i]))
+		if (string_tools::is_directory_separator(source[i]))
 		{
 			return i;
 		}
@@ -401,9 +401,9 @@ Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
 
 	for (size_t i = 0; i < blob.size; i++)
 	{
-		if (StringTools::is_directory_separator(blob[i]))
+		if (string_tools::is_directory_separator(blob[i]))
 		{
-			size_t count = StringTools::count(&blob[i], blob.size - i, StringTools::is_directory_separator);
+			size_t count = string_tools::count(&blob[i], blob.size - i, string_tools::is_directory_separator);
 			i += count - 1;
 			segments.emplace_back(SegmentType::DirectorySeparator, IndexRange(i, i + count));
 			continue;
@@ -411,7 +411,7 @@ Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
 
 		if (blob[i] == '?')
 		{
-			size_t count = StringTools::count(&blob[i], blob.size - i, inner::EqualTo('?'));
+			size_t count = string_tools::count(&blob[i], blob.size - i, inner::EqualTo('?'));
 			i += count - 1;
 			segments.emplace_back(SegmentType::AnyCharacter, IndexRange(i, i + count));
 			continue;
@@ -419,7 +419,7 @@ Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
 
 		if (blob[i] == '*')
 		{
-			size_t count = StringTools::count(
+			size_t count = string_tools::count(
 				&blob[i],
 				// check either 1 or more stars in a row
 				blob.size - i,
@@ -447,7 +447,7 @@ Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
 			continue;
 		}
 
-		size_t text_length = StringTools::count(&blob[i], blob.size - i, inner::InvertOp(&is_char_reserved));
+		size_t text_length = string_tools::count(&blob[i], blob.size - i, inner::InvertOp(&is_char_reserved));
 		segments.emplace_back(SegmentType::Text, IndexRange(i, i + text_length));
 		i += text_length - 1;
 	}

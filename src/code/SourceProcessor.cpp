@@ -49,22 +49,39 @@ SourceProcessor::file_change_list SourceProcessor::gen_file_change_table(bool in
 	}
 
 	file_change_list list{};
-	for (const FilePath &key : file_paths)
+	for (const FilePath &src_file : file_paths)
 	{
-		const auto iter_pos = this->file_records.find(key);
-		const DependencyInfo &value = m_info_map.at(key);
+		const auto file_records_key = m_file_records_src2out_map.find(src_file);
+		const DependencyInfo &value = m_info_map.at(src_file);
+
+		// files isn't mapped, rebuild?
+		if (file_records_key == m_file_records_src2out_map.end())
+		{
+			// constexpr const char *msg = 
+			// 	"tracked source file \"%s\" is not present in the file records trans-table" 
+			// 	" (bug or didn't process dependencies)";
+			// Logger::error(msg, src_file.c_str());
+
+			// comment VVV if you uncomment ^^^
+
+			list.emplace_back(src_file, value.hash);
+
+			continue;
+		}
+
+		const auto iter_pos = this->m_file_records.find(file_records_key->second);
 
 		// no record of this file
-		if (iter_pos == file_records.end())
+		if (iter_pos == m_file_records.end())
 		{
-			list.emplace_back(key, value.hash);
+			list.emplace_back(src_file, value.hash);
 			continue;
 		}
 
 		// record has an invalid hash
 		if (iter_pos->second.hash != value.hash)
 		{
-			list.emplace_back(key, value.hash);
+			list.emplace_back(src_file, value.hash);
 		}
 	}
 
@@ -80,6 +97,11 @@ SourceProcessor::dependency_map SourceProcessor::gen_dependency_map() const {
 	return map;
 }
 
+
+void SourceProcessor::set_file_records(const file_record_table &records) {
+	m_file_records = records;
+	_rebuild_file_record_src2out_map();
+}
 
 bool SourceProcessor::_is_processing_path(const FilePath &filepath) const {
 	return m_loading_stack.top() == filepath;
@@ -176,6 +198,17 @@ void SourceProcessor::_process_input(const InputFilePath &input) {
 	dep_info.hash = hash_digest.value;
 
 	_pop_processing_path(input.path);
+}
+
+void SourceProcessor::_rebuild_file_record_src2out_map() {
+	m_file_records_src2out_map = {};
+
+	// key is the output file, fetch the source file for the map
+	for (const auto &[key, record] : m_file_records)
+	{
+		m_file_records_src2out_map.emplace(record.source_file, key);
+	}
+
 }
 
 FilePath SourceProcessor::_find_dependency(const dependency_name &name,

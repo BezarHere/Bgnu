@@ -61,7 +61,7 @@ inline bool SourceTools::is_compatable_types(SourceFileType type, SourceFileType
 inline SourceFileType SourceTools::get_extension_file_type(const StrBlob &extension) {
 	for (size_t i = 0; i < std::size(ExtensionToSourceTable); i++)
 	{
-		if (StringTools::equal(extension.begin(), ExtensionToSourceTable[i].first))
+		if (string_tools::equal(extension.begin(), ExtensionToSourceTable[i].first))
 		{
 			return ExtensionToSourceTable[i].second;
 		}

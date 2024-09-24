@@ -5,7 +5,7 @@
 constexpr CPreprocessor::Type CPreprocessor::_get_tk_type(const StrBlob &name) {
 	for (const auto &p : TypeNamePairs)
 	{
-		if (StringTools::equal(name.data, p.first, name.length()))
+		if (string_tools::equal(name.data, p.first, name.length()))
 		{
 			return p.second;
 		}
@@ -44,7 +44,7 @@ CPreprocessor::Token CPreprocessor::get_next_tk(const StrBlob &source) {
 
 	for (size_t i = 0; i < source.size - 1; i++)
 	{
-		if ((StringTools::is_newline(source[i]) || i == 0) && !StringTools::is_newline(source[i + 1]))
+		if ((string_tools::is_newline(source[i]) || i == 0) && !string_tools::is_newline(source[i + 1]))
 		{
 
 			const size_t read_start = i + (i ? 1 : 0);
@@ -100,7 +100,7 @@ CPreprocessor::Token CPreprocessor::_read_tk_inline(const StrBlob &source) {
 	size_t index = 0;
 	for (; index < source.size; index++)
 	{
-		if (StringTools::is_newline(source[index]))
+		if (string_tools::is_newline(source[index]))
 		{
 			break;
 		}
@@ -111,12 +111,12 @@ CPreprocessor::Token CPreprocessor::_read_tk_inline(const StrBlob &source) {
 
 			for (; index < source.size; index++)
 			{
-				if (StringTools::is_newline(source[index]))
+				if (string_tools::is_newline(source[index]))
 				{
 					break;
 				}
 
-				if (StringTools::is_whitespace(source[index]))
+				if (string_tools::is_whitespace(source[index]))
 				{
 					continue;
 				}
@@ -166,7 +166,7 @@ CPreprocessor::Token CPreprocessor::_parse_tk(const StrBlob &line) {
 		{
 			if (_is_valid_macro_name(line[i]))
 			{
-				size_t count = StringTools::count(
+				size_t count = string_tools::count(
 					line.data + i,
 					line.size - i,
 					_is_valid_macro_name
@@ -181,12 +181,12 @@ CPreprocessor::Token CPreprocessor::_parse_tk(const StrBlob &line) {
 			continue;
 		}
 
-		if (!StringTools::is_whitespace(line[i]))
+		if (!string_tools::is_whitespace(line[i]))
 		{
-			size_t trailing_ws = StringTools::rcount(
+			size_t trailing_ws = string_tools::rcount(
 				line.data + i,
 				line.size - i,
-				StringTools::is_whitespace
+				string_tools::is_whitespace
 			);
 
 			value = {i, line.size - trailing_ws};
@@ -208,7 +208,7 @@ size_t CPreprocessor::_escape(const StrBlob &source, const MutableStrBlob &desti
 			offset += 2;
 
 			// skip escaped char
-			if (StringTools::is_whitespace(source[i]))
+			if (string_tools::is_whitespace(source[i]))
 			{
 				continue;
 			}

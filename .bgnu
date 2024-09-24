@@ -1,0 +1,51 @@
+output_dir: "out"
+output_cache_dir: "out/cache"
+source_selectors: ["**/*.c", "**/*.cpp", "**/*.cc", "**/*.cxx", ]
+output_name: output
+build_configurations: {
+  debug: {
+    dynamically_linkable: true
+    catch_typos: true
+    optimization_type: debug
+    include_dirs: ["include", "src/"]
+    preprocessor_args: []
+    linker_args: []
+    lib_dirs: ["../library"]
+    assembler_args: []
+    lib_names: [ "opengl32" ]
+    predefines: {
+      _DEBUG: null
+    }
+    exit_on_errors: true
+    optimization_lvl: high
+    warning_pedantic: false
+    warning_level: all
+    standard: C++20
+    print_stats: true
+    simd_type: AVX
+    print_includes: false
+  }
+  release: {
+    dynamically_linkable: true
+    catch_typos: true
+    optimization_type: speed
+    include_dirs: []
+    preprocessor_args: []
+    linker_args: []
+    lib_dirs: []
+    assembler_args: []
+    lib_names: []
+    predefines: {
+      NDEBUG: null
+      _RELEASE: null
+    }
+    exit_on_errors: true
+    optimization_lvl: extreme
+    warning_pedantic: false
+    warning_level: all
+    standard: c++20
+    print_stats: true
+    simd_type: sse
+    print_includes: false
+  }
+}

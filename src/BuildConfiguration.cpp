@@ -229,7 +229,7 @@ void BuildConfiguration::_put_misc(vector<string> &output) const {
 	}
 
 	output.emplace_back("-m");
-	output.back().append(StringTools::to_lower(get_enum_name(simd_type)));
+	output.back().append(string_tools::to_lower(get_enum_name(simd_type)));
 }
 
 void BuildConfiguration::_put_includes(vector<string> &output) const {
@@ -312,6 +312,9 @@ void BuildConfiguration::build_link_arguments(vector<string> &output,
 		output.back().append(blob.begin(), blob.length());
 		output.back().append(1, '"');
 	}
+		
+	output.back().append("-o");
+
 
 	output.emplace_back(1, '"');
 	output.back().append(ouput_file.begin(), ouput_file.length());
@@ -665,26 +668,26 @@ constexpr NamedEnum<WarningLevel> WarningLevelNames[] = {
 constexpr NamedEnum<StandardType> StandardTypeNames[] = {
 	NamedEnum{StandardType::None, "none"},
 
-	NamedEnum{StandardType::C99, "C99"},
-	NamedEnum{StandardType::C11, "C11"},
-	NamedEnum{StandardType::C14, "C14"},
-	NamedEnum{StandardType::C17, "C17"},
-	NamedEnum{StandardType::C23, "C23"},
+	NamedEnum{StandardType::C99, "c99"},
+	NamedEnum{StandardType::C11, "c11"},
+	NamedEnum{StandardType::C14, "c14"},
+	NamedEnum{StandardType::C17, "c17"},
+	NamedEnum{StandardType::C23, "c23"},
 
-	NamedEnum{StandardType::Cpp11, "Cpp11"},
-	NamedEnum{StandardType::Cpp14, "Cpp14"},
-	NamedEnum{StandardType::Cpp17, "Cpp17"},
-	NamedEnum{StandardType::Cpp20, "Cpp20"},
-	NamedEnum{StandardType::Cpp23, "Cpp23"},
+	NamedEnum{StandardType::Cpp11, "c++11"},
+	NamedEnum{StandardType::Cpp14, "c++14"},
+	NamedEnum{StandardType::Cpp17, "c++17"},
+	NamedEnum{StandardType::Cpp20, "c++20"},
+	NamedEnum{StandardType::Cpp23, "c++23"},
 
-	NamedEnum{StandardType::Cpp11, "C++11"},
-	NamedEnum{StandardType::Cpp14, "C++14"},
-	NamedEnum{StandardType::Cpp17, "C++17"},
-	NamedEnum{StandardType::Cpp20, "C++20"},
-	NamedEnum{StandardType::Cpp23, "C++23"},
+	NamedEnum{StandardType::Cpp11, "cpp11"},
+	NamedEnum{StandardType::Cpp14, "cpp14"},
+	NamedEnum{StandardType::Cpp17, "cpp17"},
+	NamedEnum{StandardType::Cpp20, "cpp20"},
+	NamedEnum{StandardType::Cpp23, "cpp23"},
 
-	NamedEnum{StandardType::Cpp23, "Cpp2x"},
-	NamedEnum{StandardType::Cpp23, "C++2x"},
+	NamedEnum{StandardType::Cpp23, "cpp2x"},
+	NamedEnum{StandardType::Cpp23, "c++2x"},
 
 	NamedEnum{StandardType::C99, "STD99"},
 	NamedEnum{StandardType::Cpp11, "STD11"},
@@ -726,7 +729,7 @@ template <typename _T, size_t N>
 inline constexpr _T _find_enum_value(const NamedEnum<_T>(&names)[N], const string_char *name, _T default_value = _T(0)) {
 	for (size_t i = 1; i < N; ++i)
 	{
-		if (StringTools::equal_insensitive(names[i].name, name))
+		if (string_tools::equal_insensitive(names[i].name, name))
 		{
 			return names[i].value;
 		}
@@ -773,6 +776,21 @@ StandardType BuildConfiguration::get_standard_type(const string &name) {
 
 SIMDType BuildConfiguration::get_simd_type(const string &name) {
 	return _find_enum_value(SIMDTypeNames, name.c_str());
+}
+
+const string_char *BuildConfiguration::get_compiler_name(CompilerType type, SourceFileType file_type) {
+	if (type == CompilerType::GCC)
+	{
+		switch (file_type)
+		{
+		case SourceFileType::CPP:
+			return "g++";
+		default:
+			return "gcc";
+		}
+	}
+
+	return nullptr;
 }
 
 #pragma endregion

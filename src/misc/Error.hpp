@@ -2,23 +2,35 @@
 #include <string>
 #include <errno.h>
 
+#ifndef EOK
+#define EOK 0
+#endif
+
 enum class Error
 {
 	Ok,
 	Failure,
 
 	NoData,
+	NullData,
 	InvalidType,
 
 	NotImplemented,
 
-	NoConfig
+	NoConfig,
+
+	FileNotFound,
+	DirNotFound,
+
+	AlreadyExists,
 };
 
 struct ErrorReport
 {
 	Error code = Error::Ok;
 	std::string message;
+
+	inline operator bool() const noexcept { return code != Error::Ok; }
 };
 
 inline constexpr const char *error_str(const Error error) {

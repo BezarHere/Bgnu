@@ -1,2 +1,2 @@
-output/cache/*
-output/*
+out/cache/*.o
+**/*.o
