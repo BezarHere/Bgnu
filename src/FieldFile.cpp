@@ -5,6 +5,8 @@
 #include <fstream>
 #include <string.h>
 
+constexpr uint32_t FieldFileVersion = 0x01'01;
+
 inline static bool is_identifier_char(char c) {
 	return isalnum(c) || c == '_' || c == '.' || c == '-' || c == '+';
 }
@@ -38,6 +40,7 @@ enum class TKType : uint8_t
 	Newline,
 
 	Column,
+	Assign,
 	Comma,
 
 	Open_SqBracket,
@@ -48,6 +51,13 @@ enum class TKType : uint8_t
 	// can be a number, a boolean, null or anything
 	Identifier,
 	String,
+};
+
+enum StringParseFlags : uint8_t
+{
+	eStrPFlag_None = 0x00,
+	eStrPFlag_Multiline = 0x01,
+	eStrPFlag_Literal = 0x02,
 };
 
 struct SourcePosition
@@ -68,13 +78,7 @@ struct Token
 	SourcePosition pos;
 };
 
-enum StringParseFlags : uint8_t
-{
-	eStrPFlag_None = 0x00,
-	eStrPFlag_Multiline = 0x01,
-	eStrPFlag_Literal = 0x02,
-};
-
+static inline constexpr bool IsAssignTokenType(TKType type);
 
 namespace std
 {
@@ -294,6 +298,7 @@ inline Token Tokenizer::_read_tk() const {
 		MATCH_SPAN_CHAR('}', TKType::Close_CurlyBracket);
 		MATCH_SPAN_CHAR('[', TKType::Open_SqBracket);
 		MATCH_SPAN_CHAR(']', TKType::Close_SqBracket);
+		MATCH_SPAN_CHAR('=', TKType::Assign);
 		MATCH_SPAN_CHAR(':', TKType::Column);
 		MATCH_SPAN_CHAR(',', TKType::Comma);
 #undef MATCH_SPAN_CHAR
@@ -305,6 +310,11 @@ inline Token Tokenizer::_read_tk() const {
 	return Token();
 }
 
+
+inline constexpr bool IsAssignTokenType(TKType type) {
+	return type == TKType::Column || type == TKType::Assign;
+}
+
 #pragma endregion
 
 #pragma region(parser)
@@ -312,7 +322,7 @@ inline Token Tokenizer::_read_tk() const {
 class Parser
 {
 public:
-	static constexpr char ValueAssignOp = ':';
+	static constexpr char ValueAssignOp = '=';
 	static constexpr char ValueSeparateOp = ',';
 
 	enum class SkipType : uint8_t
@@ -641,7 +651,7 @@ std::pair<FieldVar::String, FieldVar> Parser::_parse_var_kv() {
 
 	_skip_empty();
 
-	if (get_tk().type != TKType::Column)
+	if (!IsAssignTokenType(get_tk().type))
 	{
 		_XUnexpectedToken(format_join('"', ValueAssignOp, '"'));
 	}
@@ -757,7 +767,7 @@ void FieldFileWriter::write(const FieldVar::Dict &data, bool striped) {
 	{
 		write_indent();
 		write(kv.first);
-		stream << ": ";
+		stream << ' ' << Parser::ValueAssignOp << ' ';
 		write(kv.second);
 		stream << '\n';
 	}
@@ -836,4 +846,3 @@ string FieldFile::write(const FieldVar::Dict &data) {
 	writer.write(data, true);
 	return output.str();
 }
-
