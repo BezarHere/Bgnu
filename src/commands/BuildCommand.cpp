@@ -94,6 +94,7 @@ namespace commands
 				changed_files.begin(),
 				changed_files.end(),
 				[&rebuild_files](const pair<FilePath, hash_t> &input) {
+					Logger::debug("rebuilding \"%s\": cached object file invalidated", input.first.c_str());
 					rebuild_files.insert(input.first);
 				}
 			);
@@ -105,6 +106,7 @@ namespace commands
 			{
 				if (!in_out.second.is_file())
 				{
+					Logger::debug("rebuilding \"%s\": compiled object not found", in_out.second.c_str());
 					rebuild_files.insert(in_out.first);
 				}
 			}
@@ -160,7 +162,7 @@ namespace commands
 		m_build_cache = new_cache;
 
 		m_project.get_output().ensure_available();
-		_write_build_cache();
+		_write_build_info();
 
 		Logger::debug("building objects:");
 		this->_execute_build(build_args);
@@ -299,7 +301,7 @@ namespace commands
 		m_current_build_cfg = &config_pos->second;
 	}
 
-	void BuildCommand::_write_build_cache() const {
+	void BuildCommand::_write_build_info() const {
 		const auto data = m_build_cache.write();
 		FieldFile::dump(_get_build_cache_path(), data);
 	}
@@ -312,7 +314,18 @@ namespace commands
 			return;
 		}
 
-		const FieldVar old_build_cache_data = FieldFile::load(build_cache_path);
+
+		FieldVar old_build_cache_data;
+		try
+		{
+			old_build_cache_data = FieldFile::load(build_cache_path);
+		}
+		catch (const std::exception &e)
+		{
+			Logger::error("failed to load build cache: %s", e.what());
+			return;
+		}
+
 		ErrorReport report = {};
 
 		m_build_cache = BuildCache::load(
@@ -368,17 +381,23 @@ namespace commands
 	}
 
 	void BuildCommand::_execute_build(const vector<vector<string>> &args) {
-		const bool flag_multithreaded = Settings::Get("flag_multithreaded", true).get_bool();
+		const bool flag_multithreaded = Settings::Get("flag_multithreaded", false).get_bool();
 		std::thread *threads = flag_multithreaded ? new std::thread[args.size()] : nullptr;
 		vector<int> results{};
 
 		const auto cmd = [&results](const string_char *cmd, size_t index)
 			{
-				Logger::verbose("\nrunning '%s' index %llu\n", cmd, index);
 				Process process = {cmd};
+				Logger::note("building '%s'", process.get_printable_cmd());
+
+				std::ostringstream oss = {};
 				const int result = process.start();
-				Logger::verbose("process '%s' returned %d\n", cmd, result);
+				std::cout << oss.str();
+
+				Logger::verbose("process '%s' returned %d", process.get_printable_cmd(), result);
 				results.push_back(result);
+
+
 				return result;
 			};
 
@@ -397,7 +416,6 @@ namespace commands
 			}
 
 			const string command_line = oss.str();
-			std::cout << "running '" << command_line << "'\n";
 
 			if (flag_multithreaded)
 			{

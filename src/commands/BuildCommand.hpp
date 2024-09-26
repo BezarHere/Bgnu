@@ -32,7 +32,7 @@ namespace commands
 		void _load_properties(ArgumentReader &reader);
 		void _load_project();
 		void _setup_build_config(ArgumentReader &reader);
-		void _write_build_cache() const;
+		void _write_build_info() const;
 		void _load_build_cache();
 
 		void _build_source_processor();

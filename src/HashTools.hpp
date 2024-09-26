@@ -86,6 +86,7 @@ struct HashTools
 	}
 
 	inline static hash_t hash(const StrBlob &data, hash_t seed = StartSeed);
+	inline static hash_t hash(const std::string &source, hash_t seed = StartSeed);
 
 	// only recommend for simple types
 	template <typename T>
@@ -132,7 +133,7 @@ struct HashDigester
 };
 
 inline constexpr hash_t HashTools::hash(hash_t left, hash_t right) {
-	return (left ^ StartSeed) ^ ~Math::rotr(right, 21);
+	return (left ^ StartSeed) ^ ~Math::rotr(right, 21) ^ Math::rotl(right, 14);
 }
 
 inline hash_t HashTools::hash(const StrBlob &data, hash_t seed) {
@@ -142,6 +143,10 @@ inline hash_t HashTools::hash(const StrBlob &data, hash_t seed) {
 	}
 
 	return seed;
+}
+
+inline hash_t HashTools::hash(const std::string &source, hash_t seed) {
+	return hash(StrBlob{source.c_str(), source.length()}, seed);
 }
 
 template<typename T>

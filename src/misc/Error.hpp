@@ -33,11 +33,11 @@ struct ErrorReport
 	inline operator bool() const noexcept { return code != Error::Ok; }
 };
 
-inline constexpr const char *error_str(const Error error) {
+inline constexpr const char *GetErrorName(const Error error) {
 	return "unknown";
 }
 
-inline constexpr const char *errno_str(const errno_t error) {
+inline constexpr const char *GetErrorName(const errno_t error) {
 	switch (error)
 	{
 	case EPERM:

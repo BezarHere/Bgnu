@@ -485,7 +485,7 @@ inline hash_t FieldVar::hash() const {
 }
 
 inline hash_t FieldVar::hash_string(const String &str) {
-	return HashTools::hash({str.c_str(), str.length()});
+	return HashTools::hash(StrBlob{str.c_str(), str.length()});
 }
 
 inline hash_t FieldVar::hash_array(const Array &arr) {
@@ -503,7 +503,7 @@ inline hash_t FieldVar::hash_dict(const Dict &dict) {
 	hash_t vals_hash = HashTools::StartSeed;
 	for (const auto &[key, value] : dict)
 	{
-		keys_hash = HashTools::hash({key.c_str(), key.length()}, keys_hash);
+		keys_hash = HashTools::hash(StrBlob{key.c_str(), key.length()}, keys_hash);
 		vals_hash = HashTools::hash(value.hash(), vals_hash);
 	}
 

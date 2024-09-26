@@ -6,8 +6,10 @@
 #include "Logger.hpp"
 
 
-struct string_tools
+namespace string_tools
 {
+	constexpr size_t npos = std::string::npos;
+
 	using string_type = string;
 	using char_type = string_char;
 	using traits_type = string_type::traits_type;
@@ -182,7 +184,7 @@ struct string_tools
 	}
 
 	template <class _Str>
-	static inline _Str convert(const _Str::value_type *src_str, const size_t max_count) {
+	static inline _Str convert(const typename _Str::value_type *src_str, const size_t max_count) {
 		(void)max_count;
 		return _Str(src_str);
 	}
@@ -338,6 +340,23 @@ struct string_tools
 	template <typename _Pred>
 	static inline constexpr bool any_of(const char_type *cstr, _Pred &&pred) {
 		return any_of(cstr, npos, std::forward<_Pred>(pred));
+	}
+
+	template <typename Predicate>
+	static inline constexpr size_t find(const char_type *str, const size_t max_length, Predicate &&pred) {
+		for (size_t i = 0; i < max_length; i++)
+		{
+			if (pred(str[i]))
+			{
+				return i;
+			}
+
+			if (str[i] == 0)
+			{
+				return npos;
+			}
+		}
+		return npos;
 	}
 
 };

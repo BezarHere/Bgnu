@@ -6,6 +6,8 @@ typedef pair<int64_t *, const string_char *> int64_pointer_info;
 #define CTOR_HASH_PTR_DEF(name) { &cache.name, #name }
 #define CTOR_INT64_PTR_DEF_RECORD(name) { &record.name, #name }
 
+static inline std::string ParseToHex(hash_t hash);
+
 static inline ErrorReport load_file_record_table(BuildCache::file_record_table &records,
 																								 const FieldDataReader &data);
 
@@ -67,7 +69,7 @@ FieldVar::Dict BuildCache::write() const {
 		record_dict.emplace("source_file", record.source_file.c_str());
 		record_dict.emplace("build_time", FieldVar::Int(record.build_time));
 		record_dict.emplace("last_source_write_time", FieldVar::Int(record.last_source_write_time));
-		record_dict.emplace("hash", FieldVar::Int(record.hash));
+		record_dict.emplace("hash", ParseToHex(record.hash));
 
 		records.insert_or_assign(path.c_str(), FieldVar(record_dict));
 	}
@@ -75,6 +77,12 @@ FieldVar::Dict BuildCache::write() const {
 	dict["file_records"] = FieldVar{records};
 
 	return dict;
+}
+
+inline std::string ParseToHex(hash_t hash) {
+	char buffer[32] = {0};
+	_ui64toa(hash, buffer, 16);
+	return {buffer};
 }
 
 inline ErrorReport load_file_record_table(BuildCache::file_record_table &records, const FieldDataReader &data) {
@@ -126,7 +134,6 @@ inline ErrorReport load_file_record(BuildCache::FileRecord &record, const FieldD
 	const int64_pointer_info i64_ptr_info[]{
 		CTOR_INT64_PTR_DEF_RECORD(build_time),
 		CTOR_INT64_PTR_DEF_RECORD(last_source_write_time),
-		{reinterpret_cast<int64_t *>(&record.hash), "hash"}
 	};
 
 	for (size_t i = 0; i < std::size(i64_ptr_info); i++)
@@ -139,6 +146,23 @@ inline ErrorReport load_file_record(BuildCache::FileRecord &record, const FieldD
 		*i64_ptr_info[i].first = var.get_int();
 	}
 
+	const auto &value = data.try_get_value<FieldVarType::String>("hash", "00000000").get_string();
+
+	if (!value.empty())
+	{
+		const char *value_start = value.c_str();
+
+		if (value_start[0] == '0' && value.length() > 2 && tolower(value[1]) == 'x')
+		{
+			value_start += 2;
+		}
+
+		record.hash = strtoull(value_start, nullptr, 16);
+	}
+	else
+	{
+		return {Error::NullData, "record hash is empty"};
+	}
 
 	return ErrorReport();
 }

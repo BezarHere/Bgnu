@@ -3,8 +3,8 @@
 #include "FieldVar.hpp"
 
 struct SettingValue {
-	FieldVar default_value = nullptr;
 	FieldVar value = nullptr;
+	FieldVar default_value = nullptr;
 };
 
 struct Settings

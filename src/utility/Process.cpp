@@ -9,102 +9,206 @@
 #ifdef _WIN32
 #include <Windows.h>
 typedef HANDLE Pipe;
+struct ProcessInfo
+{
+	HANDLE process;
+	HANDLE thread;
+};
 #elif __unix__
 // TODO: unix stuff
 
 typedef _Filet *Pipe;
-struct _ProcessData
+struct ProcessInfo
 {
-	pid_t handle;
+	pid_t process;
+	pid_t thread;
 };
 #endif
+
+static void DumpPipeStr(Pipe pipe, std::ostream *out);
+static const char *Process_GetErrorMessage();
+
+static void KillProcess(const ProcessInfo &info);
 
 static string join_args(const Blob<const Process::char_type *const> &args);
 
 Process::Process(int argc, const char_type *const *argv)
-	: Process(join_args({argv, argc}).c_str()) {
+	: Process(join_args({argv, argc})) {
 }
 
 Process::Process(const char_type *cmd)
+	: Process(std::string{cmd}) {
+}
+
+Process::Process(const std::string &cmd)
 	: m_cmd{cmd} {
+	m_printable_cmd = _BuildPrintableCMD(m_cmd.c_str());
 }
 
 int Process::start(std::ostream *const out) {
 	int exit_code = -1;
-	Pipe output = {};
+	Pipe output_r = {};
+	Pipe output_w = {};
 
 #ifdef _WIN32
 
-	if (out)
-	{
-		CreatePipe(
-			&output, nullptr, nullptr, 0
-		);
-	}
+	// if (out)
+	// {
+	// 	CreatePipe(
+	// 		&output_r, &output_w, nullptr, 0
+	// 	);
+	// }
 
 	STARTUPINFOA startup_info = {};
 	startup_info.cb = sizeof(startup_info);
 	startup_info.dwFlags = STARTF_USESTDHANDLES;
-	startup_info.hStdOutput = output;
-	startup_info.hStdError = output;
+	// startup_info.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+	// startup_info.hStdError = output_r;
 
-	PROCESS_INFORMATION process_info = {};
+	PROCESS_INFORMATION win_process_info = {};
 
 	SECURITY_ATTRIBUTES sec_attrs = {};
 	sec_attrs.nLength = sizeof(sec_attrs);
+	sec_attrs.bInheritHandle = true;
+	sec_attrs.lpSecurityDescriptor = nullptr;
 
 	std::string cmd_copy = m_cmd;
-	CreateProcessA(
+	const bool create_proc_result = CreateProcessA(
 		nullptr, cmd_copy.data(),
 		&sec_attrs, nullptr,
 		TRUE, CREATE_NO_WINDOW,
 		nullptr, nullptr,
-		&startup_info, &process_info
+		&startup_info, &win_process_info
 	);
 
-	(void)WaitForSingleObject(
-		process_info.hProcess, INFINITE
+	if (!create_proc_result)
+	{
+		Logger::error(
+			"creating process '%s' error: %s",
+			m_printable_cmd.data(),
+			Process_GetErrorMessage()
+		);
+
+		return -1;
+	}
+
+	ProcessInfo process_info = {
+		win_process_info.hProcess,
+		win_process_info.hThread
+	};
+
+	const DWORD wait_ms_timeout = INFINITE;
+	const DWORD object_waiting_res = WaitForSingleObject(
+		process_info.process, wait_ms_timeout
 	);
+
+	if (object_waiting_res == WAIT_FAILED)
+	{
+		Logger::warning(
+			"waiting for process '%s' for %ums error: %s",
+			m_printable_cmd.data(),
+			wait_ms_timeout,
+			Process_GetErrorMessage()
+		);
+	}
 
 	for (uint32_t i = 0; i < 64; i++)
 	{
-		if (GetExitCodeProcess(process_info.hProcess, reinterpret_cast<DWORD *>(&exit_code)) == 0)
+		const bool exit_code_result = GetExitCodeProcess(
+			process_info.process,
+			reinterpret_cast<DWORD *>(&exit_code)
+		);
+
+		if (!exit_code_result)
 		{
-			continue;
+			Logger::error(
+				"getting exit code for process '%s' error: %s",
+				m_printable_cmd.data(),
+				Process_GetErrorMessage()
+			);
+			break;
 		}
-		
-		printf("exit code: %d\n", exit_code);
 		break;
 	}
 
-	// // make sure the process is killed?
-	// CloseHandle(process_info.hProcess);
+	// make sure the process is killed?
+	KillProcess(process_info);
 
-	if (output && out)
+	if (output_w && out)
 	{
-		constexpr size_t buffer_size = 1024;
-		char buffer[buffer_size + 1] = {};
-		DWORD read_sz = 0;
-
-		while (::ReadFile(output, buffer, buffer_size, &read_sz, nullptr))
-		{
-			if (read_sz == 0)
-			{
-				break;
-			}
-
-			buffer[read_sz] = 0;
-			(*out) << buffer;
-		}
-
+		DumpPipeStr(output_r, out);
+		// DumpPipeStr(output_w, out);
 	}
 
-	CloseHandle(output);
+
+
+	// CloseHandle(output_w);
+	// CloseHandle(output_r);
 
 #endif
 
 
 	return exit_code;
+}
+
+Process::PrintableBuffer Process::_BuildPrintableCMD(const char *string) {
+	PrintableBuffer output = {};
+	constexpr size_t max_copy_length = PrintableCMDLength - 3;
+
+	for (size_t i = 0; i < max_copy_length; i++)
+	{
+		output[i] = string[i];
+
+		if (string[i] == 0)
+		{
+			return output;
+		}
+
+		if (i == max_copy_length - 1)
+		{
+			output[++i] = '.';
+			output[++i] = '.';
+			output[++i] = '.';
+			output[++i] = 0;
+		}
+	}
+
+	memcpy(output.data(), string, max_copy_length);
+	output[PrintableCMDLength] = 0;
+	return output;
+}
+
+void DumpPipeStr(Pipe pipe, std::ostream *out) {
+	if (out == nullptr)
+	{
+		return;
+	}
+
+	constexpr size_t buffer_size = 1024;
+	char buffer[buffer_size + 1] = {};
+	DWORD read_sz = 0;
+
+	while (::ReadFile(pipe, buffer, buffer_size, &read_sz, nullptr))
+	{
+		if (read_sz == 0)
+		{
+			break;
+		}
+
+		buffer[read_sz] = 0;
+		(*out) << buffer;
+	}
+
+
+}
+
+const char *Process_GetErrorMessage() {
+	return GetErrorName(GetLastError());
+}
+
+void KillProcess(const ProcessInfo &info) {
+	CloseHandle(info.process);
+	CloseHandle(info.thread);
 }
 
 string join_args(const Blob<const Process::char_type *const> &args) {

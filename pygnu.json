@@ -1,6 +1,6 @@
 {
-    "output_dir": "F:\\gcc\\bgnu\\output",
-    "output_cache_dir": "F:\\gcc\\bgnu\\output\\cache",
+    "output_dir": "output",
+    "output_cache_dir": "output\\cache",
     "output_name": "output",
     "source_selectors": [
         "**/*.c",
@@ -14,7 +14,7 @@
                 "_DEBUG": null
             },
             "optimization_lvl": "high",
-            "optimization_type": "debug",
+            "optimization_type": "raw_debug",
             "standard": "c++20",
             "warning_level": "all",
             "warning_pedantic": false,
@@ -24,7 +24,9 @@
             "dynamically_linkable": true,
             "print_stats": true,
             "simd_type": "avx2",
-            "include_dirs": ["src/"],
+            "include_dirs": [
+                "src/"
+            ],
             "lib_dirs": [],
             "lib_names": [],
             "assembler_args": [],
@@ -47,7 +49,9 @@
             "dynamically_linkable": true,
             "print_stats": true,
             "simd_type": "sse",
-            "include_dirs": ["src/"],
+            "include_dirs": [
+                "src/"
+            ],
             "lib_dirs": [],
             "lib_names": [],
             "assembler_args": [],

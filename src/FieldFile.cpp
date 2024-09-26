@@ -7,8 +7,12 @@
 
 constexpr uint32_t FieldFileVersion = 0x01'01;
 
-inline static bool is_identifier_char(char c) {
-	return isalnum(c) || c == '_' || c == '.' || c == '-' || c == '+';
+inline static bool IsIdentifierChar(char c) {
+	return isalpha(c) || c == '_' || c == '.' || c == '-' || c == '+';
+}
+
+inline static bool IsIdentifierFirstChar(char c) {
+	return IsIdentifierChar(c) || isdigit(c);
 }
 
 inline static bool is_number_identifier(const char *str, size_t len) {
@@ -26,6 +30,9 @@ inline static bool is_number_identifier(const char *str, size_t len) {
 
 	return isdigit(*str);
 }
+
+static inline bool IsValidNumber(StrBlob str);
+static inline bool IsValidIdentifierName(StrBlob str);
 
 #pragma region(tokenizer)
 
@@ -253,14 +260,14 @@ Token Tokenizer::_tk_string(const StringParseFlags flags) const {
 }
 
 Token Tokenizer::_tk_identifier() const {
-	if (!is_identifier_char(m_source[index]))
+	if (!IsIdentifierFirstChar(m_source[index]))
 		return {TKType::Unknown, _get_current_str(), 1, get_pos()};
 
 	size_t result_end = m_length;
 
 	for (size_t i = index; i < m_length; ++i)
 	{
-		if (is_identifier_char(m_source[i]))
+		if (IsIdentifierFirstChar(m_source[i]))
 			continue;
 
 		result_end = i;
@@ -310,6 +317,42 @@ inline Token Tokenizer::_read_tk() const {
 	return Token();
 }
 
+
+inline bool IsValidNumber(StrBlob str) {
+	if (str.empty())
+	{
+		return false;
+	}
+
+	if (str[0] == '-' || str[0] == '+')
+	{
+		str = str.slice(1);
+	}
+
+	const size_t dot_pos = string_tools::find(str.data, str.size, [](char c) {return c == '.';});
+
+	if (dot_pos != npos)
+	{
+		// check before the dot and after it
+		return IsValidNumber(str.slice(0, dot_pos)) && IsValidNumber(str.slice(dot_pos + 1));
+	}
+
+	return string_tools::all_of(str.data, str.size, isdigit);
+}
+
+inline bool IsValidIdentifierName(StrBlob str) {
+	if (str.empty())
+	{
+		return false;
+	}
+
+	if (!IsIdentifierFirstChar(str[0]))
+	{
+		return false;
+	}
+
+	return string_tools::all_of(str.data, str.size, IsIdentifierChar);
+}
 
 inline constexpr bool IsAssignTokenType(TKType type) {
 	return type == TKType::Column || type == TKType::Assign;
@@ -496,7 +539,7 @@ FieldVar Parser::_parse_var_simple() {
 		return _parse_var_string();
 	}
 
-	if (is_number_identifier(get_tk().str.c_str(), get_tk().length))
+	if (IsValidNumber({get_tk().str.c_str(), get_tk().length}))
 	{
 		return _parse_var_number();
 	}
@@ -721,28 +764,18 @@ void FieldFileWriter::write(FieldVar::Real data) {
 }
 
 void FieldFileWriter::write(const FieldVar::String &data) {
-	bool simple_string = data.length() < 32ULL;
+	const bool long_string = data.length() >= 32ULL;
+	const bool ambiguous_to_number = IsValidNumber({data.c_str(), data.length()});
 
-	if (simple_string)
-	{
-		// check if the string is not simple (only identifier chars)
-		for (const char c : data)
-		{
-			if (!is_identifier_char(c))
-			{
-				simple_string = false;
-				break;
-			}
-		}
-	}
+	const bool replicable_by_identifier = !long_string && !ambiguous_to_number;
 
-	if (!simple_string)
+	if (replicable_by_identifier && IsValidIdentifierName({data.c_str(), data.length()}))
 	{
-		stream << '"' << data << '"';
+		stream << data;
 		return;
 	}
 
-	stream << data;
+	stream << '"' << data << '"';
 }
 
 void FieldFileWriter::write(const FieldVar::Array &data) {

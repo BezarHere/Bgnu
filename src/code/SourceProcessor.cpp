@@ -2,6 +2,8 @@
 #include "FileTools.hpp"
 #include <set>
 
+static inline std::string LoadFileSource(const FilePath &path);
+
 void SourceProcessor::process() {
 	while (!m_input_stack.empty())
 	{
@@ -57,10 +59,10 @@ SourceProcessor::file_change_list SourceProcessor::gen_file_change_table(bool in
 		// files isn't mapped, rebuild?
 		if (file_records_key == m_file_records_src2out_map.end())
 		{
-			// constexpr const char *msg = 
-			// 	"tracked source file \"%s\" is not present in the file records trans-table" 
-			// 	" (bug or didn't process dependencies)";
-			// Logger::error(msg, src_file.c_str());
+			constexpr const char *msg =
+				"tracked source file \"%s\" is not present in the file records trans-table"
+				" (bug or didn't process dependencies)";
+			Logger::warning(msg, src_file.c_str());
 
 			// comment VVV if you uncomment ^^^
 
@@ -81,6 +83,7 @@ SourceProcessor::file_change_list SourceProcessor::gen_file_change_table(bool in
 		// record has an invalid hash
 		if (iter_pos->second.hash != value.hash)
 		{
+			printf("file: %s, old: %llx, new: %llx\n", file_records_key->second.c_str(), iter_pos->second.hash, value.hash);
 			list.emplace_back(src_file, value.hash);
 		}
 	}
@@ -101,6 +104,17 @@ SourceProcessor::dependency_map SourceProcessor::gen_dependency_map() const {
 void SourceProcessor::set_file_records(const file_record_table &records) {
 	m_file_records = records;
 	_rebuild_file_record_src2out_map();
+}
+
+bool SourceProcessor::has_hash(hash_t hash) const {
+	for (const auto &[key, value] : m_info_map)
+	{
+		if (value.hash == hash)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 bool SourceProcessor::_is_processing_path(const FilePath &filepath) const {
@@ -175,6 +189,7 @@ void SourceProcessor::_process_input(const InputFilePath &input) {
 		// we do this to eliminate inf recursion
 		if (has_file_hash(dependency_path))
 		{
+			Logger::verbose("found hash for \"%s\" = %llu", dependency_path.c_str(), get_file_hash(dependency_path));
 			hash_digest += get_file_hash(dependency_path);
 			continue;
 		}
@@ -195,7 +210,19 @@ void SourceProcessor::_process_input(const InputFilePath &input) {
 		hash_digest += get_file_hash(dependency_path);
 	}
 
-	dep_info.hash = hash_digest.value;
+	hash_digest += LoadFileSource(input.path);
+
+	const hash_t final_file_hash = hash_digest.value;
+
+	if (has_hash(final_file_hash))
+	{
+		Logger::warning(
+			"hash value '%llX' digested from a new file already exists for another file, bug?",
+			final_file_hash
+		);
+	}
+
+	dep_info.hash = final_file_hash;
 
 	_pop_processing_path(input.path);
 }
@@ -247,4 +274,8 @@ bool SourceProcessor::_dependency_exists(const FilePath &path, SourceFileType ty
 	default:
 		return path.is_file();
 	}
+}
+
+inline std::string LoadFileSource(const FilePath &path) {
+	return FileTools::read_str(path);
 }

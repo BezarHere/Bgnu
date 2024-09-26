@@ -63,6 +63,8 @@ public:
 
 	void set_file_records(const file_record_table &records);
 
+	bool has_hash(hash_t hash) const;
+
 	vector<FilePath> included_directories;
 private:
 

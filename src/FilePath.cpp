@@ -398,7 +398,7 @@ FilePath::string_type FilePath::_working_directory() {
 	if (_getcwd(buffer, std::size(buffer) - 1) == nullptr)
 	{
 		const errno_t error = errno;
-		Logger::error("Failed to retrieve current working directory: %s", errno_str(error));
+		Logger::error("Failed to retrieve current working directory: %s", GetErrorName(error));
 
 		return "";
 	}
@@ -424,7 +424,7 @@ FilePath::string_type FilePath::_executable_path() {
 
 	if (error != 0)
 	{
-		Logger::error("Failed to retrieve executable path: %s", errno_str(error));
+		Logger::error("Failed to retrieve executable path: %s", GetErrorName(error));
 		return "";
 	}
 

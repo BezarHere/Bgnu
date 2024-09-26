@@ -27,7 +27,7 @@ errno_t Settings::Init() {
 	}
 	g_SettingsData.initalized = true;
 
-
+	AddField("flag_multithreaded", {false, false});
 
 	return EOK;
 }
@@ -84,7 +84,7 @@ inline const FieldVar &GetSettingInnerValue(const std::string &name, const Field
 }
 
 inline SettingValue *GetSettingValue(const std::string &name) {
-		if (g_SettingsData.base_values.contains(name))
+	if (g_SettingsData.base_values.contains(name))
 	{
 		return &g_SettingsData.base_values.at(name);
 	}

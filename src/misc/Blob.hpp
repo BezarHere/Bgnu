@@ -37,7 +37,7 @@ struct Blob final
 
 	// returns a slice from start to the end of the blob
 	inline Blob slice(size_type start) const {
-		if (start >= size)
+		if (start > size)
 		{
 			throw std::range_error(
 				"'start' should be contained in [0, size)"
@@ -48,7 +48,7 @@ struct Blob final
 
 	// returns a slice from start to end (exclusive end)
 	inline Blob slice(size_type start, size_type end) const {
-		if (start >= size || end > size || end < start)
+		if (start > size || end > size || end < start)
 		{
 			throw std::range_error(
 				"'start' and 'end' should be contained in [0, size), with 'start' <= 'end'"
