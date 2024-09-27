@@ -2,10 +2,13 @@
 #include "Logger.hpp"
 #include "Command.hpp"
 #include "FieldFile.hpp"
+#include "Settings.hpp"
 
 FieldVar::Dict Startup::s_env = {};
 
 int Startup::start(ArgumentReader reader) {
+	Settings::Init();
+
 	if (reader.empty())
 	{
 		Logger::warning("no command passed, please pass a command and it's arguments");
@@ -13,6 +16,7 @@ int Startup::start(ArgumentReader reader) {
 	}
 
 	_build_env(reader);
+
 	reader.simplify();
 
 	CommandDB::_load_commands();

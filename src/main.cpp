@@ -3,6 +3,7 @@
 #include <iostream>
 #include "Logger.hpp"
 #include "FilePath.hpp"
+#include <Windows.h>
 
 namespace chrono
 {

@@ -62,6 +62,7 @@ Logger::State Logger::s_state = {};
 
 bool Logger::s_debug = IN_DEBUG;
 bool Logger::s_verbose = false;
+std::mutex Logger::s_log_mutex = {};
 
 void Logger::_push_state() {
 	State::s_stack.push_back(s_state);

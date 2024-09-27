@@ -53,25 +53,9 @@ SourceProcessor::file_change_list SourceProcessor::gen_file_change_table(bool in
 	file_change_list list{};
 	for (const FilePath &src_file : file_paths)
 	{
-		const auto file_records_key = m_file_records_src2out_map.find(src_file);
 		const DependencyInfo &value = m_info_map.at(src_file);
 
-		// files isn't mapped, rebuild?
-		if (file_records_key == m_file_records_src2out_map.end())
-		{
-			constexpr const char *msg =
-				"tracked source file \"%s\" is not present in the file records trans-table"
-				" (bug or didn't process dependencies)";
-			Logger::warning(msg, src_file.c_str());
-
-			// comment VVV if you uncomment ^^^
-
-			list.emplace_back(src_file, value.hash);
-
-			continue;
-		}
-
-		const auto iter_pos = this->m_file_records.find(file_records_key->second);
+		const auto iter_pos = this->m_file_records.find(src_file);
 
 		// no record of this file
 		if (iter_pos == m_file_records.end())
@@ -83,7 +67,7 @@ SourceProcessor::file_change_list SourceProcessor::gen_file_change_table(bool in
 		// record has an invalid hash
 		if (iter_pos->second.hash != value.hash)
 		{
-			printf("file: %s, old: %llx, new: %llx\n", file_records_key->second.c_str(), iter_pos->second.hash, value.hash);
+			printf("file: %s, old: %llx, new: %llx\n", iter_pos->second.output_path.c_str(), iter_pos->second.hash, value.hash);
 			list.emplace_back(src_file, value.hash);
 		}
 	}
@@ -210,6 +194,7 @@ void SourceProcessor::_process_input(const InputFilePath &input) {
 		hash_digest += get_file_hash(dependency_path);
 	}
 
+	hash_digest += std::string(input.path);
 	hash_digest += LoadFileSource(input.path);
 
 	const hash_t final_file_hash = hash_digest.value;
@@ -233,7 +218,7 @@ void SourceProcessor::_rebuild_file_record_src2out_map() {
 	// key is the output file, fetch the source file for the map
 	for (const auto &[key, record] : m_file_records)
 	{
-		m_file_records_src2out_map.emplace(record.source_file, key);
+		m_file_records_src2out_map.emplace(key, record.output_path);
 	}
 
 }

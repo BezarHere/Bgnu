@@ -52,31 +52,32 @@ int Process::start(std::ostream *const out) {
 
 #ifdef _WIN32
 
-	// if (out)
-	// {
-	// 	CreatePipe(
-	// 		&output_r, &output_w, nullptr, 0
-	// 	);
-	// }
+	if (out)
+	{
+
+		SECURITY_ATTRIBUTES sec_attrs = {};
+		sec_attrs.nLength = sizeof(sec_attrs);
+		sec_attrs.bInheritHandle = true;
+		sec_attrs.lpSecurityDescriptor = nullptr;
+
+		CreatePipe(
+			&output_r, &output_w, &sec_attrs, 0
+		);
+	}
 
 	STARTUPINFOA startup_info = {};
 	startup_info.cb = sizeof(startup_info);
 	startup_info.dwFlags = STARTF_USESTDHANDLES;
-	// startup_info.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-	// startup_info.hStdError = output_r;
+	startup_info.hStdOutput = output_w;
+	startup_info.hStdError = output_w;
 
 	PROCESS_INFORMATION win_process_info = {};
-
-	SECURITY_ATTRIBUTES sec_attrs = {};
-	sec_attrs.nLength = sizeof(sec_attrs);
-	sec_attrs.bInheritHandle = true;
-	sec_attrs.lpSecurityDescriptor = nullptr;
 
 	std::string cmd_copy = m_cmd;
 	const bool create_proc_result = CreateProcessA(
 		nullptr, cmd_copy.data(),
-		&sec_attrs, nullptr,
-		TRUE, CREATE_NO_WINDOW,
+		nullptr, nullptr,
+		TRUE, 0,
 		nullptr, nullptr,
 		&startup_info, &win_process_info
 	);
@@ -133,17 +134,14 @@ int Process::start(std::ostream *const out) {
 
 	// make sure the process is killed?
 	KillProcess(process_info);
+	CloseHandle(output_w);
 
 	if (output_w && out)
 	{
 		DumpPipeStr(output_r, out);
-		// DumpPipeStr(output_w, out);
 	}
 
-
-
-	// CloseHandle(output_w);
-	// CloseHandle(output_r);
+	CloseHandle(output_r);
 
 #endif
 
@@ -183,6 +181,8 @@ void DumpPipeStr(Pipe pipe, std::ostream *out) {
 	{
 		return;
 	}
+
+	Logger::verbose("dumping pipe %llu to the stream %p", pipe, out);
 
 	constexpr size_t buffer_size = 1024;
 	char buffer[buffer_size + 1] = {};

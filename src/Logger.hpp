@@ -3,6 +3,8 @@
 #include "Console.hpp"
 #include "misc/Error.hpp"
 
+#include <mutex>
+
 #define LOG_ASSERT(condition) if (!(condition)) Logger::_assert_fail(#condition, nullptr)
 #define LOG_ASSERT_V(condition, ...) \
 	if (!(condition)) Logger::_assert_fail(#condition, __VA_ARGS__)
@@ -26,15 +28,33 @@ public:
 
 	template <typename... _Args>
 	inline static void log(_Args &&...args) {
+		std::scoped_lock<std::mutex> lock{s_log_mutex};
+		
 		_write_indent(std::cout);
 		_format_join(std::cout, std::forward<_Args>(args)...);
 		std::cout << '\n';
+	}
+
+	// only indented, no trailing new line or defined-coloring
+	inline static void write_raw(const char *format, ...) {
+		std::scoped_lock<std::mutex> lock{s_log_mutex};
+
+		Console::push_state();
+		_write_indent(stdout);
+
+		va_list valist{};
+		va_start(valist, format);
+		vfprintf(stdout, format, valist);
+		va_end(valist);
+
+		Console::pop_state();
 	}
 
 	// to be used with the LOG_ASSERT/LOG_ASSERT_V macro
 	// `format` can be null to display the assertion fail without any message
 	NORETURN static inline
 		void _assert_fail(const char *assert_cond, const char *format, ...) {
+		std::scoped_lock<std::mutex> lock{s_log_mutex};
 
 		Console::push_state();
 		Console::set_bg(ConsoleColor::Black);
@@ -63,6 +83,8 @@ public:
 	}
 
 	static inline void error(const char *format, ...) {
+		std::scoped_lock<std::mutex> lock{s_log_mutex};
+
 		Console::push_state();
 		Console::set_bg(ConsoleColor::Black);
 		Console::set_fg(ConsoleColor::IntenseRed);
@@ -84,6 +106,8 @@ public:
 	}
 
 	static inline void warning(const char *format, ...) {
+		std::scoped_lock<std::mutex> lock{s_log_mutex};
+
 		Console::push_state();
 		Console::set_bg(ConsoleColor::Black);
 		Console::set_fg(ConsoleColor::Yellow);
@@ -101,6 +125,8 @@ public:
 	}
 
 	static inline void notify(const char *format, ...) {
+		std::scoped_lock<std::mutex> lock{s_log_mutex};
+
 		Console::push_state();
 		Console::set_bg(ConsoleColor::Black);
 		Console::set_fg(ConsoleColor::Green);
@@ -118,6 +144,8 @@ public:
 	}
 
 	static inline void note(const char *format, ...) {
+		std::scoped_lock<std::mutex> lock{s_log_mutex};
+
 		Console::push_state();
 		Console::set_bg(ConsoleColor::Black);
 		Console::set_fg(ConsoleColor::Cyan);
@@ -140,6 +168,7 @@ public:
 		{
 			return;
 		}
+		std::scoped_lock<std::mutex> lock{s_log_mutex};
 
 		Console::push_state();
 		Console::set_bg(ConsoleColor::Black);
@@ -170,6 +199,7 @@ public:
 		{
 			return;
 		}
+		std::scoped_lock<std::mutex> lock{s_log_mutex};
 
 		Console::push_state();
 		Console::set_bg(ConsoleColor::Black);
@@ -200,4 +230,5 @@ private:
 	static State s_state;
 	static bool s_debug; // default = defined(_DEBUG)
 	static bool s_verbose; // default = false
+	static std::mutex s_log_mutex;
 };

@@ -6,10 +6,12 @@
 #include "FileTools.hpp"
 #include "Settings.hpp"
 #include "utility/Process.hpp"
+#include "BuildTools.hpp"
 
 #include <chrono>
 #include <set>
 #include <thread>
+#include <mutex>
 
 const string RebuildArgs[] = {"-r", "--rebuild"};
 const string ResaveArgs[] = {"--resave"};
@@ -100,6 +102,7 @@ namespace commands
 			);
 		}
 
+
 		// add files with no compiled object file
 		{
 			for (const auto &in_out : input_output_map)
@@ -116,6 +119,8 @@ namespace commands
 		BuildCache new_cache = m_build_cache;
 		// new_cache.file_records.clear();
 
+		// TODO: delete old object files
+
 		for (const FilePath &path : rebuild_files)
 		{
 			const FilePath &output_path = input_output_map.at(path);
@@ -125,12 +130,13 @@ namespace commands
 			BuildCache::FileRecord record;
 			record.build_time = get_build_time();
 			record.hash = hash;
-			record.source_file = path;
+			record.output_path = output_path;
 			record.last_source_write_time = get_build_time();
 
-			new_cache.file_records.insert_or_assign(
-				output_path, record
+			new_cache.override_old_source_record(
+				path, record
 			);
+
 
 			Logger::verbose(
 				"adding \"%s\" -> \"%s\" to the build force",
@@ -146,9 +152,9 @@ namespace commands
 		}
 
 		build_args_list link_args = {};
-		std::vector<StrBlob> link_input_files = this->_get_linker_inputs(input_output_map);
+		std::vector<StrBlob> link_input_files = _get_linker_inputs(input_output_map);
 
-		const FilePath output_filepath = m_project.get_output().get_result_path();
+		const FilePath output_filepath = m_project.get_output().get_result_path().resolve();
 
 		m_current_build_cfg->build_link_arguments(
 			link_args.emplace_back(),
@@ -156,19 +162,25 @@ namespace commands
 			output_filepath.get_text()
 		);
 
-		new_cache.config_hash = m_project.hash();
-		new_cache.build_hash = m_current_build_cfg->hash();
+		Logger::debug("finalizing build cache");
+
+		build_tools::SetupHashes(new_cache, m_project, m_current_build_cfg);
+		new_cache.fix_file_records();
 
 		m_build_cache = new_cache;
 
 		m_project.get_output().ensure_available();
-		_write_build_info();
 
 		Logger::debug("building objects:");
 		this->_execute_build(build_args);
 
-		Logger::debug("linking executable:");
+		Logger::debug("writing build cache");
+		_write_build_info();
+
+		Logger::notify("linking executable:");
 		this->_execute_build(link_args);
+
+		build_args.insert(build_args.end(), link_args.begin(), link_args.end());
 
 		// TODO: link args with all the input files
 
@@ -373,7 +385,7 @@ namespace commands
 		string_char buf[FilePath::MaxPathLength + 1] = {};
 		sprintf_s(
 			buf,
-			"%s/%s.%X.o",
+			"%s/%s.%llX.o",
 			m_project.get_output().cache_dir.c_str(), filepath.name().c_str(), hash
 		);
 
@@ -381,20 +393,24 @@ namespace commands
 	}
 
 	void BuildCommand::_execute_build(const vector<vector<string>> &args) {
-		const bool flag_multithreaded = Settings::Get("flag_multithreaded", false).get_bool();
+		const bool flag_multithreaded = Settings::Get("build_multithreaded", false).get_bool();
 		std::thread *threads = flag_multithreaded ? new std::thread[args.size()] : nullptr;
 		vector<int> results{};
 
-		const auto cmd = [&results](const string_char *cmd, size_t index)
+
+
+		const auto cmd = [&results](const std::string cmd, size_t index = 0)
 			{
 				Process process = {cmd};
 				Logger::note("building '%s'", process.get_printable_cmd());
 
+
 				std::ostringstream oss = {};
-				const int result = process.start();
-				std::cout << oss.str();
+				const int result = process.start(&oss);
+				Logger::write_raw("%s", oss.str().c_str());
 
 				Logger::verbose("process '%s' returned %d", process.get_printable_cmd(), result);
+
 				results.push_back(result);
 
 
@@ -407,7 +423,9 @@ namespace commands
 			std::ostringstream oss;
 
 			// TODO: use the file's source type
-			oss << BuildConfiguration::get_compiler_name(m_current_build_cfg->compiler_type, SourceFileType::CPP);
+			oss << FilePath::FindExecutableInPATHEnv(
+				BuildConfiguration::get_compiler_name(m_current_build_cfg->compiler_type, SourceFileType::CPP)
+			);
 			oss << ' ';
 
 			for (const string &str : args[i])
@@ -420,12 +438,12 @@ namespace commands
 			if (flag_multithreaded)
 			{
 				threads[i] = std::thread(
-					cmd, command_line.c_str(), i
+					cmd, command_line, i
 				);
 			}
 			else
 			{
-				cmd(command_line.c_str(), i);
+				cmd(command_line);
 			}
 		}
 

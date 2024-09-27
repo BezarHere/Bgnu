@@ -12,8 +12,9 @@
 #include <memory>
 #include <fstream>
 #include <filesystem>
-#include "StringTools.hpp"
 
+#include "HashTools.hpp"
+#include "StringTools.hpp"
 #include "misc/ArrayList.hpp"
 
 struct FilePath;
@@ -62,6 +63,7 @@ public:
 	static const FilePath &get_working_directory();
 	static const FilePath &get_parent_directory();
 	static const FilePath &get_executable_path();
+	static FilePath FindExecutableInPATHEnv(std::string name);
 
 	/*
 	* === === Lifetime (Ctors/Dtors/Copy Ctors) === ===
@@ -174,6 +176,11 @@ public:
 	errno_t create_file() const;
 	errno_t create_directory() const;
 
+	errno_t remove() const;
+	errno_t remove_recursive() const;
+
+	std::filesystem::path to_std_path() const;
+
 	/// @returns does anything exist at this filepath
 	bool exists() const;
 
@@ -201,6 +208,7 @@ public:
 	// resolves a copy to be absolute then returns it, base is the working directory as a base
 	inline FilePath resolved_copy() const { return resolved_copy(get_working_directory()); }
 
+	hash_t hash() const;
 
 	/*
 	* === === Exposed Utility === ===

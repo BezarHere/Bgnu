@@ -5,6 +5,8 @@
 #include <direct.h>
 #include <algorithm>
 
+#include <Windows.h>
+
 namespace fs
 {
 	using namespace std::filesystem;
@@ -349,6 +351,22 @@ errno_t FilePath::create_directory() const {
 	return errno_t();
 }
 
+errno_t FilePath::remove() const {
+	std::error_code err_code = {};
+	(void)std::filesystem::remove(to_std_path(), err_code);
+	return err_code.value();
+}
+
+errno_t FilePath::remove_recursive() const {
+	std::error_code err_code = {};
+	(void)std::filesystem::remove_all(to_std_path(), err_code);
+	return err_code.value();
+}
+
+std::filesystem::path FilePath::to_std_path() const {
+	return {string_tools::convert(this->c_str(), npos)};
+}
+
 bool FilePath::exists() const {
 	return std::filesystem::exists(string(m_text.data(), m_text.size()));
 }
@@ -390,6 +408,20 @@ const FilePath &FilePath::get_parent_directory() {
 const FilePath &FilePath::get_executable_path() {
 	static const FilePath path{_executable_path()};
 	return path;
+}
+
+FilePath FilePath::FindExecutableInPATHEnv(std::string name) {
+	char buffer[512] = {0};
+	if (!SearchPathA(nullptr, name.c_str(), ".exe", std::size(buffer), buffer, nullptr))
+	{
+		return {};
+	}
+	
+	return {buffer};
+}
+
+hash_t FilePath::hash() const {
+	return HashTools::hash(std::string{*this});
 }
 
 FilePath::string_type FilePath::_working_directory() {

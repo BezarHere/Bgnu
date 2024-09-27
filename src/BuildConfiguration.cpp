@@ -4,6 +4,7 @@
 #include "Logger.hpp"
 
 #include <algorithm>
+#include "Settings.hpp"
 
 template <typename Type, typename ParseProc, typename StringifyProc, typename ValidateProc>
 struct EnumTraits
@@ -136,6 +137,11 @@ void BuildConfiguration::_put_flags(vector<string> &output) const {
 	if (this->exit_on_errors)
 	{
 		output.emplace_back("-Wfatal-errors");
+	}
+
+	if (Settings::Get("color_output", true))
+	{
+		output.emplace_back("-fdiagnostics-color=always");
 	}
 
 }
@@ -313,7 +319,7 @@ void BuildConfiguration::build_link_arguments(vector<string> &output,
 		output.back().append(1, '"');
 	}
 		
-	output.back().append("-o");
+	output.emplace_back("-o");
 
 
 	output.emplace_back(1, '"');

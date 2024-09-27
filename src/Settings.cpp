@@ -1,5 +1,8 @@
 #include "Settings.hpp"
 #include "StringTools.hpp"
+#include "FilePath.hpp"
+#include "FieldFile.hpp"
+#include "FieldDataReader.hpp"
 
 typedef std::map<std::string, SettingValue> SettingMap;
 
@@ -20,6 +23,11 @@ static inline errno_t AddField(const std::string &name, const SettingValue &valu
 static inline const FieldVar &GetSettingInnerValue(const std::string &name, const FieldVar &def_val);
 static inline SettingValue *GetSettingValue(const std::string &name);
 
+static inline void ReadSetting(FieldDataReader &reader);
+
+static inline FilePath GetLocalSettingsPath();
+static inline FieldVar LoadSettingsFile();
+
 errno_t Settings::Init() {
 	if (g_SettingsData.initalized)
 	{
@@ -27,7 +35,11 @@ errno_t Settings::Init() {
 	}
 	g_SettingsData.initalized = true;
 
-	AddField("flag_multithreaded", {false, false});
+	Logger::note("initialising settings");
+
+	const FieldVar local_settings = LoadSettingsFile();
+	FieldDataReader reader{"local-settings", local_settings.get_dict()};
+	ReadSetting(reader);
 
 	return EOK;
 }
@@ -80,6 +92,8 @@ inline const FieldVar &GetSettingInnerValue(const std::string &name, const Field
 		return g_SettingsData.custom_values.at(name).value;
 	}
 
+	Logger::verbose("no setting field with the name '%s'", name.c_str());
+
 	return def_val;
 }
 
@@ -95,4 +109,26 @@ inline SettingValue *GetSettingValue(const std::string &name) {
 	}
 
 	return nullptr;
+}
+
+inline void ReadSetting(FieldDataReader &reader) {
+	for (const auto &[name, value] : reader.get_data())
+	{
+		const errno_t err = AddField(name, {value, value});
+		if (err == EOK)
+		{
+			Logger::debug("added setting: %s", name.c_str());
+			continue;
+		}
+
+		Logger::warning("failed to add setting field '%s', error=%s", name.c_str(), GetErrorName(err));
+	}
+}
+
+inline FilePath GetLocalSettingsPath() {
+	return FilePath::get_working_directory() + "settings.bgnu";
+}
+
+inline FieldVar LoadSettingsFile() {
+	return FieldFile::load(GetLocalSettingsPath());
 }

@@ -1,4 +1,5 @@
 #include "BuildCache.hpp"
+#include <set>
 
 typedef pair<hash_t *, const string_char *> hash_pointer_info;
 typedef pair<int64_t *, const string_char *> int64_pointer_info;
@@ -12,6 +13,13 @@ static inline ErrorReport load_file_record_table(BuildCache::file_record_table &
 																								 const FieldDataReader &data);
 
 static inline ErrorReport load_file_record(BuildCache::FileRecord &record, const FieldDataReader &data);
+
+void BuildCache::fix_file_records() {
+}
+
+void BuildCache::override_old_source_record(const FilePath &source_path, const FileRecord &new_record) {
+	this->file_records.insert_or_assign(source_path, new_record);
+}
 
 BuildCache BuildCache::load(const FieldDataReader &data, ErrorReport &error) {
 
@@ -66,7 +74,7 @@ FieldVar::Dict BuildCache::write() const {
 	{
 		FieldVar::Dict record_dict{};
 
-		record_dict.emplace("source_file", record.source_file.c_str());
+		record_dict.emplace("output_path", record.output_path);
 		record_dict.emplace("build_time", FieldVar::Int(record.build_time));
 		record_dict.emplace("last_source_write_time", FieldVar::Int(record.last_source_write_time));
 		record_dict.emplace("hash", ParseToHex(record.hash));
@@ -81,7 +89,9 @@ FieldVar::Dict BuildCache::write() const {
 
 inline std::string ParseToHex(hash_t hash) {
 	char buffer[32] = {0};
-	_ui64toa(hash, buffer, 16);
+	sprintf_s(
+		buffer, "%llX", hash
+	);
 	return {buffer};
 }
 
@@ -117,19 +127,19 @@ inline ErrorReport load_file_record_table(BuildCache::file_record_table &records
 }
 
 inline ErrorReport load_file_record(BuildCache::FileRecord &record, const FieldDataReader &data) {
-	const FieldVar &source_file = data.try_get_value<FieldVarType::String>("source_file");
+	const FieldVar &output_path = data.try_get_value<FieldVarType::String>("output_path");
 
-	if (source_file.is_null())
+	if (output_path.is_null())
 	{
 		ErrorReport report;
 		report.code = Error::InvalidType;
 		report.message = format_join(
-			"record's source file should be of type 'string'"
+			"record's output path should be of type 'string'"
 		);
 		return report;
 	}
 
-	record.source_file = source_file.get_string();
+	record.output_path = output_path.get_string();
 
 	const int64_pointer_info i64_ptr_info[]{
 		CTOR_INT64_PTR_DEF_RECORD(build_time),
