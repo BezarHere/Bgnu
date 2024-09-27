@@ -3,6 +3,7 @@
 #include "Project.hpp"
 #include "BuildCache.hpp"
 #include "code/SourceProcessor.hpp"
+#include "misc/StaticString.hpp"
 
 #include <map>
 
@@ -15,6 +16,12 @@ namespace commands
 	{
 	public:
 		typedef std::map<FilePath, FilePath> IOMap;
+
+	struct ExecuteParameter
+	{
+		StaticString<128> name;
+		std::vector<std::string> args;
+	};
 
 		struct FileInputOutput
 		{
@@ -44,7 +51,7 @@ namespace commands
 
 		FilePath _get_output_filepath(const FilePath &filepath, const hash_t &hash) const;
 
-		void _execute_build(const vector<vector<string>> &args);
+		void _execute_build(const vector<ExecuteParameter> &params);
 
 		static std::vector<StrBlob> _get_linker_inputs(const IOMap &io_map);
 

@@ -40,6 +40,8 @@ inline constexpr const char *GetErrorName(const Error error) {
 inline constexpr const char *GetErrorName(const errno_t error) {
 	switch (error)
 	{
+	case EOK:
+		return "OK";
 	case EPERM:
 		return "EPERM";
 	case ENOENT:

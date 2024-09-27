@@ -6,6 +6,10 @@
 
 typedef std::map<std::string, SettingValue> SettingMap;
 
+static constexpr BGnuVersion BGnuVersionHistory[] = {
+	{1, 0, 0}
+};
+
 struct SettingsData
 {
 	static const SettingMap Default;
@@ -27,6 +31,10 @@ static inline void ReadSetting(FieldDataReader &reader);
 
 static inline FilePath GetLocalSettingsPath();
 static inline FieldVar LoadSettingsFile();
+
+BGnuVersion Settings::GetVersion() {
+	return BGnuVersionHistory[std::size(BGnuVersionHistory) - 1];
+}
 
 errno_t Settings::Init() {
 	if (g_SettingsData.initalized)

@@ -11,11 +11,6 @@ namespace chrono
 }
 
 int main(int argc, const char *argv[]) {
-	for (int i = 0; i < argc; i++)
-	{
-		Logger::debug("arg no.%d: '%s'", i, argv[i]);
-	}
-
 	const chrono::time_point pre_run_time = chrono::steady_clock::now();
 
 	int result = Startup::start(ArgumentReader(argv + 1, std::max(argc - 1, 0)));

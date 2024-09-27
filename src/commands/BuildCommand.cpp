@@ -29,7 +29,7 @@ static inline int64_t get_build_time() {
 }
 
 static void dump_dep_map(const dependency_map &map, const FilePath &cache_folder);
-static void dump_build_args(const build_args_list &list, const FilePath &cache_folder);
+static void dump_build_args(const std::vector<commands::BuildCommand::ExecuteParameter> &list, const FilePath &cache_folder);
 
 namespace commands
 {
@@ -115,7 +115,7 @@ namespace commands
 			}
 		}
 
-		build_args_list build_args{};
+		std::vector<ExecuteParameter> build_args{};
 		BuildCache new_cache = m_build_cache;
 		// new_cache.file_records.clear();
 
@@ -144,43 +144,53 @@ namespace commands
 			);
 
 			m_current_build_cfg->build_arguments(
-				build_args.emplace_back(),
+				build_args.emplace_back().args,
 				path.get_text(),
 				output_path.get_text(),
 				SourceFileType::CPP
 			);
+
+			build_args.back().name = path.c_str();
 		}
-
-		build_args_list link_args = {};
-		std::vector<StrBlob> link_input_files = _get_linker_inputs(input_output_map);
-
-		const FilePath output_filepath = m_project.get_output().get_result_path().resolve();
-
-		m_current_build_cfg->build_link_arguments(
-			link_args.emplace_back(),
-			{link_input_files.data(), link_input_files.size()},
-			output_filepath.get_text()
-		);
-
-		Logger::debug("finalizing build cache");
-
-		build_tools::SetupHashes(new_cache, m_project, m_current_build_cfg);
-		new_cache.fix_file_records();
-
-		m_build_cache = new_cache;
 
 		m_project.get_output().ensure_available();
 
 		Logger::debug("building objects:");
 		this->_execute_build(build_args);
 
-		Logger::debug("writing build cache");
-		_write_build_info();
+		{
+			Logger::debug("finalizing build cache");
 
-		Logger::notify("linking executable:");
-		this->_execute_build(link_args);
+			build_tools::SetupHashes(new_cache, m_project, m_current_build_cfg);
+			new_cache.fix_file_records();
 
-		build_args.insert(build_args.end(), link_args.begin(), link_args.end());
+			m_build_cache = new_cache;
+
+			Logger::debug("writing build cache");
+			_write_build_info();
+		}
+
+		Logger::notify("preparing the final stage");
+		ExecuteParameter link_param = {};
+
+		{
+			std::vector<StrBlob> link_input_files = _get_linker_inputs(input_output_map);
+
+			const FilePath output_filepath = m_project.get_output().get_result_path().resolve();
+
+			m_current_build_cfg->build_link_arguments(
+				link_param.args,
+				{link_input_files.data(), link_input_files.size()},
+				output_filepath.get_text()
+			);
+
+			link_param.name = "binary";
+
+			this->_execute_build({link_param});
+		}
+
+
+		build_args.insert(build_args.end(), link_param);
 
 		// TODO: link args with all the input files
 
@@ -392,24 +402,25 @@ namespace commands
 		return FilePath(buf);
 	}
 
-	void BuildCommand::_execute_build(const vector<vector<string>> &args) {
+	void BuildCommand::_execute_build(const vector<ExecuteParameter> &args) {
 		const bool flag_multithreaded = Settings::Get("build_multithreaded", false).get_bool();
 		std::thread *threads = flag_multithreaded ? new std::thread[args.size()] : nullptr;
 		vector<int> results{};
 
 
 
-		const auto cmd = [&results](const std::string cmd, size_t index = 0)
+		const auto cmd = [&results](const std::string cmd, const char *name, size_t index = 0)
 			{
+
 				Process process = {cmd};
-				Logger::note("building '%s'", process.get_printable_cmd());
+				Logger::note("building %s:", name);
 
 
 				std::ostringstream oss = {};
 				const int result = process.start(&oss);
 				Logger::write_raw("%s", oss.str().c_str());
 
-				Logger::verbose("process '%s' returned %d", process.get_printable_cmd(), result);
+				Logger::verbose("build '%s' returned %d", name, GetErrorName(result));
 
 				results.push_back(result);
 
@@ -428,7 +439,7 @@ namespace commands
 			);
 			oss << ' ';
 
-			for (const string &str : args[i])
+			for (const string &str : args[i].args)
 			{
 				oss << str << ' ';
 			}
@@ -438,12 +449,12 @@ namespace commands
 			if (flag_multithreaded)
 			{
 				threads[i] = std::thread(
-					cmd, command_line, i
+					cmd, command_line, args[i].name.c_str(), i
 				);
 			}
 			else
 			{
-				cmd(command_line);
+				cmd(command_line, args[i].name.c_str(), i);
 			}
 		}
 
@@ -492,7 +503,7 @@ void dump_dep_map(const dependency_map &map, const FilePath &cache_folder) {
 	Logger::verbose("dumped the dependency map: size=%lld bytes", stream.tellp() - start);
 }
 
-void dump_build_args(const build_args_list &list, const FilePath &cache_folder) {
+void dump_build_args(const std::vector<commands::BuildCommand::ExecuteParameter> &list, const FilePath &cache_folder) {
 	FilePath output_path = cache_folder.join_path(".args");
 	std::ofstream stream = output_path.stream_write(false);
 
@@ -501,10 +512,10 @@ void dump_build_args(const build_args_list &list, const FilePath &cache_folder) 
 	// We can do it by converting 'map' to field var and save it
 	// sadly, im too lazy rn
 
-	for (const auto &args : list)
+	for (const auto &param : list)
 	{
 		bool first = true;
-		for (const auto &arg : args)
+		for (const auto &arg : param.args)
 		{
 			if (!first)
 			{

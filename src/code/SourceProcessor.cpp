@@ -67,7 +67,7 @@ SourceProcessor::file_change_list SourceProcessor::gen_file_change_table(bool in
 		// record has an invalid hash
 		if (iter_pos->second.hash != value.hash)
 		{
-			printf("file: %s, old: %llx, new: %llx\n", iter_pos->second.output_path.c_str(), iter_pos->second.hash, value.hash);
+			Logger::verbose("hash mismatch %s, old: %llx, new: %llx\n", iter_pos->second.output_path.c_str(), iter_pos->second.hash, value.hash);
 			list.emplace_back(src_file, value.hash);
 		}
 	}

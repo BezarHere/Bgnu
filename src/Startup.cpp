@@ -6,7 +6,10 @@
 
 FieldVar::Dict Startup::s_env = {};
 
+static void StartupMessage();
+
 int Startup::start(ArgumentReader reader) {
+	StartupMessage();
 	Settings::Init();
 
 	if (reader.empty())
@@ -42,7 +45,7 @@ int Startup::start(ArgumentReader reader) {
 
 	// try
 	// {
-		error = command->execute(command_input);
+	error = command->execute(command_input);
 	// }
 	// catch (std::exception &e)
 	// {
@@ -105,4 +108,19 @@ void Startup::_check_misspelled_command(const string &name) {
 	}
 
 	Logger::note("Maybe you meant '%s'?", to_cstr(suggestion.command->name));
+}
+
+void StartupMessage() {
+	const auto version = Settings::GetVersion();
+
+	Logger::notify(
+		"BGnu version %u.%u.%u",
+		version.major,
+		version.minor,
+		version.patch
+	);
+
+	Logger::notify(
+		"Zahr abdullatif babker (@Bezar/@BezarHere) © 2024"
+	);
 }

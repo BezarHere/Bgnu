@@ -7,8 +7,17 @@ struct SettingValue {
 	FieldVar default_value = nullptr;
 };
 
+struct BGnuVersion
+{
+	uint8_t major;
+	uint8_t minor;
+	int16_t patch;
+};
+
 struct Settings
 {
+public:
+	static BGnuVersion GetVersion();
 
 	static errno_t Init();
 
