@@ -7,7 +7,8 @@
 typedef std::map<std::string, SettingValue> SettingMap;
 
 static constexpr BGnuVersion BGnuVersionHistory[] = {
-	{1, 0, 0}
+	{1, 0, 0},
+	{1, 1, 0},
 };
 
 struct SettingsData
