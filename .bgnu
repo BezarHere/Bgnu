@@ -12,7 +12,7 @@ build_configurations: {
     linker_args: []
     lib_dirs: ["../library"]
     assembler_args: []
-    lib_names: [ "opengl32" ]
+    lib_names: [ ]
     predefines: {
       _DEBUG: null
     }
@@ -29,12 +29,12 @@ build_configurations: {
     dynamically_linkable: true
     catch_typos: true
     optimization_type: speed
-    include_dirs: []
+    include_dirs: ["include", "src/"]
     preprocessor_args: []
     linker_args: []
-    lib_dirs: []
+    lib_dirs: ["../library"]
     assembler_args: []
-    lib_names: []
+    lib_names: [ ]
     predefines: {
       NDEBUG: null
       _RELEASE: null

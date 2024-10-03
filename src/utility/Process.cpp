@@ -1,9 +1,9 @@
 #include "Process.hpp"
 #include "base.hpp"
 #include "StringTools.hpp"
+#include "Settings.hpp"
 
 #include <algorithm>
-
 #include <sstream>
 
 #ifdef _WIN32
@@ -61,7 +61,7 @@ int Process::start(std::ostream *const out) {
 		sec_attrs.lpSecurityDescriptor = nullptr;
 
 		CreatePipe(
-			&output_r, &output_w, &sec_attrs, 0
+			&output_r, &output_w, &sec_attrs, Settings::Get("process_pipe_buffer_sz", 0x1A000LL).get_int()
 		);
 	}
 
@@ -194,6 +194,9 @@ void DumpPipeStr(Pipe pipe, std::ostream *out) {
 		{
 			break;
 		}
+
+
+		Logger::verbose("read %llu bytes from pipe %llu", read_sz, pipe);
 
 		buffer[read_sz] = 0;
 		(*out) << buffer;

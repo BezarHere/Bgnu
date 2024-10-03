@@ -9,6 +9,8 @@ FieldVar::Dict Startup::s_env = {};
 static void StartupMessage();
 
 int Startup::start(ArgumentReader reader) {
+	setlocale(LC_ALL, "en_US.utf8");
+
 	StartupMessage();
 	Settings::Init();
 
@@ -121,6 +123,6 @@ void StartupMessage() {
 	);
 
 	Logger::notify(
-		"Zahr abdullatif babker (@Bezar/@BezarHere) © 2024"
+		"Zahr abdullatif babker (@Bezar/@BezarHere) (C) 2024"
 	);
 }

@@ -18,6 +18,11 @@ namespace string_tools
 	using wide_char_type = wide_string_type::value_type;
 	using wide_traits_type = wide_string_type::traits_type;
 
+	// multi-byte character length (utf-8) (loose)
+	extern uint8_t MBCLength(const string_char character);
+	// multi-byte string length (utf-8) (loose)
+	extern size_t MBStrLength(const string_char *str, const size_t max_length = npos);
+
 	template <typename StrProcessor>
 	static ALWAYS_INLINE string_type _modify(const string_type &str, const StrProcessor &processor = {}) {
 		if (str.empty())
@@ -160,7 +165,7 @@ namespace string_tools
 	}
 
 	static inline wide_string_type widen(const char_type *src_str, const size_t max_count) {
-		const size_t dst_sz = mblen(src_str, max_count) * sizeof(*src_str) + 1;
+		const size_t dst_sz = MBStrLength(src_str, max_count) * sizeof(*src_str) + 1;
 		wide_string_type dst_str{};
 		dst_str.resize(dst_sz);
 
@@ -171,10 +176,10 @@ namespace string_tools
 		if (error != 0)
 		{
 			Logger::error(
-				"Error while widening string \"%S\" max count=%llu, errno=%d",
+				"Error while widening string \"%S\" max count=%llu, error=%s",
 				dst_str.c_str(),
 				max_count,
-				error
+				GetErrorName(error)
 			);
 		}
 
@@ -358,5 +363,4 @@ namespace string_tools
 		}
 		return npos;
 	}
-
 };

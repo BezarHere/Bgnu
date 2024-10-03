@@ -31,8 +31,18 @@ inline static bool is_number_identifier(const char *str, size_t len) {
 	return isdigit(*str);
 }
 
-static inline bool IsValidNumber(StrBlob str);
+enum ScanNumberType
+{
+	eScanNType_None = 0,
+	eScanNType_Float = 1,
+	eScanNType_Int = 2
+};
+
+static inline ScanNumberType ScanForNumberType(StrBlob str);
 static inline bool IsValidIdentifierName(StrBlob str);
+static inline FieldVar::Int ParseInt(const string_char *str, size_t max_length);
+static inline int ScanForIntBase(const string_char *str, size_t max_length);
+static inline unsigned IntBaseStartOffset(const int base);
 
 #pragma region(tokenizer)
 
@@ -318,10 +328,10 @@ inline Token Tokenizer::_read_tk() const {
 }
 
 
-inline bool IsValidNumber(StrBlob str) {
+inline ScanNumberType ScanForNumberType(StrBlob str) {
 	if (str.empty())
 	{
-		return false;
+		return eScanNType_None;
 	}
 
 	if (str[0] == '-' || str[0] == '+')
@@ -333,11 +343,15 @@ inline bool IsValidNumber(StrBlob str) {
 
 	if (dot_pos != npos)
 	{
+		if (ScanForNumberType(str.slice(0, dot_pos)) == eScanNType_None)
+		{
+			return eScanNType_None;
+		}
 		// check before the dot and after it
-		return IsValidNumber(str.slice(0, dot_pos)) && IsValidNumber(str.slice(dot_pos + 1));
+		return ScanForNumberType(str.slice(dot_pos + 1)) == eScanNType_Int ? eScanNType_Float : eScanNType_None;
 	}
 
-	return string_tools::all_of(str.data, str.size, isdigit);
+	return string_tools::all_of(str.data, str.size, isdigit) ? eScanNType_Int : eScanNType_None;
 }
 
 inline bool IsValidIdentifierName(StrBlob str) {
@@ -352,6 +366,67 @@ inline bool IsValidIdentifierName(StrBlob str) {
 	}
 
 	return string_tools::all_of(str.data, str.size, IsIdentifierChar);
+}
+
+inline FieldVar::Int ParseInt(const string_char *str, size_t max_length) {
+	const int base = ScanForIntBase(str, max_length);
+
+	const unsigned offset = IntBaseStartOffset(base);
+
+	// bug! how can that even happen? ScanForIntBase will ret 10 for invalid number (base 10 has 0 off)
+	if (max_length <= offset)
+	{
+		return 0;
+	}
+
+	str += offset;
+	max_length -= offset;
+
+	return strtoll(str, nullptr, base);
+}
+
+inline int ScanForIntBase(const string_char *str, size_t max_length) {
+	// needs at least two chars to define a base '0x', '0b'
+	if (max_length < 2)
+	{
+		return 10;
+	}
+
+	if (str[0] != '0')
+	{
+		return 10;
+	}
+
+	if (str[1] == 'x' || str[1] == 'X')
+	{
+		return 16;
+	}
+
+	if (str[1] == 'b' || str[1] == 'B')
+	{
+		return 2;
+	}
+
+	if (isdigit(str[1]))
+	{
+		return 8;
+	}
+
+	return 10;
+}
+
+inline unsigned IntBaseStartOffset(const int base) {
+	if (base == 16 || base == 2)
+	{
+		return 2U;
+	}
+
+	if (base == 8)
+	{
+		return 1U;
+	}
+
+	return 0U;
 }
 
 inline constexpr bool IsAssignTokenType(TKType type) {
@@ -450,7 +525,8 @@ private:
 
 
 	FieldVar::String _parse_var_string();
-	FieldVar::Real _parse_var_number();
+	FieldVar::Real _parse_var_float();
+	FieldVar::Int _parse_var_int();
 	FieldVar::Array _parse_var_array();
 	FieldVar::Dict _parse_var_dict(bool body_dict = false);
 
@@ -520,12 +596,23 @@ FieldVar Parser::_parse_var_identifier() {
 	return FieldVar::String(token_str, token.length);
 }
 
-FieldVar::Real Parser::_parse_var_number() {
+FieldVar::Real Parser::_parse_var_float() {
 	// TODO: error detection
 
 	float val = strtof(get_tk().str.c_str(), nullptr);
 
 	// read this token, now we advance
+	_advance_tk();
+
+	return val;
+}
+
+FieldVar::Int Parser::_parse_var_int() {
+	// TODO: error detection
+
+	FieldVar::Int val = ParseInt(get_tk().str.c_str(), get_tk().length);
+
+	// had read this token, now we advance
 	_advance_tk();
 
 	return val;
@@ -539,9 +626,14 @@ FieldVar Parser::_parse_var_simple() {
 		return _parse_var_string();
 	}
 
-	if (IsValidNumber({get_tk().str.c_str(), get_tk().length}))
+	const ScanNumberType n_type = ScanForNumberType({get_tk().str.c_str(), get_tk().length});
+	if (n_type == eScanNType_Float)
 	{
-		return _parse_var_number();
+		return _parse_var_float();
+	}
+	else if (n_type == eScanNType_Int)
+	{
+		return _parse_var_int();
 	}
 
 	return _parse_var_identifier();
@@ -765,7 +857,7 @@ void FieldFileWriter::write(FieldVar::Real data) {
 
 void FieldFileWriter::write(const FieldVar::String &data) {
 	const bool long_string = data.length() >= 32ULL;
-	const bool ambiguous_to_number = IsValidNumber({data.c_str(), data.length()});
+	const bool ambiguous_to_number = ScanForNumberType({data.c_str(), data.length()});
 
 	const bool replicable_by_identifier = !long_string && !ambiguous_to_number;
 

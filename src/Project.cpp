@@ -194,7 +194,7 @@ hash_t Project::hash_own(HashDigester &digester) const {
 
 	for (const auto &glob : m_source_selectors)
 	{
-		digester.add(glob.get_source().c_str(), glob.get_source().length());
+		digester.add(StrBlob{glob.get_source().c_str(), glob.get_source().length()});
 	}
 
 	return digester.value;
@@ -204,7 +204,7 @@ hash_t Project::hash_cfgs(HashDigester &digester) const {
 
 	for (const auto &[name, cfg] : m_build_configurations)
 	{
-		digester.add(name.c_str(), name.length());
+		digester.add(StrBlob{name.c_str(), name.length()});
 		digester += cfg;
 	}
 
@@ -212,7 +212,7 @@ hash_t Project::hash_cfgs(HashDigester &digester) const {
 }
 
 hash_t Project::hash() const {
-	HashDigester digester;
+	HashDigester digester = {};
 
 	hash_own(digester);
 	hash_cfgs(digester);

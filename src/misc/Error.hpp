@@ -37,7 +37,8 @@ inline constexpr const char *GetErrorName(const Error error) {
 	return "unknown";
 }
 
-inline constexpr const char *GetErrorName(const errno_t error) {
+static inline const char *GetErrorName(const errno_t error) {
+	static char unknown_error_n[80] = {0};
 	switch (error)
 	{
 	case EOK:
@@ -201,6 +202,9 @@ inline constexpr const char *GetErrorName(const errno_t error) {
 	case EOVERFLOW:
 		return "EOVERFLOW";
 	default:
-		return "UNKNOWN_ERROR";
+		{
+			sprintf_s(unknown_error_n, "UnkownErr_%d", error);
+			return unknown_error_n;
+		}
 	}
 }

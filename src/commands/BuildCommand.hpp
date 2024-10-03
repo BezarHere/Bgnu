@@ -6,6 +6,7 @@
 #include "misc/StaticString.hpp"
 
 #include <map>
+#include <set>
 
 class SourceProcessor;
 
@@ -17,11 +18,11 @@ namespace commands
 	public:
 		typedef std::map<FilePath, FilePath> IOMap;
 
-	struct ExecuteParameter
-	{
-		StaticString<128> name;
-		std::vector<std::string> args;
-	};
+		struct ExecuteParameter
+		{
+			StaticString<128> name;
+			std::vector<std::string> args;
+		};
 
 		struct FileInputOutput
 		{
@@ -33,6 +34,8 @@ namespace commands
 
 		Error execute(ArgumentReader &reader) override;
 
+		bool is_running_rebuild() const;
+
 		static FilePath _default_filepath();
 
 	private:
@@ -40,7 +43,7 @@ namespace commands
 		void _load_project();
 		void _setup_build_config(ArgumentReader &reader);
 		void _write_build_info() const;
-		void _load_build_cache();
+		bool _load_build_cache();
 
 		void _build_source_processor();
 		std::map<FilePath, FilePath> _gen_io_map() const;
@@ -55,9 +58,17 @@ namespace commands
 
 		static std::vector<StrBlob> _get_linker_inputs(const IOMap &io_map);
 
+		static void _add_uncompiled_files(const commands::BuildCommand::IOMap &input_output_map,
+																			const bool running_normal_build,
+																			std::set<FilePath> &rebuild_files);
+
+		void _add_changed_files(std::set<FilePath> &rebuild_files) const;
+		bool _try_rebuild_setup();
+
 	private:
 		bool m_rebuild = false;
 		bool m_resave = false;
+		bool m_loaded_build_cache = false;
 
 		Project m_project;
 		FilePath m_project_file;
@@ -68,6 +79,7 @@ namespace commands
 
 		ErrorReport m_report;
 		BuildCache m_build_cache;
+		BuildCache m_new_cache;
 	};
 
 }

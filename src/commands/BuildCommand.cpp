@@ -7,6 +7,8 @@
 #include "Settings.hpp"
 #include "utility/Process.hpp"
 #include "BuildTools.hpp"
+#include "utility/FileStats.hpp"
+#include "misc/ContainerTools.hpp"
 
 #include <chrono>
 #include <set>
@@ -74,7 +76,22 @@ namespace commands
 			return m_report.code;
 		}
 
-		_load_build_cache();
+		if (m_rebuild)
+		{
+			Logger::notify("rebuilding project: deleting output directory & cache directory");
+			build_tools::DeleteBuildDir(this->m_project);
+		}
+
+		// is false if we are rebuilding
+		m_loaded_build_cache = !m_rebuild && _load_build_cache();
+		const bool running_rebuild = this->is_running_rebuild();
+		// rebuilding is not normal
+		const bool running_normal_build = !running_rebuild;
+
+		if (running_normal_build && !m_loaded_build_cache)
+		{
+			build_tools::DeleteBuildCache(this->m_project);
+		}
 
 		m_project.get_output().ensure_available();
 
@@ -84,56 +101,59 @@ namespace commands
 
 		m_src_processor.process();
 
-		std::map<FilePath, FilePath> input_output_map = this->_gen_io_map();
+		const std::map<FilePath, FilePath> input_output_map = this->_gen_io_map();
+		const std::set<FilePath> current_source_files = container_tools::keys(input_output_map);
+		const std::set<FilePath> current_object_files =
+			container_tools::values_set(input_output_map);
 		std::set<FilePath> rebuild_files;
 
-		// add files that have changed from last build 
+		if (m_loaded_build_cache)
 		{
-			const SourceProcessor::file_change_list changed_files = \
-				m_src_processor.gen_file_change_table();
-
-			std::for_each(
-				changed_files.begin(),
-				changed_files.end(),
-				[&rebuild_files](const pair<FilePath, hash_t> &input) {
-					Logger::debug("rebuilding \"%s\": cached object file invalidated", input.first.c_str());
-					rebuild_files.insert(input.first);
-				}
+			build_tools::DeleteUnusedObjFiles(
+				m_build_cache.extract_compiled_paths(),
+				current_object_files
 			);
 		}
 
+		this->m_new_cache = m_build_cache;
+		m_new_cache.build_time = t::Now_ms();
 
-		// add files with no compiled object file
+		build_tools::SetupHashes(m_new_cache, m_project, m_current_build_cfg);
+
+		Logger::verbose(
+			"build cache hashes: new[%llX, %llX]  old[%llX, %llX]\n",
+			m_new_cache.build_hash, m_new_cache.config_hash,
+			m_build_cache.build_hash, m_build_cache.config_hash
+		);
+
+		if (this->_try_rebuild_setup())
 		{
-			for (const auto &in_out : input_output_map)
-			{
-				if (!in_out.second.is_file())
-				{
-					Logger::debug("rebuilding \"%s\": compiled object not found", in_out.second.c_str());
-					rebuild_files.insert(in_out.first);
-				}
-			}
+			rebuild_files = current_source_files;
+		}
+		else
+		{
+			// add files that have changed from last build
+			_add_changed_files(rebuild_files);
+
+			// add files with no compiled object file
+			_add_uncompiled_files(input_output_map, !is_running_rebuild(), rebuild_files);
 		}
 
 		std::vector<ExecuteParameter> build_args{};
-		BuildCache new_cache = m_build_cache;
-		// new_cache.file_records.clear();
-
-		// TODO: delete old object files
 
 		for (const FilePath &path : rebuild_files)
 		{
 			const FilePath &output_path = input_output_map.at(path);
 			const hash_t &hash = m_src_processor.get_file_hash(path);
 
+			const FileStats file_stats = {path};
 
 			BuildCache::FileRecord record;
-			record.build_time = get_build_time();
 			record.hash = hash;
 			record.output_path = output_path;
-			record.last_source_write_time = get_build_time();
+			record.source_write_time = file_stats.last_write_time.count();
 
-			new_cache.override_old_source_record(
+			m_new_cache.override_old_source_record(
 				path, record
 			);
 
@@ -158,17 +178,10 @@ namespace commands
 		Logger::debug("building objects:");
 		this->_execute_build(build_args);
 
-		{
-			Logger::debug("finalizing build cache");
-
-			build_tools::SetupHashes(new_cache, m_project, m_current_build_cfg);
-			new_cache.fix_file_records();
-
-			m_build_cache = new_cache;
-
-			Logger::debug("writing build cache");
-			_write_build_info();
-		}
+		Logger::debug("writing build cache");
+		m_new_cache.fix_file_records();
+		m_build_cache = m_new_cache;
+		_write_build_info();
 
 		Logger::notify("preparing the final stage");
 		ExecuteParameter link_param = {};
@@ -190,15 +203,78 @@ namespace commands
 		}
 
 
-		build_args.insert(build_args.end(), link_param);
-
-		// TODO: link args with all the input files
+		build_args.push_back(link_param);
+		
+		// if 'no_cache' or 'clear_cache', the cache will be deleted
+		if (Settings::Get("no_cache", Settings::Get("clear_cache", false)))
+		{
+			build_tools::DeleteBuildCache(m_project);
+		}
 
 		// dump_dep_map(dependencies, m_project.get_output().dir);
 		dump_build_args(build_args, m_project.get_output().dir);
 
 
 		return Error::Ok;
+	}
+
+	bool BuildCommand::is_running_rebuild() const {
+		return m_rebuild || !m_loaded_build_cache;
+	}
+
+	void BuildCommand::_add_uncompiled_files(const BuildCommand::IOMap &input_output_map, const bool running_normal_build, std::set<FilePath> &rebuild_files) {
+		for (const auto &in_out : input_output_map)
+		{
+			if (!in_out.second.is_file())
+			{
+				if (running_normal_build)
+				{
+					Logger::debug(
+						"rebuilding \"%s\": compiled object at \"%s\" not found",
+						in_out.first.c_str(),
+						in_out.second.c_str()
+					);
+				}
+
+				rebuild_files.insert(in_out.first);
+			}
+		}
+	}
+
+	void BuildCommand::_add_changed_files(std::set<FilePath> &rebuild_files) const {
+		const SourceProcessor::file_change_list changed_files = \
+			m_src_processor.gen_file_change_table();
+
+		std::for_each(
+			changed_files.begin(),
+			changed_files.end(),
+			[&rebuild_files](const pair<FilePath, hash_t> &input) {
+				Logger::debug("rebuilding \"%s\": cached object file invalidated", input.first.c_str());
+				rebuild_files.insert(input.first);
+			}
+		);
+	}
+
+	bool BuildCommand::_try_rebuild_setup() {
+		if (is_running_rebuild())
+		{
+			return true;
+		}
+
+		if (!m_new_cache.is_compatible_with(m_build_cache))
+		{
+			Logger::notify("older build's cache is invalidated, rebuilding...");
+			build_tools::DeleteBuildCache(m_project);
+			return true;
+		}
+
+		if (m_build_cache.too_out_dated_with(m_new_cache))
+		{
+			Logger::notify("older build's cache is too old, rebuilding...");
+			return true;
+		}
+
+		return false;
 	}
 
 	FilePath BuildCommand::_default_filepath() {
@@ -328,12 +404,13 @@ namespace commands
 		FieldFile::dump(_get_build_cache_path(), data);
 	}
 
-	void BuildCommand::_load_build_cache() {
+	bool BuildCommand::_load_build_cache() {
 		const FilePath build_cache_path = _get_build_cache_path();
 
 		if (!build_cache_path.is_file())
 		{
-			return;
+			Logger::verbose("no build cache found at '%s'", build_cache_path.c_str());
+			return false;
 		}
 
 
@@ -345,7 +422,7 @@ namespace commands
 		catch (const std::exception &e)
 		{
 			Logger::error("failed to load build cache: %s", e.what());
-			return;
+			return false;
 		}
 
 		ErrorReport report = {};
@@ -358,7 +435,10 @@ namespace commands
 		if (report.code != Error::Ok)
 		{
 			Logger::error(report);
+			return false;
 		}
+
+		return true;
 	}
 
 	void BuildCommand::_build_source_processor() {
@@ -407,9 +487,9 @@ namespace commands
 		std::thread *threads = flag_multithreaded ? new std::thread[args.size()] : nullptr;
 		vector<int> results{};
 
+		size_t executed_builds = 0;
 
-
-		const auto cmd = [&results](const std::string cmd, const char *name, size_t index = 0)
+		const auto cmd = [&results, flag_multithreaded, &executed_builds, &args](const std::string cmd, const char *name, size_t index = 0)
 			{
 
 				Process process = {cmd};
@@ -424,10 +504,17 @@ namespace commands
 
 				results.push_back(result);
 
+				if (flag_multithreaded)
+				{
+					executed_builds++;
+					Logger::note("completed build %llu, %llu out of %llu builds finished", index, executed_builds, args.size());
+				}
+
 
 				return result;
 			};
 
+		Logger::raise_indent();
 
 		for (size_t i = 0; i < args.size(); i++)
 		{
@@ -465,6 +552,10 @@ namespace commands
 				threads[i].join();
 			}
 		}
+
+		Logger::debug("completed the execution of the last %llu processes", args.size());
+
+		Logger::lower_indent();
 
 		delete[] threads;
 	}

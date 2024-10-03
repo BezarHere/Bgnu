@@ -17,8 +17,26 @@ static inline ErrorReport load_file_record(BuildCache::FileRecord &record, const
 void BuildCache::fix_file_records() {
 }
 
+std::set<FilePath> BuildCache::extract_compiled_paths() {
+	std::set<FilePath> filepaths = {};
+	for (const auto &[_, record] : this->file_records)
+	{
+		filepaths.emplace(record.output_path);
+	}
+	return filepaths;
+}
+
+bool BuildCache::too_out_dated_with(const BuildCache &cache) const {
+	return (cache.build_time - this->build_time) >= OutdatedCacheTime;
+}
+
 void BuildCache::override_old_source_record(const FilePath &source_path, const FileRecord &new_record) {
 	this->file_records.insert_or_assign(source_path, new_record);
+}
+
+bool BuildCache::is_compatible_with(const BuildCache &older_cache) const {
+	return this->build_hash == older_cache.build_hash
+		&& this->config_hash == older_cache.config_hash;
 }
 
 BuildCache BuildCache::load(const FieldDataReader &data, ErrorReport &error) {
@@ -29,8 +47,6 @@ BuildCache BuildCache::load(const FieldDataReader &data, ErrorReport &error) {
 	const hash_pointer_info hash_ptrs[] = {
 		CTOR_HASH_PTR_DEF(build_hash),
 		CTOR_HASH_PTR_DEF(config_hash),
-		CTOR_HASH_PTR_DEF(library_hash),
-		CTOR_HASH_PTR_DEF(include_dir_hash)
 	};
 
 	for (size_t i = 0; i < std::size(hash_ptrs); i++)
@@ -43,6 +59,10 @@ BuildCache BuildCache::load(const FieldDataReader &data, ErrorReport &error) {
 
 		*hash_ptr_info.first = var.get_int();
 	}
+
+	cache.build_time = data.try_get_value<FieldVarType::Integer>(
+		"build_time", FieldVar(FieldVar::Int(0))
+	).get_int();
 
 	const FieldVar records_data = data.try_get_value<FieldVarType::Dict>("file_records");
 
@@ -64,9 +84,7 @@ FieldVar::Dict BuildCache::write() const {
 
 	dict["build_hash"] = FieldVar::Int(this->build_hash);
 	dict["config_hash"] = FieldVar::Int(this->config_hash);
-	dict["library_hash"] = FieldVar::Int(this->library_hash);
-	dict["include_dir_hash"] = FieldVar::Int(this->include_dir_hash);
-
+	dict["build_time"] = FieldVar::Int(this->build_time);
 
 	FieldVar::Dict records{};
 
@@ -75,8 +93,7 @@ FieldVar::Dict BuildCache::write() const {
 		FieldVar::Dict record_dict{};
 
 		record_dict.emplace("output_path", record.output_path);
-		record_dict.emplace("build_time", FieldVar::Int(record.build_time));
-		record_dict.emplace("last_source_write_time", FieldVar::Int(record.last_source_write_time));
+		record_dict.emplace("source_write_time", FieldVar::Int(record.source_write_time));
 		record_dict.emplace("hash", ParseToHex(record.hash));
 
 		records.insert_or_assign(path.c_str(), FieldVar(record_dict));
@@ -142,8 +159,7 @@ inline ErrorReport load_file_record(BuildCache::FileRecord &record, const FieldD
 	record.output_path = output_path.get_string();
 
 	const int64_pointer_info i64_ptr_info[]{
-		CTOR_INT64_PTR_DEF_RECORD(build_time),
-		CTOR_INT64_PTR_DEF_RECORD(last_source_write_time),
+		CTOR_INT64_PTR_DEF_RECORD(source_write_time),
 	};
 
 	for (size_t i = 0; i < std::size(i64_ptr_info); i++)

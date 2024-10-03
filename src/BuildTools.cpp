@@ -2,39 +2,31 @@
 
 
 
-void build_tools::DeleteBuild(const Project &project) {
+void build_tools::DeleteBuildCache(const Project &project) {
 	project.get_output().cache_dir.remove_recursive();
+}
+
+void build_tools::DeleteBuildDir(const Project &project) {
+	DeleteBuildCache(project);
+	project.get_output().dir.remove_recursive();
 }
 
 void build_tools::SetupHashes(BuildCache &cache, const Project &proj, const BuildConfiguration *config) {
 	cache.build_hash = proj.hash();
 	cache.config_hash = config->hash();
+}
 
+void build_tools::DeleteUnusedObjFiles(const std::set<FilePath> &object_files, const std::set<FilePath> &used_files) {
+	for (const auto &obj : object_files)
 	{
-		HashDigester digest = {};
-		
-		for (const auto &lib : config->library_names)
+		if (used_files.contains(obj))
 		{
-			digest += lib;
-		}
-		
-		for (const auto &lib_dir : config->library_directories)
-		{
-			digest += lib_dir;
+			continue;
 		}
 
-		cache.library_hash = digest.value;
+		if (obj.is_file())
+		{
+			obj.remove();
+		}
 	}
-
-	{
-		HashDigester digest = {};
-		
-		for (const auto &inc : config->include_directories)
-		{
-			digest += inc;
-		}
-
-		cache.library_hash = digest.value;
-	}
-
 }

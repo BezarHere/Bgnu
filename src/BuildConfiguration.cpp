@@ -318,7 +318,7 @@ void BuildConfiguration::build_link_arguments(vector<string> &output,
 		output.back().append(blob.begin(), blob.length());
 		output.back().append(1, '"');
 	}
-		
+
 	output.emplace_back("-o");
 
 
