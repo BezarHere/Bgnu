@@ -33,6 +33,13 @@ namespace commands
 		}
 
 		Error execute(ArgumentReader &reader) override;
+		Error get_help(ArgumentReader &reader, string &out) override;
+		inline CommandInfo get_info() const override {
+			return {
+				"build",
+				"builds the project in the working directory, project files are named '.bgnu'"
+			};
+		}
 
 		bool is_running_rebuild() const;
 
@@ -49,12 +56,12 @@ namespace commands
 		std::map<FilePath, FilePath> _gen_io_map() const;
 
 		inline FilePath _get_build_cache_path() const {
-			return m_project.get_output().dir.join_path(".build");
+			return m_project.get_output().dir->join_path(".build");
 		}
 
 		FilePath _get_output_filepath(const FilePath &filepath, const hash_t &hash) const;
 
-		void _execute_build(const vector<ExecuteParameter> &params);
+		std::vector<int> _execute_build(const vector<ExecuteParameter> &params);
 
 		static std::vector<StrBlob> _get_linker_inputs(const IOMap &io_map);
 

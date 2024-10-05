@@ -56,9 +56,18 @@ public:
 	ArgumentReader(const Blob<const Argument> &args);
 
 	Argument &read();
+	const std::string &read_or(const std::string &default_value);
 
 	Argument *extract(const string &name);
 	Argument *extract_any(const Blob<const string> &names);
+
+	// returns true if the flag is found, false otherwise
+	// marks the argument with the flags as used
+	bool check_flag(const string &name);
+
+	// returns true if a flag with a matched name is found, false otherwise
+	// marks the argument matched as used
+	bool check_flag_any(const Blob<const string> &names);
 
 	template <typename _Pred>
 	inline Argument *extract_matching(_Pred &&pred) {

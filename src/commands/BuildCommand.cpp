@@ -176,17 +176,32 @@ namespace commands
 		m_project.get_output().ensure_available();
 
 		Logger::debug("building objects:");
-		this->_execute_build(build_args);
+		const auto build_results = this->_execute_build(build_args);
 
 		Logger::debug("writing build cache");
 		m_new_cache.fix_file_records();
 		m_build_cache = m_new_cache;
 		_write_build_info();
 
-		Logger::notify("preparing the final stage");
+		const size_t compile_failures = \
+			build_results.size() - std::count(build_results.begin(), build_results.end(), 0);
+		if (compile_failures > 0)
+		{
+			Logger::warning(
+				"Linking will fail: %llu out of %llu builds have failed",
+				compile_failures,
+				build_results.size()
+			);
+		}
+
+		const bool intermidiate_build_all_success = (compile_failures == 0);
+
+
 		ExecuteParameter link_param = {};
 
+		if (intermidiate_build_all_success)
 		{
+			Logger::notify("preparing the final stage");
 			std::vector<StrBlob> link_input_files = _get_linker_inputs(input_output_map);
 
 			const FilePath output_filepath = m_project.get_output().get_result_path().resolve();
@@ -204,18 +219,41 @@ namespace commands
 
 
 		build_args.push_back(link_param);
-		
+
 		// if 'no_cache' or 'clear_cache', the cache will be deleted
 		if (Settings::Get("no_cache", Settings::Get("clear_cache", false)))
 		{
+			Logger::notify("Applying 'no_cache' rule: deleting build cache post finalizing");
 			build_tools::DeleteBuildCache(m_project);
 		}
 
 		// dump_dep_map(dependencies, m_project.get_output().dir);
-		dump_build_args(build_args, m_project.get_output().dir);
+		dump_build_args(build_args, m_project.get_output().dir.field());
 
 
 		return Error::Ok;
+	}
+
+	Error BuildCommand::get_help(ArgumentReader &reader, string &out) {
+		out
+			.append("usage: build [-r/--rebuild] [--resave] [-m=<build mode>/--mode=<build mode>]\n");
+
+		out
+			.append("[-r/--rebuild]:\n")
+			.append("  rebuilds the current project, deleting all the cached object files (+ it's folder)\n");
+
+		out
+			.append("[--resave]:\n")
+			.append("  saves the project bake to the project file (for fixing project files)\n")
+			.append("  project file is the '.bgnu' in the current working directory\n");
+
+		out
+			.append("[-m=<build mode>/--mode=<build mode>]:\n")
+			.append("  sets the build mode (i.e. 'release' or 'debug')\n")
+			.append("  defaults to 'debug'\n")
+			.append("  if no build configuration has the given '<build mode>' name, an error is thrown\n");
+
+		return Error();
 	}
 
 	bool BuildCommand::is_running_rebuild() const {
@@ -293,15 +331,18 @@ namespace commands
 		Logger::verbose("rebuild = %s", to_boolalpha(m_rebuild));
 		Logger::verbose("resave = %s", to_boolalpha(m_resave));
 
-		const string &input_file_str = Argument::try_get_value(
-			reader.extract_matching(
-				[](const Argument &arg) {
-					return arg.get_value().starts_with(InputFilePrefix);
-				}
-			)
+		const auto arg_value_prefix_check = [](const Argument &arg) {
+			return arg.get_value().starts_with(InputFilePrefix);
+			};
+		Argument *argument = reader.extract_matching(
+			arg_value_prefix_check
 		);
 
-		Logger::verbose("input file string = \"%s\"", to_cstr(input_file_str));
+		const string &input_file_str = Argument::try_get_value(
+			argument
+		);
+
+		Logger::verbose("input file string = \"%s\"", input_file_str.c_str());
 
 		m_project_file = input_file_str.empty() ? _default_filepath() : FilePath(input_file_str);
 
@@ -444,7 +485,7 @@ namespace commands
 	void BuildCommand::_build_source_processor() {
 		m_src_processor.set_file_records(m_build_cache.file_records);
 
-		for (const FilePath &path : m_current_build_cfg->include_directories)
+		for (const FilePath &path : m_current_build_cfg->include_directories.field())
 		{
 			m_src_processor.included_directories.emplace_back(
 				path.get_text(),
@@ -476,16 +517,17 @@ namespace commands
 		sprintf_s(
 			buf,
 			"%s/%s.%llX.o",
-			m_project.get_output().cache_dir.c_str(), filepath.name().c_str(), hash
+			m_project.get_output().cache_dir->c_str(), filepath.name().c_str(), hash
 		);
 
 		return FilePath(buf);
 	}
 
-	void BuildCommand::_execute_build(const vector<ExecuteParameter> &args) {
+	std::vector<int> BuildCommand::_execute_build(const vector<ExecuteParameter> &args) {
 		const bool flag_multithreaded = Settings::Get("build_multithreaded", false).get_bool();
 		std::thread *threads = flag_multithreaded ? new std::thread[args.size()] : nullptr;
 		vector<int> results{};
+		results.resize(args.size());
 
 		size_t executed_builds = 0;
 
@@ -497,21 +539,21 @@ namespace commands
 
 
 				std::ostringstream oss = {};
-				const int result = process.start(&oss);
+				const int process_result = process.start(&oss);
 				Logger::write_raw("%s", oss.str().c_str());
 
-				Logger::verbose("build '%s' returned %d", name, GetErrorName(result));
+				Logger::verbose("build '%s' returned %d", name, GetErrorName(process_result));
 
-				results.push_back(result);
+				results[index] = process_result;
 
 				if (flag_multithreaded)
 				{
 					executed_builds++;
-					Logger::note("completed build %llu, %llu out of %llu builds finished", index, executed_builds, args.size());
+					Logger::note("completed build %llu: [%llu / %llu] builds finished", index, executed_builds, args.size());
 				}
 
 
-				return result;
+				return process_result;
 			};
 
 		Logger::raise_indent();
@@ -522,7 +564,7 @@ namespace commands
 
 			// TODO: use the file's source type
 			oss << FilePath::FindExecutableInPATHEnv(
-				BuildConfiguration::get_compiler_name(m_current_build_cfg->compiler_type, SourceFileType::CPP)
+				BuildConfiguration::get_compiler_name(m_current_build_cfg->compiler_type.field(), SourceFileType::CPP)
 			);
 			oss << ' ';
 
@@ -558,6 +600,8 @@ namespace commands
 		Logger::lower_indent();
 
 		delete[] threads;
+
+		return results;
 	}
 
 	std::vector<StrBlob> BuildCommand::_get_linker_inputs(const IOMap &io_map) {

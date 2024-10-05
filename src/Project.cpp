@@ -1,6 +1,21 @@
 #include "Project.hpp"
 #include "FieldDataReader.hpp"
+#include "io/FieldWriter.hpp"
 
+
+Project Project::GetDefault() {
+	Project project = {};
+
+	project.m_build_configurations->try_emplace(
+		"debug", BuildConfiguration::GetDefault(BuildConfigurationDefaultType::Debug)
+	);
+
+	project.m_build_configurations->try_emplace(
+		"release", BuildConfiguration::GetDefault(BuildConfigurationDefaultType::Release)
+	);
+
+	return project;
+}
 
 Project Project::from_data(const FieldVar::Dict &data, ErrorReport &result) {
 	Project project{};
@@ -14,7 +29,9 @@ Project Project::from_data(const FieldVar::Dict &data, ErrorReport &result) {
 		return project;
 	}
 
-	const FieldVar &build_configs = reader.try_get_value<FieldVarType::Dict>("build_configurations");
+	const FieldVar &build_configs = reader.try_get_value<FieldVarType::Dict>(
+		project.m_build_configurations.name()
+	);
 
 	if (build_configs.is_null())
 	{
@@ -56,14 +73,63 @@ Project Project::from_data(const FieldVar::Dict &data, ErrorReport &result) {
 			return project;
 		}
 
-		project.m_build_configurations.insert_or_assign(key, config);
+		project.m_build_configurations->insert_or_assign(key, config);
 	}
 
 	return project;
 }
 
-ErrorReport Project::load_various(Project &project, FieldDataReader &reader) {
+errno_t Project::to_data(const Project &project, FieldVar &output) {
+	if (output.get_type() != FieldVarType::Dict)
+	{
+		output = FieldVar(FieldVarType::Dict);
+	}
 
+	FieldWriter writer = {};
+
+	std::vector<const char *> vec = {};
+
+	for (const auto &glob : project.m_source_selectors)
+	{
+		vec.emplace_back(glob.get_source().c_str());
+	}
+
+	writer.write_arr<const char *>(
+		"source_selectors",
+		{
+			vec.data(),
+			vec.size()
+		}
+	);
+
+	// writer.write_nested_transform(project.m_output.name(), project.m_output->type);
+	writer.write_nested(project.m_output.name(), project.m_output->name);
+	writer.write_nested(project.m_output.name(), project.m_output->dir);
+	writer.write_nested(project.m_output.name(), project.m_output->cache_dir);
+
+	FieldVar::Dict config_dicts = {};
+	for (const auto &[name, config] : project.m_build_configurations.field())
+	{
+		ErrorReport report = {};
+		config_dicts.try_emplace(name, BuildConfiguration::to_data(config, report));
+
+		if (report)
+		{
+			Logger::error(
+				"error while serializing config named '%s' [%d]: %s",
+				name.c_str(), (int)report.code, report.message.c_str()
+			);
+		}
+	}
+
+	writer.write(project.m_build_configurations.name(), config_dicts);
+
+	output = FieldVar(writer.output);
+
+	return EOK;
+}
+
+ErrorReport Project::load_various(Project &project, FieldDataReader &reader) {
 	const FieldVar::Array &src_slc = \
 		reader.try_get_array<FieldVarType::String>("source_selectors").get_array();
 
@@ -84,43 +150,50 @@ ErrorReport Project::load_various(Project &project, FieldDataReader &reader) {
 	}
 
 
-	const FieldVar &output_dir = reader.try_get_value<FieldVarType::String>("output_dir");
+	const FieldVar &output_dir = reader.try_get_value<FieldVarType::String>(
+		FieldIO::NestedName(project.m_output.name(), project.m_output->dir)
+	);
+
 	if (output_dir.is_null())
 	{
 		Logger::verbose(
 			"no specified output directory, using default: '%s'",
-			project.m_output.dir.c_str()
+			project.m_output->dir->c_str()
 		);
 	}
 	else
 	{
-		project.m_output.dir = output_dir.get_string();
+		project.m_output->dir.field() = output_dir.get_string();
 	}
 
-	const FieldVar &output_cache_dir = reader.try_get_value<FieldVarType::String>("output_cache_dir");
+	const FieldVar &output_cache_dir = reader.try_get_value<FieldVarType::String>(
+		FieldIO::NestedName(project.m_output.name(), project.m_output->cache_dir)
+	);
 	if (output_cache_dir.is_null())
 	{
 		Logger::verbose(
 			"no specified cache directory, using default: '%s'",
-			project.m_output.cache_dir.c_str()
+			project.m_output->cache_dir->c_str()
 		);
 	}
 	else
 	{
-		project.m_output.cache_dir = output_cache_dir.get_string();
+		project.m_output->cache_dir.field() = output_cache_dir.get_string();
 	}
 
-	const FieldVar &output_name = reader.try_get_value<FieldVarType::String>("output_name");
+	const FieldVar &output_name = reader.try_get_value<FieldVarType::String>(
+		FieldIO::NestedName(project.m_output.name(), project.m_output->name)
+	);
 	if (output_name.is_null())
 	{
 		Logger::verbose(
 			"no specified output name, using default: '%s'",
-			project.m_output.name.c_str()
+			project.m_output->name->c_str()
 		);
 	}
 	else
 	{
-		project.m_output.name = output_name.get_string();
+		project.m_output->name.field() = output_name.get_string();
 	}
 
 	return ErrorReport();
@@ -190,7 +263,7 @@ bool Project::is_matching_source(const StrBlob &path) const {
 }
 
 hash_t Project::hash_own(HashDigester &digester) const {
-	digester += m_output;
+	digester += m_output.field();
 
 	for (const auto &glob : m_source_selectors)
 	{
@@ -202,7 +275,7 @@ hash_t Project::hash_own(HashDigester &digester) const {
 
 hash_t Project::hash_cfgs(HashDigester &digester) const {
 
-	for (const auto &[name, cfg] : m_build_configurations)
+	for (const auto &[name, cfg] : m_build_configurations.field())
 	{
 		digester.add(StrBlob{name.c_str(), name.length()});
 		digester += cfg;
@@ -223,12 +296,12 @@ hash_t Project::hash() const {
 
 
 Error ProjectOutputData::ensure_available() const {
-	this->name.parent().create_directory();
-	this->cache_dir.create_directory();
-	this->dir.create_directory();
+	this->name->parent().create_directory();
+	this->cache_dir->create_directory();
+	this->dir->create_directory();
 	return Error::Ok;
 }
 
 FilePath ProjectOutputData::get_result_path() const {
-	return FilePath(this->name).resolve(this->dir.resolved_copy());
+	return FilePath(this->name.field()).resolve(this->dir->resolved_copy());
 }

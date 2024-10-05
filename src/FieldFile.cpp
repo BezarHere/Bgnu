@@ -8,11 +8,15 @@
 constexpr uint32_t FieldFileVersion = 0x01'01;
 
 inline static bool IsIdentifierChar(char c) {
-	return isalpha(c) || c == '_' || c == '.' || c == '-' || c == '+';
+	return isalnum(c) || c == '_' || c == '.' || c == '-' || c == '+';
+}
+
+inline static bool IsIdentifierCharExtended(char c) {
+	return IsIdentifierChar(c) || c == ':' || c == '.';
 }
 
 inline static bool IsIdentifierFirstChar(char c) {
-	return IsIdentifierChar(c) || isdigit(c);
+	return IsIdentifierCharExtended(c) && !isdigit(c);
 }
 
 inline static bool is_number_identifier(const char *str, size_t len) {
@@ -56,7 +60,6 @@ enum class TKType : uint8_t
 	Whitespace,
 	Newline,
 
-	Column,
 	Assign,
 	Comma,
 
@@ -270,15 +273,17 @@ Token Tokenizer::_tk_string(const StringParseFlags flags) const {
 }
 
 Token Tokenizer::_tk_identifier() const {
-	if (!IsIdentifierFirstChar(m_source[index]))
+	if (!IsIdentifierChar(m_source[index]))
 		return {TKType::Unknown, _get_current_str(), 1, get_pos()};
 
 	size_t result_end = m_length;
 
 	for (size_t i = index; i < m_length; ++i)
 	{
-		if (IsIdentifierFirstChar(m_source[i]))
+		if (IsIdentifierCharExtended(m_source[i]))
+		{
 			continue;
+		}
 
 		result_end = i;
 		break;
@@ -316,7 +321,6 @@ inline Token Tokenizer::_read_tk() const {
 		MATCH_SPAN_CHAR('[', TKType::Open_SqBracket);
 		MATCH_SPAN_CHAR(']', TKType::Close_SqBracket);
 		MATCH_SPAN_CHAR('=', TKType::Assign);
-		MATCH_SPAN_CHAR(':', TKType::Column);
 		MATCH_SPAN_CHAR(',', TKType::Comma);
 #undef MATCH_SPAN_CHAR
 
@@ -365,7 +369,7 @@ inline bool IsValidIdentifierName(StrBlob str) {
 		return false;
 	}
 
-	return string_tools::all_of(str.data, str.size, IsIdentifierChar);
+	return string_tools::all_of(str.data, str.size, IsIdentifierCharExtended);
 }
 
 inline FieldVar::Int ParseInt(const string_char *str, size_t max_length) {
@@ -430,7 +434,7 @@ inline unsigned IntBaseStartOffset(const int base) {
 }
 
 inline constexpr bool IsAssignTokenType(TKType type) {
-	return type == TKType::Column || type == TKType::Assign;
+	return type == TKType::Assign;
 }
 
 #pragma endregion
@@ -462,7 +466,8 @@ public:
 			return true;
 		}
 
-		return token.type == TKType::Whitespace || token.type == TKType::Unknown;
+		// return token.type == TKType::Whitespace || token.type == TKType::Unknown;
+		return token.type == TKType::Whitespace;
 	}
 
 	static bool is_empty_token(const Token &token) {
@@ -683,8 +688,15 @@ FieldVar::Dict Parser::_parse_var_dict(const bool body_dict) {
 		_pop_index();
 		_skip_useless();
 
+		if (!_can_read())
+		{
+			break;
+		}
+		// std::cout << "0[0]: " << current_index << ' ' << get_tk() << '\n';
+
 		if (expecting_separator)
 		{
+			// std::cout << "0[1]: " << current_index << ' ' << get_tk() << '\n';
 			// the dict has no key-value separator, but we expecting the next kv
 			// if we didn't have a next kv, then it would have had stoped above
 			if (get_tk().type == TKType::Comma || get_tk().type == TKType::Newline)
@@ -760,6 +772,9 @@ FieldVar::Array Parser::_parse_var_array() {
 FieldVar Parser::_parse_var() {
 	_skip_useless();
 
+	
+	// std::cout << "4: " << current_index << ' ' << *current() << '\n';
+
 	switch (get_tk().type)
 	{
 	case TKType::Identifier:
@@ -782,17 +797,39 @@ std::pair<FieldVar::String, FieldVar> Parser::_parse_var_kv() {
 
 	_skip_useless();
 
+	if (!_can_read())
+	{
+		//! ERROR?
+		return {};
+	}
+
+
 	FieldVar::String key = _parse_var_string();
 
 	_skip_empty();
+
+	if (!_can_read())
+	{
+		//! ERROR?
+		return {key, {}};
+	}
 
 	if (!IsAssignTokenType(get_tk().type))
 	{
 		_XUnexpectedToken(format_join('"', ValueAssignOp, '"'));
 	}
 
+	// std::cout << "3: " << current_index << ' ' << *current() << '\n';
 	_advance_tk();
+	// std::cout << "3.5: " << current_index << ' ' << *current() << *(current() + 1)  << *(current() + 2) << '\n';
 	_skip_empty();
+
+	if (!_can_read())
+	{
+		//! ERROR?
+		return {key, {}};
+	}
+
 
 	return {key, _parse_var()};
 }
@@ -856,7 +893,7 @@ void FieldFileWriter::write(FieldVar::Real data) {
 }
 
 void FieldFileWriter::write(const FieldVar::String &data) {
-	const bool long_string = data.length() >= 32ULL;
+	const bool long_string = data.length() >= 45ULL;
 	const bool ambiguous_to_number = ScanForNumberType({data.c_str(), data.length()});
 
 	const bool replicable_by_identifier = !long_string && !ambiguous_to_number;

@@ -1,7 +1,14 @@
 #pragma once
 #include "Argument.hpp"
 #include "misc/Error.hpp"
+#include "misc/StaticString.hpp"
 #include <memory>
+
+struct CommandInfo
+{
+	StaticString<32> name;
+	StaticString<256> desc;
+};
 
 class Command
 {
@@ -20,6 +27,14 @@ public:
 		return Error::NotImplemented;
 	}
 
+	inline virtual CommandInfo get_info() const {
+		return {
+			"unimplemented command",
+		"basic, raw and unimplemented command.\n"
+		"raw dogging the code isn't fun..."
+		};
+	}
+
 	const string name;
 	const string description;
 
@@ -32,7 +47,7 @@ class CommandDB
 {
 public:
 	using command_ptr = std::unique_ptr<Command>;
-	
+
 	struct CommandSuggestion
 	{
 		Command *command;
@@ -50,6 +65,6 @@ private:
 	static void _add_command(command_ptr &&command);
 
 private:
-	struct Data; 
+	struct Data;
 	static Data s_data;
 };

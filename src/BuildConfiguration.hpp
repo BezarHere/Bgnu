@@ -7,6 +7,8 @@
 #include "Glob.hpp"
 #include "SourceTools.hpp" // for SourceFileType
 
+#include "utility/NField.hpp"
+
 enum class CompilerType
 {
 	GCC,
@@ -80,25 +82,33 @@ enum class SIMDType : uint8_t
 struct OptimizationInfo
 {
 	inline hash_t hash() const noexcept {
-		return HashTools::combine((int)type, (int)degree);
+		return HashTools::combine((int)type.field(), (int)degree.field());
 	}
 
-	OptimizationType type = OptimizationType::Release;
-	OptimizationDegree degree = OptimizationDegree::High;
+	NField<OptimizationType> type = {"type", OptimizationType::Release};
+	NField<OptimizationDegree> degree = {"degree", OptimizationDegree::High};
 };
 
 struct WarningReportInfo
 {
 	inline hash_t hash() const noexcept {
-		return HashTools::combine((int)level, (int)pedantic);
+		return HashTools::combine((int)level.field(), (int)pedantic.field());
 	}
 
-	WarningLevel level = WarningLevel::All;
-	bool pedantic = false;
+	NField<WarningLevel> level = {"level", WarningLevel::All};
+	NField<bool> pedantic = {"pedantic", false};
+};
+
+enum class BuildConfigurationDefaultType
+{
+	Debug,
+	Release
 };
 
 struct BuildConfiguration
 {
+	inline BuildConfiguration() {}
+
 	void _put_predefines(vector<string> &output) const;
 	void _put_flags(vector<string> &output) const;
 
@@ -121,7 +131,9 @@ struct BuildConfiguration
 
 	hash_t hash() const;
 
+	static BuildConfiguration GetDefault(BuildConfigurationDefaultType default_mode);
 	static BuildConfiguration from_data(FieldDataReader reader, ErrorReport &report);
+	static FieldVar::Dict to_data(const BuildConfiguration &config, ErrorReport &report);
 
 	static const char *get_enum_name(OptimizationType opt_type);
 	static const char *get_enum_name(OptimizationDegree opt_degree);
@@ -138,28 +150,26 @@ struct BuildConfiguration
 	static const string_char *get_compiler_name(CompilerType type, SourceFileType file_type);
 
 	// values should be either a string OR a null 
-	FieldVar::Dict predefines;
+	NField<FieldVar::Dict> predefines = {"predefines"};
 
-	OptimizationInfo optimization = {};
-	WarningReportInfo warnings = {};
+	NField<OptimizationInfo> optimization = {"optimization", OptimizationInfo{}};
+	NField<WarningReportInfo> warnings = {"warnings", WarningReportInfo{}};
 
-	CompilerType compiler_type = CompilerType::GCC;
+	NField<CompilerType> compiler_type = {"compiler_type", CompilerType::GCC};
+	NField<StandardType> standard = {"standard", StandardType::Cpp20};
+	NField<SIMDType> simd_type = {"simd_type", SIMDType::AVX2};
 
-	StandardType standard = StandardType::Cpp17;
+	NField<bool> exit_on_errors = {"exit_on_errors", true};
+	NField<bool> print_stats = {"print_stats", false};
+	NField<bool> print_includes = {"print_includes", false};
+	NField<bool> dynamically_linkable = {"dynamically_linkable", true};
 
-	bool exit_on_errors = true;
-	bool print_stats = false;
-	bool print_includes = false;
-	bool dynamically_linkable = true;
+	NField<vector<string>> preprocessor_args = {"preprocessor_args"};
+	NField<vector<string>> linker_args = {"linker_args"};
+	NField<vector<string>> assembler_args = {"assembler_args"};
 
-	SIMDType simd_type = SIMDType::AVX2;
+	NField<vector<string>> library_names = {"library_names"};
 
-	vector<string> preprocessor_args;
-	vector<string> linker_args;
-	vector<string> assembler_args;
-
-	vector<string> library_names;
-
-	vector<FilePath> library_directories;
-	vector<FilePath> include_directories;
+	NField<vector<FilePath>> library_directories = {"library_directories"};
+	NField<vector<FilePath>> include_directories = {"include_directories"};
 };

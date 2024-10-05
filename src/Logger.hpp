@@ -19,6 +19,7 @@ public:
 
 	static void _write_indent(std::ostream &stream);
 	static void _write_indent(FILE *pfile);
+	static const char *_get_indent_str();
 
 	static void raise_indent();
 	static void lower_indent();

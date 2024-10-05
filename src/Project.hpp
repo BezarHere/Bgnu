@@ -20,17 +20,17 @@ struct ProjectOutputData
 
 	inline hash_t hash() const {
 		return HashTools::combine(
-			(hash_t)type,
-			HashTools::hash(name.get_text()),
-			HashTools::hash(dir.get_text()),
-			HashTools::hash(cache_dir.get_text())
+			(hash_t)type.field(),
+			HashTools::hash(name->get_text()),
+			HashTools::hash(dir->get_text()),
+			HashTools::hash(cache_dir->get_text())
 		);
 	}
 
-	BuildOutputType type = BuildOutputType::Executable;
-	FilePath name = "out/main";
-	FilePath dir = "out";
-	FilePath cache_dir = "out/cache/";
+	NField<BuildOutputType> type = {"type", BuildOutputType::Executable};
+	NField<FilePath> name = {"name", "output"};
+	NField<FilePath> dir = {"dir", "out"};
+	NField<FilePath> cache_dir = {"cache_dir", "out/cache/"};
 };
 
 struct ProjectModifier
@@ -57,11 +57,13 @@ class Project
 public:
 	typedef std::map<FieldVar::String, BuildConfiguration> BuildConfigMap;
 
+	static Project GetDefault();
 	static Project from_data(const FieldVar::Dict &data, ErrorReport &result);
+	static errno_t to_data(const Project &project, FieldVar &output);
 
-	inline const ProjectOutputData &get_output() const { return m_output; }
+	inline const ProjectOutputData &get_output() const { return m_output.field(); }
 	inline const vector<Glob> &get_source_selector() const { return m_source_selectors; }
-	inline const BuildConfigMap &get_build_configs() const { return m_build_configurations; }
+	inline const BuildConfigMap &get_build_configs() const { return m_build_configurations.field(); }
 
 	vector<FilePath::iterator_entry> get_available_files() const;
 	vector<FilePath> get_source_files() const;
@@ -77,10 +79,10 @@ private:
 	static ErrorReport load_various(Project &project, FieldDataReader &reader);
 
 private:
-	ProjectOutputData m_output = {};
+	NField<ProjectOutputData> m_output = {"output", ProjectOutputData{}};
 	vector<Glob> m_source_selectors = {"**/*.c", "**/*.cpp", "**/*.cc", "**/*.cxx"};
 
 	vector<ProjectModifier> m_modifiers;
 
-	BuildConfigMap m_build_configurations;
+	NField<BuildConfigMap> m_build_configurations = {"build_configurations"};
 };

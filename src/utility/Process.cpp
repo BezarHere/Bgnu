@@ -61,7 +61,7 @@ int Process::start(std::ostream *const out) {
 		sec_attrs.lpSecurityDescriptor = nullptr;
 
 		CreatePipe(
-			&output_r, &output_w, &sec_attrs, Settings::Get("process_pipe_buffer_sz", 0x1A000LL).get_int()
+			&output_r, &output_w, &sec_attrs, Settings::Get("process_pipe_buffer_sz", 0x100000LL).get_int()
 		);
 	}
 
@@ -98,7 +98,7 @@ int Process::start(std::ostream *const out) {
 		win_process_info.hThread
 	};
 
-	const DWORD wait_ms_timeout = INFINITE;
+	const DWORD wait_ms_timeout = 1000 * 30;
 	const DWORD object_waiting_res = WaitForSingleObject(
 		process_info.process, wait_ms_timeout
 	);

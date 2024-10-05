@@ -3,12 +3,12 @@
 
 
 void build_tools::DeleteBuildCache(const Project &project) {
-	project.get_output().cache_dir.remove_recursive();
+	project.get_output().cache_dir->remove_recursive();
 }
 
 void build_tools::DeleteBuildDir(const Project &project) {
 	DeleteBuildCache(project);
-	project.get_output().dir.remove_recursive();
+	project.get_output().dir->remove_recursive();
 }
 
 void build_tools::SetupHashes(BuildCache &cache, const Project &proj, const BuildConfiguration *config) {

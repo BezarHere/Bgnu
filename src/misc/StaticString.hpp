@@ -2,6 +2,9 @@
 #include <string>
 #include <stdexcept>
 
+// Pneumonoultramicroscopicsilicovolcanoconiosis
+constexpr size_t StaticStr_LongestWordLength = 45;
+
 template <size_t _MaxLen, typename _T>
 class BasicStaticString
 {
@@ -12,6 +15,7 @@ public:
 	typedef _T char_type;
 	typedef std::basic_string<value_type> string_type;
 	typedef typename string_type::traits_type traits_type;
+	typedef BasicStaticString<_MaxLen, _T> this_type;
 
 	typedef char_type container_type[max_str_length + 1];
 
@@ -130,6 +134,24 @@ public:
 	inline operator string_type() const {
 		return string_type(m_data, m_length);
 	}
+
+	inline auto operator+(const string_type &other) const -> decltype(string_type() + other) {
+		return string_type(m_data, m_length) + other;
+	}
+
+	inline auto operator+(const string_char *other) const -> decltype(string_type() + other) {
+		return string_type(m_data, m_length) + other;
+	}
+
+	// static inline auto operator+(const string_type &left, const this_type &right)
+	// 	-> decltype(string_type() + string_type()) {
+	// 	return left + string_type(right);
+	// }
+
+	// static inline auto operator+(const string_char *left, const this_type &right)
+	// 	-> decltype(string_type() + string_type()) {
+	// 	return left + string_type(right);
+	// }
 
 	inline constexpr char_type &operator[](size_t pos) {
 		if (pos > m_length)

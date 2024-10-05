@@ -81,6 +81,10 @@ void Logger::_write_indent(FILE *pfile) {
 	fputs(s_state.get_indent_string().c_str(), pfile);
 }
 
+const char *Logger::_get_indent_str() {
+	return s_state.get_indent_string().c_str();
+}
+
 void Logger::raise_indent() {
 	typedef std::numeric_limits<decltype(State::indent)> IndentLimits;
 

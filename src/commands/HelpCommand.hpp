@@ -10,9 +10,13 @@ namespace commands
 		inline HelpCommand() : Command("help", "prints help messages") {
 		}
 
-		inline Error execute(ArgumentReader &reader) override {
-			
-			return Error::Ok;
+		Error execute(ArgumentReader &reader) override;
+		Error get_help(ArgumentReader &reader, string &out) override;
+		inline CommandInfo get_info() const override {
+			return {
+				"help",
+				"givens help on bgnu or on other commands"
+			};
 		}
 	};
 

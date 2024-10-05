@@ -21,6 +21,19 @@ Argument &ArgumentReader::read() {
 	return m_args[index];
 }
 
+const std::string &ArgumentReader::read_or(const std::string &default_value) {
+	size_t index = _find_unused();
+
+	if (index == npos)
+	{
+		return default_value;
+	}
+
+	m_args[index].mark_used();
+
+	return m_args[index].get_value();
+}
+
 Argument *ArgumentReader::extract(const string &name) {
 	for (size_t i = 0; i < m_args.size(); i++) {
 		if (m_args[i].is_used())
@@ -48,6 +61,26 @@ Argument *ArgumentReader::extract_any(const Blob<const string> &names) {
 		return arg;
 	}
 	return nullptr;
+}
+
+bool ArgumentReader::check_flag(const string &name) {
+	Argument *arg = extract(name);
+	if (arg)
+	{
+		arg->mark_used();
+	}
+
+	return arg != nullptr;
+}
+
+bool ArgumentReader::check_flag_any(const Blob<const string> &names) {
+	Argument *arg = extract_any(names);
+	if (arg)
+	{
+		arg->mark_used();
+	}
+
+	return arg != nullptr;
 }
 
 void ArgumentReader::simplify() {
