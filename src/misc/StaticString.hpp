@@ -27,6 +27,8 @@ public:
 																	const char_type *right,
 																	size_t max_length = max_str_length);
 
+	void _set_eof();
+
 	constexpr BasicStaticString() = default;
 
 	constexpr BasicStaticString(std::nullptr_t)
@@ -139,7 +141,7 @@ public:
 		return string_type(m_data, m_length) + other;
 	}
 
-	inline auto operator+(const string_char *other) const -> decltype(string_type() + other) {
+	inline auto operator+(const char_type *other) const -> decltype(string_type() + other) {
 		return string_type(m_data, m_length) + other;
 	}
 
@@ -148,7 +150,7 @@ public:
 	// 	return left + string_type(right);
 	// }
 
-	// static inline auto operator+(const string_char *left, const this_type &right)
+	// static inline auto operator+(const char_type *left, const this_type &right)
 	// 	-> decltype(string_type() + string_type()) {
 	// 	return left + string_type(right);
 	// }
@@ -204,6 +206,52 @@ public:
 	}
 	inline constexpr const value_type *end() const {
 		return m_data + m_length;
+	}
+
+	inline this_type &append(const char_type character) {
+		if (m_length + 1 >= max_str_length)
+		{
+			throw std::length_error("append(char)");
+		}
+		m_data[m_length++] = character;
+
+		_set_eof();
+		return *this;
+	}
+
+	inline this_type &append(const char_type character, size_t count) {
+		if (m_length + 1 >= max_str_length)
+		{
+			throw std::length_error("append(char)");
+		}
+
+		const size_t space_left = max_str_length - size();
+		const size_t chars_to_add = std::min(count, space_left);
+
+		for (size_t i = 0; i < chars_to_add; i++)
+		{
+			m_data[m_length++] = character;
+		}
+
+		_set_eof();
+		return *this;
+	}
+
+	inline this_type &append(const this_type &str) {
+		if (m_length + 1 >= max_str_length)
+		{
+			throw std::length_error("append(char)");
+		}
+		const size_t space_left = max_str_length - size();
+		const size_t chars_to_add = std::min(str.length(), space_left);
+
+		for (size_t i = 0; i < chars_to_add; i++)
+		{
+			m_data[m_length++] = str[i];
+		}
+
+		_set_eof();
+		return *this;
 	}
 
 private:
@@ -278,4 +326,9 @@ inline constexpr bool BasicStaticString<_MaxLen, _T>::_equality(const char_type 
 	}
 
 	return true;
+}
+
+template<size_t _MaxLen, typename _T>
+inline void BasicStaticString<_MaxLen, _T>::_set_eof() {
+	m_data[m_length] = 0;
 }

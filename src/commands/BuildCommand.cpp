@@ -14,6 +14,7 @@
 #include <set>
 #include <thread>
 #include <mutex>
+#include <utility/ThreadBatcher.hpp>
 
 const string RebuildArgs[] = {"-r", "--rebuild"};
 const string ResaveArgs[] = {"--resave"};
@@ -31,7 +32,7 @@ static inline int64_t get_build_time() {
 }
 
 static void dump_dep_map(const dependency_map &map, const FilePath &cache_folder);
-static void dump_build_args(const std::vector<commands::BuildCommand::ExecuteParameter> &list, const FilePath &cache_folder);
+static void dump_build_args(const std::vector<build_tools::ExecuteParameter> &list, const FilePath &cache_folder);
 
 namespace commands
 {
@@ -139,14 +140,14 @@ namespace commands
 			_add_uncompiled_files(input_output_map, !is_running_rebuild(), rebuild_files);
 		}
 
-		std::vector<ExecuteParameter> build_args{};
+		std::vector<build_tools::ExecuteParameter> build_args{};
 
-		for (const FilePath &path : rebuild_files)
+		for (const FilePath &source_path : rebuild_files)
 		{
-			const FilePath &output_path = input_output_map.at(path);
-			const hash_t &hash = m_src_processor.get_file_hash(path);
+			const FilePath &output_path = input_output_map.at(source_path);
+			const hash_t &hash = m_src_processor.get_file_hash(source_path);
 
-			const FileStats file_stats = {path};
+			const FileStats file_stats = {source_path};
 
 			BuildCache::FileRecord record;
 			record.hash = hash;
@@ -154,29 +155,32 @@ namespace commands
 			record.source_write_time = file_stats.last_write_time.count();
 
 			m_new_cache.override_old_source_record(
-				path, record
+				source_path, record
 			);
 
 
 			Logger::verbose(
 				"adding \"%s\" -> \"%s\" to the build force",
-				path.c_str(), output_path.c_str()
+				source_path.c_str(), output_path.c_str()
 			);
+
+			const SourceFileType file_type = build_tools::DefaultSourceFileTypeForFilePath(source_path);
 
 			m_current_build_cfg->build_arguments(
 				build_args.emplace_back().args,
-				path.get_text(),
+				source_path.get_text(),
 				output_path.get_text(),
-				SourceFileType::CPP
+				file_type
 			);
 
-			build_args.back().name = path.c_str();
+			build_args.back().name = source_path.c_str();
+			build_args.back().flags |= build_tools::eExcFlag_Printout;
 		}
 
 		m_project.get_output().ensure_available();
 
 		Logger::debug("building objects:");
-		const auto build_results = this->_execute_build(build_args);
+		const std::vector<int> build_results = ExecuteBuild({build_args.data(), build_args.size()});
 
 		Logger::debug("writing build cache");
 		m_new_cache.fix_file_records();
@@ -187,6 +191,16 @@ namespace commands
 			build_results.size() - std::count(build_results.begin(), build_results.end(), 0);
 		if (compile_failures > 0)
 		{
+			for (size_t i = 0; i < build_results.size(); i++)
+			{
+				if (build_results[i] == 0)
+				{
+					continue;
+				}
+				const auto &execute_params = build_args[i];
+				Logger::verbose("process titled '%s' failed with error code: %d", execute_params.name.c_str(), build_results[i]);
+			}
+
 			Logger::warning(
 				"Linking will fail: %llu out of %llu builds have failed",
 				compile_failures,
@@ -196,25 +210,57 @@ namespace commands
 
 		const bool intermidiate_build_all_success = (compile_failures == 0);
 
+		const char *force_linking_setting_name = "force_linking";
+		const bool force_linking = Settings::Get(force_linking_setting_name, false).get_bool();
 
-		ExecuteParameter link_param = {};
+		build_tools::ExecuteParameter link_param = {};
 
-		if (intermidiate_build_all_success)
+		if (intermidiate_build_all_success || force_linking)
 		{
 			Logger::notify("preparing the final stage");
 			std::vector<StrBlob> link_input_files = _get_linker_inputs(input_output_map);
+
+			std::vector<SourceFileType> source_file_types{};
+
+			for (const FilePath &source_path : current_source_files) {
+				source_file_types.emplace_back(build_tools::DefaultSourceFileTypeForFilePath(source_path));
+			}
+
+			const SourceFileType dominate_file_type = build_tools::GetDominantSourceType(
+				{source_file_types.data(), source_file_types.size()}
+			);
+
+			Logger::verbose(
+				"linker dominate source file type: %s",
+				build_tools::GetSourceFileTypeName(dominate_file_type)
+			);
 
 			const FilePath output_filepath = m_project.get_output().get_result_path().resolve();
 
 			m_current_build_cfg->build_link_arguments(
 				link_param.args,
 				{link_input_files.data(), link_input_files.size()},
-				output_filepath.get_text()
+				output_filepath.get_text(),
+				dominate_file_type
 			);
 
 			link_param.name = "binary";
+			link_param.flags |= build_tools::eExcFlag_Printout;
 
-			this->_execute_build({link_param});
+			const auto linking_processes_results = ExecuteBuild({&link_param, 1});
+			const int link_result = linking_processes_results[0];
+			if (link_result != EOK)
+			{
+				Logger::error("Linking failed: error=%s [%d]", GetErrorName(link_result), link_result);
+			}
+		}
+		else
+		{
+			Logger::error("Linking not viable: intermidiate file/object compilation failed...");
+			Logger::note(
+				"* you can set the setting field '%s' to 'true' to proceed linking even if the compilation step failed",
+				force_linking_setting_name
+			);
 		}
 
 
@@ -313,6 +359,17 @@ namespace commands
 		}
 
 		return false;
+	}
+
+	std::vector<int> BuildCommand::ExecuteBuild(const Blob<const ::build_tools::ExecuteParameter> &params) {
+		const bool multithreaded = Settings::Get("build_multithreaded", false).get_bool();
+
+		if (multithreaded)
+		{
+			return build_tools::Execute_Multithreaded(params, 8);
+		}
+		return build_tools::Execute(params);
+
 	}
 
 	FilePath BuildCommand::_default_filepath() {
@@ -523,87 +580,6 @@ namespace commands
 		return FilePath(buf);
 	}
 
-	std::vector<int> BuildCommand::_execute_build(const vector<ExecuteParameter> &args) {
-		const bool flag_multithreaded = Settings::Get("build_multithreaded", false).get_bool();
-		std::thread *threads = flag_multithreaded ? new std::thread[args.size()] : nullptr;
-		vector<int> results{};
-		results.resize(args.size());
-
-		size_t executed_builds = 0;
-
-		const auto cmd = [&results, flag_multithreaded, &executed_builds, &args](const std::string cmd, const char *name, size_t index = 0)
-			{
-
-				Process process = {cmd};
-				Logger::note("building %s:", name);
-
-
-				std::ostringstream oss = {};
-				const int process_result = process.start(&oss);
-				Logger::write_raw("%s", oss.str().c_str());
-
-				Logger::verbose("build '%s' returned %d", name, GetErrorName(process_result));
-
-				results[index] = process_result;
-
-				if (flag_multithreaded)
-				{
-					executed_builds++;
-					Logger::note("completed build %llu: [%llu / %llu] builds finished", index, executed_builds, args.size());
-				}
-
-
-				return process_result;
-			};
-
-		Logger::raise_indent();
-
-		for (size_t i = 0; i < args.size(); i++)
-		{
-			std::ostringstream oss;
-
-			// TODO: use the file's source type
-			oss << FilePath::FindExecutableInPATHEnv(
-				BuildConfiguration::get_compiler_name(m_current_build_cfg->compiler_type.field(), SourceFileType::CPP)
-			);
-			oss << ' ';
-
-			for (const string &str : args[i].args)
-			{
-				oss << str << ' ';
-			}
-
-			const string command_line = oss.str();
-
-			if (flag_multithreaded)
-			{
-				threads[i] = std::thread(
-					cmd, command_line, args[i].name.c_str(), i
-				);
-			}
-			else
-			{
-				cmd(command_line, args[i].name.c_str(), i);
-			}
-		}
-
-		if (flag_multithreaded)
-		{
-			for (size_t i = 0; i < args.size(); i++)
-			{
-				threads[i].join();
-			}
-		}
-
-		Logger::debug("completed the execution of the last %llu processes", args.size());
-
-		Logger::lower_indent();
-
-		delete[] threads;
-
-		return results;
-	}
-
 	std::vector<StrBlob> BuildCommand::_get_linker_inputs(const IOMap &io_map) {
 		std::vector<StrBlob> result = {};
 
@@ -638,7 +614,7 @@ void dump_dep_map(const dependency_map &map, const FilePath &cache_folder) {
 	Logger::verbose("dumped the dependency map: size=%lld bytes", stream.tellp() - start);
 }
 
-void dump_build_args(const std::vector<commands::BuildCommand::ExecuteParameter> &list, const FilePath &cache_folder) {
+void dump_build_args(const std::vector<build_tools::ExecuteParameter> &list, const FilePath &cache_folder) {
 	FilePath output_path = cache_folder.join_path(".args");
 	std::ofstream stream = output_path.stream_write(false);
 

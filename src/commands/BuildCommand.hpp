@@ -5,6 +5,8 @@
 #include "code/SourceProcessor.hpp"
 #include "misc/StaticString.hpp"
 
+#include "BuildTools.hpp"
+
 #include <map>
 #include <set>
 
@@ -18,11 +20,6 @@ namespace commands
 	public:
 		typedef std::map<FilePath, FilePath> IOMap;
 
-		struct ExecuteParameter
-		{
-			StaticString<128> name;
-			std::vector<std::string> args;
-		};
 
 		struct FileInputOutput
 		{
@@ -61,8 +58,6 @@ namespace commands
 
 		FilePath _get_output_filepath(const FilePath &filepath, const hash_t &hash) const;
 
-		std::vector<int> _execute_build(const vector<ExecuteParameter> &params);
-
 		static std::vector<StrBlob> _get_linker_inputs(const IOMap &io_map);
 
 		static void _add_uncompiled_files(const commands::BuildCommand::IOMap &input_output_map,
@@ -71,6 +66,8 @@ namespace commands
 
 		void _add_changed_files(std::set<FilePath> &rebuild_files) const;
 		bool _try_rebuild_setup();
+
+		static std::vector<int> ExecuteBuild(const Blob<const ::build_tools::ExecuteParameter> &params);
 
 	private:
 		bool m_rebuild = false;

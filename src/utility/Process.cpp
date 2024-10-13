@@ -42,7 +42,7 @@ Process::Process(const char_type *cmd)
 
 Process::Process(const std::string &cmd)
 	: m_cmd{cmd} {
-	m_printable_cmd = _BuildPrintableCMD(m_cmd.c_str());
+	m_name = _BuildPrintableCMD(m_cmd.c_str());
 }
 
 int Process::start(std::ostream *const out) {
@@ -85,10 +85,11 @@ int Process::start(std::ostream *const out) {
 	if (!create_proc_result)
 	{
 		Logger::error(
-			"creating process '%s' error: %s",
-			m_printable_cmd.data(),
+			"creating process named '%s' error: %s",
+			m_name.c_str(),
 			Process_GetErrorMessage()
 		);
+		Logger::verbose("PROC-CMD:: %s", m_cmd.c_str());
 
 		return -1;
 	}
@@ -98,16 +99,26 @@ int Process::start(std::ostream *const out) {
 		win_process_info.hThread
 	};
 
-	const DWORD wait_ms_timeout = 1000 * 30;
+	const DWORD wait_ms_timeout = this->m_wait_time_ms;
 	const DWORD object_waiting_res = WaitForSingleObject(
-		process_info.process, wait_ms_timeout
+		process_info.thread, wait_ms_timeout
 	);
 
 	if (object_waiting_res == WAIT_FAILED)
 	{
 		Logger::warning(
 			"waiting for process '%s' for %ums error: %s",
-			m_printable_cmd.data(),
+			m_name.c_str(),
+			wait_ms_timeout,
+			Process_GetErrorMessage()
+		);
+	}
+
+	if (object_waiting_res == WAIT_TIMEOUT)
+	{
+		Logger::warning(
+			"waiting for process '%s' for %ums error: %s",
+			m_name.c_str(),
 			wait_ms_timeout,
 			Process_GetErrorMessage()
 		);
@@ -124,7 +135,7 @@ int Process::start(std::ostream *const out) {
 		{
 			Logger::error(
 				"getting exit code for process '%s' error: %s",
-				m_printable_cmd.data(),
+				m_name.c_str(),
 				Process_GetErrorMessage()
 			);
 			break;
@@ -149,30 +160,28 @@ int Process::start(std::ostream *const out) {
 	return exit_code;
 }
 
-Process::PrintableBuffer Process::_BuildPrintableCMD(const char *string) {
-	PrintableBuffer output = {};
+Process::ProcessName Process::_BuildPrintableCMD(const char *string) {
+	ProcessName output = {};
 	constexpr size_t max_copy_length = PrintableCMDLength - 3;
 
 	for (size_t i = 0; i < max_copy_length; i++)
 	{
-		output[i] = string[i];
-
 		if (string[i] == 0)
 		{
 			return output;
 		}
 
+		output.append(string[i]);
+
+
+
 		if (i == max_copy_length - 1)
 		{
-			output[++i] = '.';
-			output[++i] = '.';
-			output[++i] = '.';
-			output[++i] = 0;
+			output.append('.', 3);
+
 		}
 	}
-
-	memcpy(output.data(), string, max_copy_length);
-	output[PrintableCMDLength] = 0;
+	
 	return output;
 }
 

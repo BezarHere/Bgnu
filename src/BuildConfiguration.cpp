@@ -104,6 +104,12 @@ struct BuildConfigurationReader
 };
 
 
+void BuildConfiguration::_put_compiler(vector<string> &output, SourceFileType source_type) const {
+	output.emplace_back(
+		BuildConfiguration::get_compiler_name(this->compiler_type.field(), source_type)
+	);
+}
+
 void BuildConfiguration::_put_predefines(vector<string> &output) const {
 	for (const auto &[name, value] : predefines.field())
 	{
@@ -285,6 +291,8 @@ void BuildConfiguration::_put_libraries(vector<string> &output) const {
 void BuildConfiguration::build_arguments(vector<string> &output,
 																				 const StrBlob &input_file, const StrBlob &output_file,
 																				 SourceFileType type) const {
+	_put_compiler(output, type);
+
 	_put_predefines(output);
 
 	_put_optimization(output);
@@ -312,11 +320,14 @@ void BuildConfiguration::build_arguments(vector<string> &output,
 
 void BuildConfiguration::build_link_arguments(vector<string> &output,
 																							const Blob<const StrBlob> &files,
-																							const StrBlob &ouput_file) const {
+																							const StrBlob &ouput_file,
+																							SourceFileType type) const {
+	_put_compiler(output, type);
+
 	_put_predefines(output);
 
 	_put_optimization(output);
-	_put_standards(output, SourceFileType::None);
+	_put_standards(output, type);
 	_put_warnings(output);
 	_put_misc(output);
 
@@ -864,10 +875,11 @@ const string_char *BuildConfiguration::get_compiler_name(CompilerType type, Sour
 	{
 		switch (file_type)
 		{
-		case SourceFileType::CPP:
-			return "g++";
-		default:
+		case SourceFileType::C:
 			return "gcc";
+		case SourceFileType::CPP:
+		default:
+			return "g++";
 		}
 	}
 

@@ -1,6 +1,8 @@
 #pragma once
 #include "Blob.hpp"
 
+// does not apply the assignment, copy or move operators of the underlying type
+// only cares for the memory block that it holds
 class Buffer
 {
 public:

@@ -1,13 +1,14 @@
 #pragma once
+#include "misc/StaticString.hpp"
 #include <array>
 #include <string>
 
 class Process
 {
 public:
-	static constexpr size_t PrintableCMDLength = 31;
+	static constexpr size_t PrintableCMDLength = 63;
 	typedef char char_type;
-	typedef std::array<char_type, PrintableCMDLength + 1> PrintableBuffer;
+	typedef StaticString<PrintableCMDLength> ProcessName;
 
 	Process(int argc, const char_type *const *argv);
 	Process(const char_type *cmd);
@@ -15,14 +16,19 @@ public:
 
 	int start(std::ostream *out = nullptr);
 
-	inline const char_type *get_printable_cmd() const {
-		return m_printable_cmd.data();
+	inline const ProcessName &get_name() const {
+		return m_name;
+	}
+
+	inline void set_name(const ProcessName &name) {
+		m_name = name;
 	}
 
 private:
-	static PrintableBuffer _BuildPrintableCMD(const char *string);
+	static ProcessName _BuildPrintableCMD(const char *string);
 
 private:
 	std::string m_cmd;
-	PrintableBuffer m_printable_cmd = {0};
+	ProcessName m_name = {};
+	unsigned long m_wait_time_ms = 1000 * 60; // 1 minutes
 };

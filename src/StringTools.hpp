@@ -363,4 +363,31 @@ namespace string_tools
 		}
 		return npos;
 	}
+
+	template <typename Predicate>
+	static inline constexpr size_t find_last(const char_type *str, const size_t max_length, Predicate &&pred) {
+		size_t last_find = npos;
+		for (size_t i = 0; i < max_length; i++)
+		{
+			if (pred(str[i]))
+			{
+				last_find = i;
+			}
+
+			if (str[i] == 0)
+			{
+				break;
+			}
+		}
+
+		return last_find;
+	}
+
+	static inline constexpr size_t find(const char_type *str, char_type chr, const size_t max_length) {
+		return find(str, max_length, [chr](char_type chr2) {return chr == chr2;});
+	}
+
+	static inline constexpr size_t find_last(const char_type *str, char_type chr, const size_t max_length) {
+		return find_last(str, max_length, [chr](char_type chr2) {return chr == chr2;});
+	}
 };

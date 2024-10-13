@@ -109,6 +109,8 @@ struct BuildConfiguration
 {
 	inline BuildConfiguration() {}
 
+	void _put_compiler(vector<string> &output, SourceFileType source_type) const;
+
 	void _put_predefines(vector<string> &output) const;
 	void _put_flags(vector<string> &output) const;
 
@@ -127,7 +129,8 @@ struct BuildConfiguration
 											 const StrBlob &output_file, SourceFileType type) const;
 
 	void build_link_arguments(vector<string> &output,
-														const Blob<const StrBlob> &files, const StrBlob &ouput_file) const;
+														const Blob<const StrBlob> &files,
+														const StrBlob &ouput_file, SourceFileType type) const;
 
 	hash_t hash() const;
 
