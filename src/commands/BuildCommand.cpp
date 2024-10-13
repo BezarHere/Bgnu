@@ -175,6 +175,7 @@ namespace commands
 
 			build_args.back().name = source_path.c_str();
 			build_args.back().flags |= build_tools::eExcFlag_Printout;
+			build_args.back().out = &std::cout;
 		}
 
 		m_project.get_output().ensure_available();
@@ -246,6 +247,7 @@ namespace commands
 
 			link_param.name = "binary";
 			link_param.flags |= build_tools::eExcFlag_Printout;
+			link_param.out = &std::cout;
 
 			const auto linking_processes_results = ExecuteBuild({&link_param, 1});
 			const int link_result = linking_processes_results[0];
@@ -395,8 +397,9 @@ namespace commands
 			arg_value_prefix_check
 		);
 
+		const string default_input_file = "";
 		const string &input_file_str = Argument::try_get_value(
-			argument
+			argument, default_input_file
 		);
 
 		Logger::verbose("input file string = \"%s\"", input_file_str.c_str());

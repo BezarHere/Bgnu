@@ -102,7 +102,7 @@ errno_t build_tools::_Execute_Inner(const Blob<const std::string> &args, const B
 		if (HAS_FLAG(param.flags, eExcFlag_Printout))
 		{
 			Logger::notify(
-				"executing '%s' resulted in code %s [%llu / %llu]",
+				"executing '%s' resulted in code %d [%llu / %llu]",
 				param.name.c_str(), results[i], i, args.size
 			);
 		}
