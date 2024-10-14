@@ -165,6 +165,11 @@ namespace commands
 			);
 
 			const SourceFileType file_type = build_tools::DefaultSourceFileTypeForFilePath(source_path);
+			Logger::verbose(
+				"source file type for '%s': %s",
+				source_path.c_str(),
+				build_tools::GetSourceFileTypeName(file_type)
+			);
 
 			m_current_build_cfg->build_arguments(
 				build_args.emplace_back().args,
@@ -181,7 +186,31 @@ namespace commands
 		m_project.get_output().ensure_available();
 
 		Logger::debug("building objects:");
+
+		// diverting build output to independent stream, avoid parallel output shenanigans
+		std::unique_ptr<std::ostringstream[]> build_output_streams{new std::ostringstream[build_args.size()]{}};
+
+		// setting up
+		for (size_t i = 0; i < build_args.size(); i++)
+		{
+			build_args[i].out = build_output_streams.get() + i;
+		}
+
+		// building
 		const std::vector<int> build_results = ExecuteBuild({build_args.data(), build_args.size()});
+
+		// unloading
+		for (size_t i = 0; i < build_args.size(); i++)
+		{
+			Logger::notify("'%s' output: ", build_args[i].name.c_str());
+
+			Logger::raise_indent();
+			Logger::write_raw("%s", build_output_streams.get()[i].str().c_str());
+			Logger::lower_indent();
+		}
+
+		// clearing
+		build_output_streams.reset(nullptr);
 
 		Logger::debug("writing build cache");
 		m_new_cache.fix_file_records();
@@ -247,10 +276,17 @@ namespace commands
 
 			link_param.name = "binary";
 			link_param.flags |= build_tools::eExcFlag_Printout;
-			link_param.out = &std::cout;
+
+			std::ostringstream link_out{};
+			link_param.out = &link_out;
 
 			const auto linking_processes_results = ExecuteBuild({&link_param, 1});
 			const int link_result = linking_processes_results[0];
+
+			Logger::raise_indent();
+			Logger::write_raw("%s", link_out.str().c_str());
+			Logger::lower_indent();
+
 			if (link_result != EOK)
 			{
 				Logger::error("Linking failed: error=%s [%d]", GetErrorName(link_result), link_result);

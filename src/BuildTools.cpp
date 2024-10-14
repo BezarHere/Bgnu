@@ -207,7 +207,7 @@ SourceFileType build_tools::DefaultSourceFileTypeForExtension(FilePath::string_b
 	};
 
 #define CHECK_EXT(type, ext_list) for (size_t i = 0; i < std::size(ext_list); i++) \
-{if (string_tools::equal_insensitive(extension.data, ext_list[i], extension.size)) { return type; } }
+{if (string_tools::equal_insensitive(extension.data, (ext_list)[i])) { return type; } }
 
 	CHECK_EXT(SourceFileType::CPP, CPPExtensions);
 	CHECK_EXT(SourceFileType::C, CExtensions);

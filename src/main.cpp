@@ -19,7 +19,7 @@ int main(int argc, const char *argv[]) {
 		chrono::steady_clock::now() - pre_run_time
 	);
 
-	Logger::debug(
+	Logger::write_raw(
 		"-- run time: %.2fs --",
 		(float)run_time.count() / (float)decltype(run_time)::period::den
 	);
