@@ -1,0 +1,44 @@
+build_configurations = {
+  release = {
+    standard = "c++17"
+    exit_on_errors = true
+    preprocessor_args = []
+    library_names = []
+    assembler_args = []
+    linker_args = []
+    include_directories = []
+    predefines = {
+    }
+    dynamically_linkable = true
+    warnings:level = all
+    warnings:pedantic = false
+    optimization:degree = high
+    print_stats = false
+    simd_type = "AVX2"
+    library_directories = []
+    print_includes = false
+  }
+  debug = {
+    standard = "c++17"
+    exit_on_errors = true
+    preprocessor_args = []
+    library_names = []
+    assembler_args = []
+    linker_args = []
+    include_directories = []
+    predefines = {
+    }
+    dynamically_linkable = true
+    warnings:level = all
+    warnings:pedantic = false
+    optimization:degree = high
+    print_stats = false
+    simd_type = "AVX2"
+    library_directories = []
+    print_includes = false
+  }
+}
+output:dir = out
+output:name = "out/main"
+output:cache_dir = "out/cache/"
+source_selectors = ["**/*.c", "**/*.cpp", "**/*.cc", "**/*.cxx", ]

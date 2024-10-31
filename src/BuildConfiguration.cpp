@@ -764,6 +764,7 @@ constexpr NamedEnum<StandardType> StandardTypeNames[] = {
 	NamedEnum{StandardType::C11, "c11"},
 	NamedEnum{StandardType::C14, "c14"},
 	NamedEnum{StandardType::C17, "c17"},
+	NamedEnum{StandardType::C23, "c2x"}, // c2x SHOULD ALWAYS PRECEDE C23 SO IT CAN BE CHOSEN AS THE NAME OF C23
 	NamedEnum{StandardType::C23, "c23"},
 
 	NamedEnum{StandardType::Cpp11, "c++11"},

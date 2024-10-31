@@ -1,0 +1,62 @@
+{
+    "output_dir": "output",
+    "output_cache_dir": "output\\cache",
+    "output_name": "output",
+    "source_selectors": [
+        "**/*.c",
+        "**/*.cpp",
+        "**/*.cc",
+        "**/*.cxx"
+    ],
+    "build_configurations": {
+        "debug": {
+            "predefines": {
+                "_DEBUG": null
+            },
+            "optimization_lvl": "low",
+            "optimization_type": "raw_debug",
+            "standard": "c++20",
+            "warning_level": "all",
+            "warning_pedantic": false,
+            "print_includes": false,
+            "catch_typos": true,
+            "exit_on_errors": true,
+            "dynamically_linkable": true,
+            "print_stats": true,
+            "simd_type": "avx2",
+            "include_dirs": [
+                "src/"
+            ],
+            "lib_dirs": [],
+            "lib_names": [],
+            "assembler_args": [],
+            "linker_args": [],
+            "preprocessor_args": []
+        },
+        "release": {
+            "predefines": {
+                "NDEBUG": null,
+                "_RELEASE": null
+            },
+            "optimization_lvl": "extreme",
+            "optimization_type": "speed",
+            "standard": "c++20",
+            "warning_level": "all",
+            "warning_pedantic": false,
+            "print_includes": false,
+            "catch_typos": true,
+            "exit_on_errors": true,
+            "dynamically_linkable": true,
+            "print_stats": true,
+            "simd_type": "sse",
+            "include_dirs": [
+                "src/"
+            ],
+            "lib_dirs": [],
+            "lib_names": [],
+            "assembler_args": [],
+            "linker_args": [],
+            "preprocessor_args": []
+        }
+    }
+}

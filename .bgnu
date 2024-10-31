@@ -1,51 +1,46 @@
-output_dir: "out"
-output_cache_dir: "out/cache"
-source_selectors: ["**/*.c", "**/*.cpp", "**/*.cc", "**/*.cxx", ]
-output_name: output
-build_configurations: {
-  debug: {
-    dynamically_linkable: true
-    catch_typos: true
-    optimization_type: debug
-    include_dirs: ["include", "src/"]
-    preprocessor_args: []
-    linker_args: []
-    lib_dirs: ["../library"]
-    assembler_args: []
-    lib_names: [ ]
-    predefines: {
-      _DEBUG: null
+build_configurations = {
+  release = {
+    standard = "c++20"
+    exit_on_errors = true
+    preprocessor_args = []
+    library_names = []
+    assembler_args = []
+    linker_args = []
+    include_directories = ["src"]
+    predefines = {
     }
-    exit_on_errors: true
-    optimization_lvl: high
-    warning_pedantic: false
-    warning_level: all
-    standard: C++20
-    print_stats: true
-    simd_type: AVX
-    print_includes: false
+    dynamically_linkable = true
+    warnings:level = all
+    warnings:pedantic = false
+    optimization:type = release
+    optimization:degree = high
+    print_stats = false
+    simd_type = "AVX2"
+    library_directories = []
+    print_includes = false
   }
-  release: {
-    dynamically_linkable: true
-    catch_typos: true
-    optimization_type: speed
-    include_dirs: ["include", "src/"]
-    preprocessor_args: []
-    linker_args: []
-    lib_dirs: ["../library"]
-    assembler_args: []
-    lib_names: [ ]
-    predefines: {
-      NDEBUG: null
-      _RELEASE: null
+  debug = {
+    standard = "c++20"
+    exit_on_errors = true
+    preprocessor_args = []
+    library_names = []
+    assembler_args = []
+    linker_args = []
+    include_directories = ["src"]
+    predefines = {
     }
-    exit_on_errors: true
-    optimization_lvl: extreme
-    warning_pedantic: false
-    warning_level: all
-    standard: c++20
-    print_stats: true
-    simd_type: sse
-    print_includes: false
+    dynamically_linkable = true
+    warnings:level = all
+    warnings:pedantic = false
+    optimization:type = debug
+    optimization:degree = high
+    print_stats = false
+    simd_type = "AVX2"
+    library_directories = []
+    print_includes = false
   }
 }
+output:dir = out
+output:name = "main"
+output:cache_dir = "out/cache/"
+source_selectors = ["**/*.c", "**/*.cpp", "**/*.cc", "**/*.cxx", ]

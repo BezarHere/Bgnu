@@ -13,6 +13,7 @@ int Startup::start(ArgumentReader reader) {
 
 	StartupMessage();
 	Settings::Init();
+	Settings::SaveBackup();
 
 	if (reader.empty())
 	{
@@ -66,6 +67,13 @@ int Startup::start(ArgumentReader reader) {
 	if (error != Error::Ok)
 	{
 		Logger::error("Command '%s' failed, returned error %d", to_cstr(command->name), (int)error);
+	}
+	else
+	{
+		const bool temp = Settings::s_SilentSaveFail;
+		Settings::s_SilentSaveFail = true;
+		Settings::Save(true);
+		Settings::s_SilentSaveFail = temp;
 	}
 
 	return (int)error;

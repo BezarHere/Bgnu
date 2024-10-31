@@ -131,8 +131,8 @@ errno_t build_tools::_ExecuteParallel_Inner(const Blob<const std::string> &args,
 		if (HAS_FLAG(param.flags, eExcFlag_Printout))
 		{
 			Logger::notify(
-				"executing '%s' resulted in code %d [%llu / %llu]",
-				param.name.c_str(), result, (size_t)progress_index, args.size
+				"executing '%s' resulted in %s [%d] [%llu / %llu]",
+				param.name.c_str(), GetErrorName(result), result, (size_t)progress_index, args.size
 			);
 		}
 

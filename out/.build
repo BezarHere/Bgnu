@@ -1,150 +1,135 @@
-file_records: {
-  "out/cache/Startup.41CCBE06.o": {
-    hash: 3956519720945761798
-    last_source_write_time: 333398388935
-    build_time: 333398388935
-    source_file: "F:/gcc/bgnu/src/Startup.cpp"
+file_records = {
+  "F:/gcc/bgnu/src/utility/FileStats.cpp" = {
+    hash = "1B11A42721B2DEA4"
+    source_write_time = 133719912388174638
+    output_path = "out/cache/FileStats.1B11A42721B2DEA4.o"
   }
-  "out/cache/SourceTools.FA99DEB1.o": {
-    hash: 495510286360241
-    last_source_write_time: 333398388931
-    build_time: 333398388931
-    source_file: "F:/gcc/bgnu/src/SourceTools.cpp"
+  "F:/gcc/bgnu/src/main.cpp" = {
+    hash = F9BCA03ED49E4FC7
+    source_write_time = 133733827360943399
+    output_path = "out/cache/main.F9BCA03ED49E4FC7.o"
   }
-  "out/cache/Process.F1EAB02B.o": {
-    hash: 3533768799020908544
-    last_source_write_time: 2076035776512
-    build_time: 2076035776512
-    source_file: "F:/gcc/bgnu/src/utility/Process.cpp"
+  "F:/gcc/bgnu/src/commands/NewCommand.cpp" = {
+    hash = AD169922534DABCD
+    source_write_time = 133726116847778588
+    output_path = "out/cache/NewCommand.AD169922534DABCD.o"
   }
-  "out/cache/Process.E70C6D1F.o": {
-    hash: 5988975325668470047
-    last_source_write_time: 333398388975
-    build_time: 333398388975
-    source_file: "F:/gcc/bgnu/src/utility/Process.cpp"
+  "F:/gcc/bgnu/src/commands/HelpCommand.cpp" = {
+    hash = CE4AE0524F714E01
+    source_write_time = 133726085060585248
+    output_path = "out/cache/HelpCommand.CE4AE0524F714E01.o"
   }
-  "out/cache/Settings.EC339271.o": {
-    hash: 5936034807245148785
-    last_source_write_time: 333398388928
-    build_time: 333398388928
-    source_file: "F:/gcc/bgnu/src/Settings.cpp"
+  "F:/gcc/bgnu/src/commands/BuildCommand.cpp" = {
+    hash = FE53A0B15B87B17
+    source_write_time = 133733826531055988
+    output_path = "out/cache/BuildCommand.FE53A0B15B87B17.o"
   }
-  "out/cache/Glob.ACC429D.o": {
-    hash: -991020572720483
-    last_source_write_time: 333398388907
-    build_time: 333398388907
-    source_file: "F:/gcc/bgnu/src/Glob.cpp"
+  "F:/gcc/bgnu/src/code/CodeTokenizer.cpp" = {
+    hash = "53B8B3882E692274"
+    source_write_time = 133645041720684285
+    output_path = "out/cache/CodeTokenizer.53B8B3882E692274.o"
   }
-  "out/cache/Command.FA99DEB1.o": {
-    hash: 495510286360241
-    last_source_write_time: 333398388889
-    build_time: 333398388888
-    source_file: "F:/gcc/bgnu/src/Command.cpp"
+  "F:/gcc/bgnu/src/code/CPreprocessor.cpp" = {
+    hash = FE1258604FAFB51F
+    source_write_time = 133713230391361013
+    output_path = "out/cache/CPreprocessor.FE1258604FAFB51F.o"
   }
-  "out/cache/BuildCache.1C2A9FA9.o": {
-    hash: -7067537597569261655
-    last_source_write_time: 333398388876
-    build_time: 333398388876
-    source_file: "F:/gcc/bgnu/src/BuildCache.cpp"
+  "F:/gcc/bgnu/src/code/SourceProcessor.cpp" = {
+    hash = B1F57D0653CAC1D
+    source_write_time = 133719260384424045
+    output_path = "out/cache/SourceProcessor.B1F57D0653CAC1D.o"
   }
-  "out/cache/CodeTokenizer.FA99DEB1.o": {
-    hash: 495510286360241
-    last_source_write_time: 333398388955
-    build_time: 333398388955
-    source_file: "F:/gcc/bgnu/src/code/CodeTokenizer.cpp"
+  "F:/gcc/bgnu/src/StringTools.cpp" = {
+    hash = "67024E8F3D7494B9"
+    source_write_time = 133721652403664581
+    output_path = "out/cache/StringTools.67024E8F3D7494B9.o"
   }
-  "out/cache/BuildCommand.1494FA8F.o": {
-    hash: 7583001293526925312
-    last_source_write_time: 186435469312
-    build_time: 186435469312
-    source_file: "F:/gcc/bgnu/src/commands/BuildCommand.cpp"
+  "F:/gcc/bgnu/src/SourceTools.cpp" = {
+    hash = "595FB7D54956B0AC"
+    source_write_time = 133645057568316235
+    output_path = "out/cache/SourceTools.595FB7D54956B0AC.o"
   }
-  "out/cache/main.F1EAB02B.o": {
-    hash: 3533768798784630827
-    last_source_write_time: 333398388972
-    build_time: 333398388972
-    source_file: "F:/gcc/bgnu/src/main.cpp"
+  "F:/gcc/bgnu/src/Argument.cpp" = {
+    hash = F7E9F2A805C0B632
+    source_write_time = 133726091323529161
+    output_path = "out/cache/Argument.F7E9F2A805C0B632.o"
   }
-  "out/cache/FilePath.E70C6D1F.o": {
-    hash: 5988975325668470047
-    last_source_write_time: 333398388903
-    build_time: 333398388903
-    source_file: "F:/gcc/bgnu/src/FilePath.cpp"
+  "F:/gcc/bgnu/src/BuildCache.cpp" = {
+    hash = "20740BE10FB21056"
+    source_write_time = 133724374087404646
+    output_path = "out/cache/BuildCache.20740BE10FB21056.o"
   }
-  "out/cache/BuildCommand.1E22BF5B.o": {
-    hash: 6353317617060724571
-    last_source_write_time: 333398388963
-    build_time: 333398388963
-    source_file: "F:/gcc/bgnu/src/commands/BuildCommand.cpp"
+  "F:/gcc/bgnu/src/Startup.cpp" = {
+    hash = "235E080FBE85B9F7"
+    source_write_time = 133748402933988965
+    output_path = "out/cache/Startup.235E080FBE85B9F7.o"
   }
-  "out/cache/BuildCommand.55342ACE.o": {
-    hash: 4903118172439183360
-    last_source_write_time: 2076035776512
-    build_time: 2076035776512
-    source_file: "F:/gcc/bgnu/src/commands/BuildCommand.cpp"
+  "F:/gcc/bgnu/src/BuildConfiguration.cpp" = {
+    hash = "54397711330F8EDA"
+    source_write_time = 133748406119606803
+    output_path = "out/cache/BuildConfiguration.54397711330F8EDA.o"
   }
-  "out/cache/Argument.FA99DEB1.o": {
-    hash: 495510286360241
-    last_source_write_time: 333398388866
-    build_time: 333398388866
-    source_file: "F:/gcc/bgnu/src/Argument.cpp"
+  "F:/gcc/bgnu/src/Glob.cpp" = {
+    hash = "1EACB1EFBF964D27"
+    source_write_time = 133713230391361013
+    output_path = "out/cache/Glob.1EACB1EFBF964D27.o"
   }
-  "out/cache/BuildConfiguration.D7A86B0E.o": {
-    hash: -1905253295683245298
-    last_source_write_time: 333398388880
-    build_time: 333398388880
-    source_file: "F:/gcc/bgnu/src/BuildConfiguration.cpp"
+  "F:/gcc/bgnu/src/BuildTools.cpp" = {
+    hash = "7066035D7512C16E"
+    source_write_time = 133748406180025268
+    output_path = "out/cache/BuildTools.7066035D7512C16E.o"
   }
-  "out/cache/SourceProcessor.B199222A.o": {
-    hash: -3957017293118430678
-    last_source_write_time: 333398388960
-    build_time: 333398388959
-    source_file: "F:/gcc/bgnu/src/code/SourceProcessor.cpp"
+  "F:/gcc/bgnu/src/utility/Process.cpp" = {
+    hash = "559ADBD08B8223DD"
+    source_write_time = 133730536795082481
+    output_path = "out/cache/Process.559ADBD08B8223DD.o"
   }
-  "out/cache/Project.7A326B46.o": {
-    hash: -4591070044507444410
-    last_source_write_time: 333398388924
-    build_time: 333398388924
-    source_file: "F:/gcc/bgnu/src/Project.cpp"
+  "F:/gcc/bgnu/src/Logger.cpp" = {
+    hash = F668B4004EB0D701
+    source_write_time = 133724436287028857
+    output_path = "out/cache/Logger.F668B4004EB0D701.o"
   }
-  "out/cache/Logger.1BF2C07.o": {
-    hash: -3533126709970785273
-    last_source_write_time: 333398388911
-    build_time: 333398388911
-    source_file: "F:/gcc/bgnu/src/Logger.cpp"
+  "F:/gcc/bgnu/src/Command.cpp" = {
+    hash = "62B972E6BBE2594C"
+    source_write_time = 133713230391331079
+    output_path = "out/cache/Command.62B972E6BBE2594C.o"
   }
-  "out/cache/CPreprocessor.E740FCEB.o": {
-    hash: 7163746389770435819
-    last_source_write_time: 333398388939
-    build_time: 333398388938
-    source_file: "F:/gcc/bgnu/src/code/CPreprocessor.cpp"
+  "F:/gcc/bgnu/src/Console.cpp" = {
+    hash = "33771B8DD241943F"
+    source_write_time = 133612509008191755
+    output_path = "out/cache/Console.33771B8DD241943F.o"
   }
-  "out/cache/Console.AC400070.o": {
-    hash: -6161304207275065232
-    last_source_write_time: 333398388892
-    build_time: 333398388892
-    source_file: "F:/gcc/bgnu/src/Console.cpp"
+  "F:/gcc/bgnu/src/FieldDataReader.cpp" = {
+    hash = "3EF20AAC57DF8824"
+    source_write_time = 133610084110504348
+    output_path = "out/cache/FieldDataReader.3EF20AAC57DF8824.o"
   }
-  "out/cache/CMDTools.FA99DEB1.o": {
-    hash: 495510286360241
-    last_source_write_time: 333398388885
-    build_time: 333398388884
-    source_file: "F:/gcc/bgnu/src/CMDTools.cpp"
+  "F:/gcc/bgnu/src/FieldFile.cpp" = {
+    hash = D23A9D334B48918C
+    source_write_time = 133726188832075633
+    output_path = "out/cache/FieldFile.D23A9D334B48918C.o"
   }
-  "out/cache/FieldDataReader.F1EAB02B.o": {
-    hash: 3533768798784630827
-    last_source_write_time: 333398388896
-    build_time: 333398388896
-    source_file: "F:/gcc/bgnu/src/FieldDataReader.cpp"
+  "F:/gcc/bgnu/src/Settings.cpp" = {
+    hash = A10C4323871D781A
+    source_write_time = 133748403371786184
+    output_path = "out/cache/Settings.A10C4323871D781A.o"
   }
-  "out/cache/FieldFile.EC7F0385.o": {
-    hash: 7068021408600621957
-    last_source_write_time: 333398388899
-    build_time: 333398388899
-    source_file: "F:/gcc/bgnu/src/FieldFile.cpp"
+  "F:/gcc/bgnu/src/FilePath.cpp" = {
+    hash = E8E102ADB7349781
+    source_write_time = 133719191882543386
+    output_path = "out/cache/FilePath.E8E102ADB7349781.o"
+  }
+  "F:/gcc/bgnu/src/CMDTools.cpp" = {
+    hash = E7C20EECCB923152
+    source_write_time = 133645808870937025
+    output_path = "out/cache/CMDTools.E7C20EECCB923152.o"
+  }
+  "F:/gcc/bgnu/src/Project.cpp" = {
+    hash = A270C0110CDA397C
+    source_write_time = 133726125739756264
+    output_path = "out/cache/Project.A270C0110CDA397C.o"
   }
 }
-include_dir_hash: 0
-library_hash: 0
-config_hash: -5325370409096486507
-build_hash: 2690699538969106764
+build_time = 1351759449970
+config_hash = 7101463899230835093
+build_hash = -5322049633986564258

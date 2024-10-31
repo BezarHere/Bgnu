@@ -1,6 +1,7 @@
 #pragma once
 #include "Logger.hpp"
 #include "FieldVar.hpp"
+#include "FilePath.hpp"
 
 struct SettingValue {
 	FieldVar value = nullptr;
@@ -20,11 +21,16 @@ public:
 	static BGnuVersion GetVersion();
 
 	static errno_t Init();
+	static errno_t Save(bool overwrite);
+	static errno_t SaveBackup();
+	static errno_t SaveTo(const FilePath &path, bool overwrite);
 
 	static const FieldVar &Get(const std::string &name, const FieldVar &default_val = {});
 	static void Set(const std::string &name, const FieldVar &value);
 	static const FieldVar &Reset(const std::string &name);
 
+	// defaults to false
+	static bool s_SilentSaveFail;
 private:
 	Settings() = delete;
 	~Settings() = delete;
