@@ -401,10 +401,11 @@ namespace commands
 
 	std::vector<int> BuildCommand::ExecuteBuild(const Blob<const ::build_tools::ExecuteParameter> &params) {
 		const bool multithreaded = Settings::Get("build_multithreaded", false).get_bool();
+		const int64_t threads_count = Settings::Get("build_jobs_count", (FieldVar::Int)8).get_int();
 
 		if (multithreaded)
 		{
-			return build_tools::Execute_Multithreaded(params, 8);
+			return build_tools::Execute_Multithreaded(params, threads_count);
 		}
 		return build_tools::Execute(params);
 

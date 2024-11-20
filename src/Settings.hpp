@@ -31,6 +31,9 @@ public:
 
 	// defaults to false
 	static bool s_SilentSaveFail;
+
+	// defaults to true, when getting a value, adds the value if it's not present (to the default)
+	static bool s_AddRequestValues;
 private:
 	Settings() = delete;
 	~Settings() = delete;

@@ -27,6 +27,7 @@ static const SettingValue DefaultValue = {nullptr, nullptr};
 SettingsData g_SettingsData = {0};
 
 bool Settings::s_SilentSaveFail = false;
+bool Settings::s_AddRequestValues = true;
 
 static inline errno_t AddField(const std::string &name, const SettingValue &value, bool base_val = true);
 static inline const FieldVar &GetSettingInnerValue(const std::string &name, const FieldVar &def_val);
@@ -129,6 +130,15 @@ inline const FieldVar &GetSettingInnerValue(const std::string &name, const Field
 	}
 
 	Logger::verbose("no setting field with the name '%s'", name.c_str());
+
+	if (Settings::s_AddRequestValues)
+	{
+		Logger::verbose("adding setting field '%s'", name.c_str());
+		SettingValue value = {};
+		value.value = def_val;
+		value.default_value = def_val;
+		AddField(name, value);
+	}
 
 	return def_val;
 }
