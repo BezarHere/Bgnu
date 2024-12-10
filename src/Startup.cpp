@@ -131,6 +131,6 @@ void StartupMessage() {
 	);
 
 	Logger::notify(
-		"Zahr abdullatif babker (@Bezar/@BezarHere) (C) 2024"
+		"Zahr abdullatif babker (@Bezar/@BezarHere) (C) 2024 - 2025"
 	);
 }
