@@ -87,6 +87,7 @@ struct OptimizationInfo
 
 	NField<OptimizationType> type = {"type", OptimizationType::Release};
 	NField<OptimizationDegree> degree = {"degree", OptimizationDegree::High};
+	NField<bool> debug_optimizing = {"debug_optimizing-Og", false};
 };
 
 struct WarningReportInfo

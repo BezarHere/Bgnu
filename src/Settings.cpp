@@ -12,6 +12,7 @@ static constexpr BGnuVersion BGnuVersionHistory[] = {
 	{1, 2, 0},
 	{1, 2, 1},
 	{1, 2, 2},
+	{1, 2, 3},
 };
 
 struct SettingsData

@@ -20,9 +20,9 @@ file_records = {
     output_path = "out/cache/HelpCommand.CE4AE0524F714E01.o"
   }
   "F:/gcc/bgnu/src/commands/BuildCommand.cpp" = {
-    hash = FE53A0B15B87B17
-    source_write_time = 133733826531055988
-    output_path = "out/cache/BuildCommand.FE53A0B15B87B17.o"
+    hash = "37D603A83E7C9B2D"
+    source_write_time = 133748413342525685
+    output_path = "out/cache/BuildCommand.37D603A83E7C9B2D.o"
   }
   "F:/gcc/bgnu/src/code/CodeTokenizer.cpp" = {
     hash = "53B8B3882E692274"
@@ -60,9 +60,9 @@ file_records = {
     output_path = "out/cache/BuildCache.20740BE10FB21056.o"
   }
   "F:/gcc/bgnu/src/Startup.cpp" = {
-    hash = "235E080FBE85B9F7"
+    hash = "76AAEC7BE8C96DEA"
     source_write_time = 133748402933988965
-    output_path = "out/cache/Startup.235E080FBE85B9F7.o"
+    output_path = "out/cache/Startup.76AAEC7BE8C96DEA.o"
   }
   "F:/gcc/bgnu/src/BuildConfiguration.cpp" = {
     hash = "54397711330F8EDA"
@@ -80,9 +80,9 @@ file_records = {
     output_path = "out/cache/BuildTools.7066035D7512C16E.o"
   }
   "F:/gcc/bgnu/src/utility/Process.cpp" = {
-    hash = "559ADBD08B8223DD"
+    hash = "6E3FA4DDCEF7C0"
     source_write_time = 133730536795082481
-    output_path = "out/cache/Process.559ADBD08B8223DD.o"
+    output_path = "out/cache/Process.6E3FA4DDCEF7C0.o"
   }
   "F:/gcc/bgnu/src/Logger.cpp" = {
     hash = F668B4004EB0D701
@@ -110,9 +110,9 @@ file_records = {
     output_path = "out/cache/FieldFile.D23A9D334B48918C.o"
   }
   "F:/gcc/bgnu/src/Settings.cpp" = {
-    hash = A10C4323871D781A
-    source_write_time = 133748403371786184
-    output_path = "out/cache/Settings.A10C4323871D781A.o"
+    hash = "9B226B4DA52AC50F"
+    source_write_time = 133748411710832744
+    output_path = "out/cache/Settings.9B226B4DA52AC50F.o"
   }
   "F:/gcc/bgnu/src/FilePath.cpp" = {
     hash = E8E102ADB7349781
@@ -130,6 +130,6 @@ file_records = {
     output_path = "out/cache/Project.A270C0110CDA397C.o"
   }
 }
-build_time = 1351759449970
-config_hash = 7101463899230835093
+build_time = 1352358893352
+config_hash = -1975646719237877356
 build_hash = -5322049633986564258

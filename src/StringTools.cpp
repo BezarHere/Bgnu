@@ -23,12 +23,12 @@ size_t string_tools::MBStrLength(const string_char *str, const size_t max_length
 	{
 		if (str[i + offset] == 0)
 		{
-			printf("found length=%llu [%llu]\n", i, offset);
+			Logger::verbose("MBStrLength: found length=%llu [%llu]\n", i, offset);
 			return i;
 		}
 
 		offset += MBCLength(str[i + offset]) - 1;
 	}
-	printf("reached max=%llu\n", max_length - offset);
+	Logger::verbose("MBStrLength: reached max=%llu\n", max_length - offset);
 	return max_length - offset;
 }

@@ -385,14 +385,14 @@ namespace commands
 
 		if (!m_new_cache.is_compatible_with(m_build_cache))
 		{
-			Logger::notify("older build's cache is invalidated, rebuilding...");
+			Logger::notify("build cache has been invalidated, rebuilding...");
 			build_tools::DeleteBuildCache(m_project);
 			return true;
 		}
 
 		if (m_build_cache.too_out_dated_with(m_new_cache))
 		{
-			Logger::notify("older build's cache is too old, rebuilding...");
+			Logger::notify("build cache is too old, rebuilding...");
 			return true;
 		}
 

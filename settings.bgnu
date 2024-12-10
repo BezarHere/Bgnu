@@ -1,2 +1,6 @@
+no_cache = false
+force_linking = false
+color_output = true
 process_pipe_buffer_sz = null
+clear_cache = false
 build_multithreaded = true
