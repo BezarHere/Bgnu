@@ -528,6 +528,10 @@ FieldVar::Dict BuildConfiguration::to_data(const BuildConfiguration &config, Err
     FieldIO::NestedName(config.optimization.name(), config.optimization->degree),
     get_enum_name(config.optimization->degree.field())
   );
+  writer.write(
+    FieldIO::NestedName(config.optimization.name(), config.optimization->debug_optimizing),
+    config.optimization->debug_optimizing.field()
+  );
 
 
   writer.write(
