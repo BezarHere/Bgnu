@@ -33,6 +33,7 @@ static inline int64_t get_build_time() {
 
 static void dump_dep_map(const dependency_map &map, const FilePath &cache_folder);
 static void dump_build_args(const std::vector<build_tools::ExecuteParameter> &list, const FilePath &cache_folder);
+static void write_auto_generated_temp_header(std::ostream &stream);
 
 namespace commands
 {
@@ -241,6 +242,8 @@ namespace commands
     const bool intermidiate_build_all_success = (compile_failures == 0);
 
     const char *force_linking_setting_name = "force_linking";
+
+    // forces linking even if one or more intermediates failed building, overrides `always_link_build` if `true`
     const bool force_linking = Settings::Get(force_linking_setting_name, false).get_bool();
 
     // always link building even if no intermediates (object files) changed (lib/config changes are handled above)
@@ -252,15 +255,17 @@ namespace commands
     // should we link
     const bool link_upto_date_intermediates = always_link_build || !all_intermediates_upto_date;
 
+    const bool linking_unnecessary = all_intermediates_upto_date && !always_link_build && !force_linking;
+
     build_tools::ExecuteParameter link_param = {};
 
-    if (all_intermediates_upto_date && !always_link_build)
+    if (linking_unnecessary)
     {
       Logger::notify(
         "All intermediate[s] upto-date, no linking required (flag `always_link_build` is false)."
       );
     }
-    else if ((intermidiate_build_all_success || force_linking) && link_upto_date_intermediates)
+    else if (intermidiate_build_all_success || force_linking)
     {
       Logger::notify("preparing the final stage (linking)");
       std::vector<StrBlob> link_input_files = _get_linker_inputs(input_output_map);
@@ -656,6 +661,9 @@ void dump_dep_map(const dependency_map &map, const FilePath &cache_folder) {
 
   const std::streampos start = stream.tellp();
 
+  write_auto_generated_temp_header(stream);
+  stream << "# below is the dependency map of the entire project\n";
+
   // We can do it by converting 'map' to field var and save it
   // sadly, im too lazy rn
 
@@ -678,6 +686,9 @@ void dump_build_args(const std::vector<build_tools::ExecuteParameter> &list, con
 
   const std::streampos start = stream.tellp();
 
+  write_auto_generated_temp_header(stream);
+  stream << "# below are the arguments for building the intermediates (object files) and linking/compiling final\n";
+
   // We can do it by converting 'map' to field var and save it
   // sadly, im too lazy rn
 
@@ -697,4 +708,9 @@ void dump_build_args(const std::vector<build_tools::ExecuteParameter> &list, con
   }
 
   Logger::verbose("dumped the build argument list: size=%lld bytes to '%s'", stream.tellp() - start, output_path.c_str());
+}
+
+void write_auto_generated_temp_header(std::ostream &stream) {
+  stream << "# This file is temporay and auto generated\n";
+  stream << "# made by bgnu " << Settings::GetVersion() << '\n';
 }
