@@ -7,20 +7,20 @@
 typedef std::map<std::string, SettingValue> SettingMap;
 
 static constexpr BGnuVersion BGnuVersionHistory[] = {
-	{1, 0, 0},
-	{1, 1, 0},
-	{1, 2, 0},
-	{1, 2, 1},
-	{1, 2, 2},
-	{1, 2, 3},
+  {1, 0, 0},
+  {1, 1, 0},
+  {1, 2, 0},
+  {1, 2, 1},
+  {1, 2, 2},
+  {1, 2, 3},
 };
 
 struct SettingsData
 {
-	static const SettingMap Default;
+  static const SettingMap Default;
 
-	bool initalized = false;
-	SettingMap values;
+  bool initalized = false;
+  SettingMap values;
 };
 
 static const SettingValue DefaultValue = {nullptr, nullptr};
@@ -42,146 +42,156 @@ static inline FieldVar LoadSettingsFile();
 static FieldVar::Dict Serialize();
 
 BGnuVersion Settings::GetVersion() {
-	return BGnuVersionHistory[std::size(BGnuVersionHistory) - 1];
+  return BGnuVersionHistory[std::size(BGnuVersionHistory) - 1];
 }
 
 errno_t Settings::Init() {
-	if (g_SettingsData.initalized)
-	{
-		return EALREADY;
-	}
-	g_SettingsData.initalized = true;
+  if (g_SettingsData.initalized)
+  {
+    return EALREADY;
+  }
+  g_SettingsData.initalized = true;
 
-	Logger::note("initialising settings");
+  Logger::note("initialising settings");
 
-	const FieldVar local_settings = LoadSettingsFile();
-	FieldDataReader reader{"local-settings", local_settings.get_dict()};
-	ReadSetting(reader);
+  const FieldVar local_settings = LoadSettingsFile();
+  FieldDataReader reader{"local-settings", local_settings.get_dict()};
+  ReadSetting(reader);
 
-	return EOK;
+  return EOK;
 }
 
 errno_t Settings::Save(bool overwrite) {
-	return SaveTo(GetLocalSettingsPath(), overwrite);
+  return SaveTo(GetLocalSettingsPath(), overwrite);
 }
 
 errno_t Settings::SaveBackup() {
-	const FilePath backup_path = GetLocalSettingsPath() + ".backup";
-	Logger::verbose("backing up settings to '%s'", backup_path.c_str());
-	return SaveTo(backup_path, true);
+  const FilePath backup_path = GetLocalSettingsPath() + ".backup";
+  Logger::verbose("backing up settings to '%s'", backup_path.c_str());
+  return SaveTo(backup_path, true);
 }
 
 errno_t Settings::SaveTo(const FilePath &path, bool overwrite) {
-	if (!overwrite && path.is_file())
-	{
-		if (s_SilentSaveFail)
-		{
-			return EOK;
-		}
+  if (!overwrite && path.is_file())
+  {
+    if (s_SilentSaveFail)
+    {
+      return EOK;
+    }
 
-		Logger::error("Can not save setting locals file to '%s', file already exists", path.c_str());
-		return EALREADY;
-	}
+    Logger::error("Can not save setting locals file to '%s', file already exists", path.c_str());
+    return EALREADY;
+  }
 
-	FieldFile::dump(path, Serialize());
-	return EOK;
+  FieldFile::dump(path, Serialize());
+  return EOK;
 }
 
 const FieldVar &Settings::Get(const std::string &name, const FieldVar &default_val) {
-	return GetSettingInnerValue(name, default_val);
+  return GetSettingInnerValue(name, default_val);
 }
 
 void Settings::Set(const std::string &name, const FieldVar &value) {
 }
 
 const FieldVar &Settings::Reset(const std::string &name) {
-	SettingValue *value = GetSettingValue(name);
+  SettingValue *value = GetSettingValue(name);
 
-	if (value == nullptr)
-	{
-		return DefaultValue.value;
-	}
+  if (value == nullptr)
+  {
+    return DefaultValue.value;
+  }
 
-	value->value = value->default_value;
-	return value->value;
+  value->value = value->default_value;
+  return value->value;
 }
 
 inline errno_t AddField(const std::string &name, const SettingValue &value, bool base_val) {
-	if (name.empty())
-	{
-		return EBADF;
-	}
+  if (name.empty())
+  {
+    return EBADF;
+  }
 
-	SettingMap &map = g_SettingsData.values;
-	const auto name_processed = string_tools::to_lower(name);
+  SettingMap &map = g_SettingsData.values;
+  const auto name_processed = string_tools::to_lower(name);
 
-	if (map.contains(name_processed))
-	{
-		return EALREADY;
-	}
+  if (map.contains(name_processed))
+  {
+    return EALREADY;
+  }
 
-	map.emplace(name, value);
-	return EOK;
+  map.emplace(name, value);
+  return EOK;
 }
 
 inline const FieldVar &GetSettingInnerValue(const std::string &name, const FieldVar &def_val) {
-	if (g_SettingsData.values.contains(name))
-	{
-		return g_SettingsData.values.at(name).value;
-	}
+  if (g_SettingsData.values.contains(name))
+  {
+    const FieldVar &value = g_SettingsData.values.at(name).value;
+    if (Logger::is_verbose())
+    {
+      const std::string out = value.copy_stringified().get_string();
+      Logger::verbose(
+        "returned setting field value name='%s', value=%s",
+        name.c_str(), out.c_str()
+      );
+    }
+    return value;
+  }
 
-	Logger::verbose("no setting field with the name '%s'", name.c_str());
+  Logger::verbose("no setting field with the name '%s'", name.c_str());
 
-	if (Settings::s_AddRequestValues)
-	{
-		Logger::verbose("adding setting field '%s'", name.c_str());
-		SettingValue value = {};
-		value.value = def_val;
-		value.default_value = def_val;
-		AddField(name, value);
-	}
+  if (Settings::s_AddRequestValues)
+  {
+    Logger::verbose("add default setting field '%s'", name.c_str());
+    SettingValue value = {};
+    value.value = def_val;
+    value.default_value = def_val;
+    AddField(name, value);
+  }
 
-	return def_val;
+
+  return def_val;
 }
 
 inline SettingValue *GetSettingValue(const std::string &name) {
-	if (g_SettingsData.values.contains(name))
-	{
-		return &g_SettingsData.values.at(name);
-	}
+  if (g_SettingsData.values.contains(name))
+  {
+    return &g_SettingsData.values.at(name);
+  }
 
-	return nullptr;
+  return nullptr;
 }
 
 inline void ReadSetting(FieldDataReader &reader) {
-	for (const auto &[name, value] : reader.get_data())
-	{
-		const errno_t err = AddField(name, {value, value});
-		if (err == EOK)
-		{
-			Logger::debug("added setting: %s", name.c_str());
-			continue;
-		}
+  for (const auto &[name, value] : reader.get_data())
+  {
+    const errno_t err = AddField(name, {value, value});
+    if (err == EOK)
+    {
+      Logger::debug("added setting: %s", name.c_str());
+      continue;
+    }
 
-		Logger::warning("failed to add setting field '%s', error=%s", name.c_str(), GetErrorName(err));
-	}
+    Logger::warning("failed to add setting field '%s', error=%s", name.c_str(), GetErrorName(err));
+  }
 }
 
 inline FilePath GetLocalSettingsPath() {
-	return FilePath::get_working_directory() + "settings.bgnu";
+  return FilePath::get_working_directory() + "settings.bgnu";
 }
 
 inline FieldVar LoadSettingsFile() {
-	return FieldFile::load(GetLocalSettingsPath());
+  return FieldFile::load(GetLocalSettingsPath());
 }
 
 FieldVar::Dict Serialize() {
-	FieldVar::Dict dict = {};
+  FieldVar::Dict dict = {};
 
-	for (const auto &[name, value] : g_SettingsData.values)
-	{
-		dict.try_emplace(name, value.value);
-	}
+  for (const auto &[name, value] : g_SettingsData.values)
+  {
+    dict.try_emplace(name, value.value);
+  }
 
-	return dict;
+  return dict;
 }

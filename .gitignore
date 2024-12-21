@@ -3,3 +3,4 @@ out/cache/*.o
 **/*.exe
 out/*
 output/*
+out/.args
