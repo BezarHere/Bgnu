@@ -10,7 +10,7 @@
 struct BuildCache
 {
 	// 3 days
-	static constexpr t::microsecond_t OutdatedCacheTime = 1000U * 1000U * 60 * 60 * 24 * 3;
+	static constexpr t::microsecond_t DefaultOutdatedCacheTimeSec = 60 * 60 * 24 * 3;
 
 	struct FileRecord
 	{
