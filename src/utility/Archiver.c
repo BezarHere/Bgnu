@@ -82,7 +82,7 @@ sprintf_s(buffer, c_parser_context_sz, "%s::%s", operation, step);\
 strcpy_s(parser->context, c_parser_context_sz, buffer);}
 
 #define PARSER_CONTEXT_FUNC(step) PARSER_CONTEXT(__FUNCTION__, step)
-#define PARSER_READ_TO_VALIDATE(name, default) if (ParserReadBuf(parser, &(name), sizeof(name)) != sizeof(name)) { parser->error = EOF; return default; }
+#define PARSER_READ_TO_VALIDATE(name, default) if (ParserReadBuf(parser, &(name), sizeof(name)) != sizeof(name)) { parser->error = ENODATA; return default; }
 
 enum
 {
@@ -135,6 +135,8 @@ static inline size_t ParserTellPos(ref_parser_t parser) {
   return parser->io->tell_proc(parser->io->data);
 }
 
+static size_t ParserSpaceLeft(ref_parser_t parser);
+
 static uint64_t ParserReadIntStr(ref_parser_t parser, unsigned num_str_len);
 
 static errno_t ReadSignature(ref_parser_t parser);
@@ -143,10 +145,11 @@ static errno_t ReadFile(ref_parser_t parser, archive_file_t *file);
 
 static errno_t ReadAllFiles(ref_parser_t parser);
 
+
 #pragma endregion
 
-archiver_io_t Archiver_FileOpenPath(const char *path, const char *mode) {
-  FILE *file = fopen(path, mode);
+archiver_io_t Archiver_FileOpenPath(const char *path, bool read) {
+  FILE *file = fopen(path, read ? "rb" : "wb");
   return Archiver_FileOpen(file);
 }
 
@@ -604,6 +607,20 @@ errno_t SetupBufferIOState(io_state_t *p_state, const void *io_buffer_data, bool
   return 0;
 }
 
+size_t ParserSpaceLeft(ref_parser_t parser) {
+  const io_state_t *const io_state = parser->io;
+
+  const size_t current = ParserTellPos(parser);
+
+  ASSERT_ERR(io_state->seek_proc(SEEK_END, 0, io_state->data) == 0, "failed to jump to IO end");
+
+  const size_t end = ParserTellPos(parser);
+
+  ASSERT_ERR(io_state->seek_proc(SEEK_SET, current, io_state->data) == 0, "failed to return jump to IO last current pos");
+
+  return (end > current) ? (end - current) : (current - end);
+}
+
 uint64_t ParserReadIntStr(ref_parser_t parser, unsigned num_str_len) {
   enum
   {
@@ -744,6 +761,12 @@ errno_t ReadAllFiles(ref_parser_t parser) {
 
   while (true)
   {
+    // read the entire archive
+    if (ParserSpaceLeft(parser) == 0)
+    {
+      break;
+    }
+
     archive_file_t file = {0};
     if (ReadFile(parser, &file) != 0)
     {

@@ -98,7 +98,7 @@ typedef struct archiver_io_s
 extern "C" {
 #endif
 
-  extern archiver_io_t Archiver_FileOpenPath(const char *path, const char *mode);
+  extern archiver_io_t Archiver_FileOpenPath(const char *path, bool read);
   extern archiver_io_t Archiver_FileOpen(FILE *file);
   extern errno_t Archiver_FileClose(const archiver_io_t *io_state);
 
