@@ -53,6 +53,7 @@ enum class StandardType : uint8_t
 	C11,
 	C14,
 	C17,
+	C2x,
 	C23,
 
 	Cpp11,
@@ -167,6 +168,7 @@ struct BuildConfiguration
 	NField<bool> print_stats = {"print_stats", false};
 	NField<bool> print_includes = {"print_includes", false};
 	NField<bool> dynamically_linkable = {"dynamically_linkable", true};
+	NField<bool> sanitize_addresses = {"sanitize_addresses", true};
 
 	NField<vector<string>> preprocessor_args = {"preprocessor_args"};
 	NField<vector<string>> linker_args = {"linker_args"};

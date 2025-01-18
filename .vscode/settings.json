@@ -10,7 +10,8 @@
 		"rcount",
 		"Resave",
 		"Typeless",
-		"valist"
+		"valist",
+    "archiver"
 	],,
 	"files.associations": {
 		"*.json": "jsonc",

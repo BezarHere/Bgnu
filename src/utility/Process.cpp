@@ -33,7 +33,7 @@ static void KillProcess(const ProcessInfo &info);
 static string join_args(const Blob<const Process::char_type *const> &args);
 
 Process::Process(int argc, const char_type *const *argv)
-	: Process(join_args({argv, argc})) {
+	: Process(join_args({argv, static_cast<size_t>(argc)})) {
 }
 
 Process::Process(const char_type *cmd)

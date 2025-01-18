@@ -80,7 +80,7 @@ namespace commands
 
     if (m_rebuild)
     {
-      Logger::notify("rebuilding project: deleting output directory & cache directory");
+      Logger::note("** rebuilding project: deleting output directory & cache directory **");
       build_tools::DeleteBuildDir(this->m_project);
     }
 
@@ -123,7 +123,7 @@ namespace commands
     build_tools::SetupHashes(m_new_cache, m_project, m_current_build_cfg);
 
     Logger::verbose(
-      "build cache hashes: new[%llX, %llX]  old[%llX, %llX]\n",
+      "## build cache hashes: new[%llX, %llX]  old[%llX, %llX] ##",
       m_new_cache.build_hash, m_new_cache.config_hash,
       m_build_cache.build_hash, m_build_cache.config_hash
     );
@@ -165,7 +165,8 @@ namespace commands
         source_path.c_str(), output_path.c_str()
       );
 
-      const SourceFileType file_type = build_tools::DefaultSourceFileTypeForFilePath(source_path);
+      const SourceFileType file_type = m_project.get_source_type_or_default(source_path.get_text());
+      
       Logger::verbose(
         "source file type for '%s': %s",
         source_path.c_str(),

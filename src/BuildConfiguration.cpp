@@ -155,6 +155,11 @@ void BuildConfiguration::_put_flags(vector<string> &output) const {
     output.emplace_back("-Wfatal-errors");
   }
 
+  // if (this->sanitize_addresses.field())
+  // {
+  //   output.emplace_back("-fsanitize=address");
+  // }
+
   if (Settings::Get("color_output", true))
   {
     output.emplace_back("-fdiagnostics-color=always");
@@ -366,6 +371,7 @@ hash_t BuildConfiguration::hash() const {
   digester += (hash_t)this->print_stats.field();
   digester += (hash_t)this->print_includes.field();
   digester += (hash_t)this->dynamically_linkable.field();
+  digester += (hash_t)this->sanitize_addresses.field();
 
   digester += (hash_t)this->simd_type.field();
 
@@ -456,11 +462,12 @@ BuildConfiguration BuildConfiguration::from_data(FieldDataReader reader, ErrorRe
     config.simd_type.field() = bc_reader._read_enum(config.simd_type.name(), simd_type);
   }
 
-  const array<NField<bool> *, 4> booleans = {
+  const array<NField<bool> *, 5> booleans = {
     &config.exit_on_errors,
     &config.print_stats,
     &config.print_includes,
     &config.dynamically_linkable,
+    &config.sanitize_addresses,
   };
 
   for (auto *bool_ptr : booleans)
@@ -544,6 +551,7 @@ FieldVar::Dict BuildConfiguration::to_data(const BuildConfiguration &config, Err
   writer.write(config.print_includes);
   writer.write(config.dynamically_linkable);
   writer.write(config.exit_on_errors);
+  writer.write(config.sanitize_addresses);
 
   writer.write(config.simd_type.name(), get_enum_name(config.simd_type.field()));
   writer.write(config.standard.name(), get_enum_name(config.standard.field()));
@@ -781,7 +789,8 @@ constexpr NamedEnum<StandardType> StandardTypeNames[] = {
   NamedEnum{StandardType::C11, "c11"},
   NamedEnum{StandardType::C14, "c14"},
   NamedEnum{StandardType::C17, "c17"},
-  NamedEnum{StandardType::C23, "c2x"}, // c2x SHOULD ALWAYS PRECEDE C23 SO IT CAN BE CHOSEN AS THE NAME OF C23
+  NamedEnum{StandardType::C2x, "c2x"}, // c2x SHOULD ALWAYS PRECEDE C23 SO IT CAN BE CHOSEN AS THE NAME OF C23
+  NamedEnum{StandardType::C23, "c2x"}, // no -std=c23 in gcc :[
   NamedEnum{StandardType::C23, "c23"},
 
   NamedEnum{StandardType::Cpp11, "c++11"},
@@ -1003,10 +1012,10 @@ constexpr StandardType transform_standards(StandardType original, SourceFileType
 
   case E::Cpp20:
     {
-      // if (source_type == S::C)
-      // {
-      // 	return E::C20;
-      // }
+      if (source_type == S::C)
+      {
+      	return E::C2x;
+      }
 
       return E::Cpp20;
     }
@@ -1026,19 +1035,16 @@ constexpr StandardType transform_standards(StandardType original, SourceFileType
   }
 }
 
-// template<BuildConfigurationDefaultType>
-// void SetupDefaultConfig(BuildConfiguration &config) {
-// 	// ? unknown type
-// }
-
 template<>
 void SetupDefaultConfig<BuildConfigurationDefaultType::Debug>(BuildConfiguration &config) {
   config.optimization->type.field() = OptimizationType::Debug;
   config.optimization->degree.field() = OptimizationDegree::Extreme;
+  config.sanitize_addresses.field() = true;
 }
 
 template<>
 void SetupDefaultConfig<BuildConfigurationDefaultType::Release>(BuildConfiguration &config) {
   config.optimization->type.field() = OptimizationType::Release;
   config.optimization->degree.field() = OptimizationDegree::Extreme;
+  config.sanitize_addresses.field() = false;
 }

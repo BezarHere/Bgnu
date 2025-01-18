@@ -6,50 +6,57 @@
 
 namespace build_tools
 {
-	enum _ExecuteFlags : uint8_t
-	{
-		eExcFlag_Printout = 0x01,
-		eExcFlag_PrintoutProgress = 0x02,
-	};
+  enum _ExecuteFlags : uint8_t
+  {
+    eExcFlag_Printout = 0x01,
+    eExcFlag_PrintoutProgress = 0x02,
+  };
 
-	typedef std::underlying_type_t<_ExecuteFlags> ExecuteFlags;
+  typedef std::underlying_type_t<_ExecuteFlags> ExecuteFlags;
 
-	struct ExecuteParameter
-	{
-		ExecuteFlags flags = eExcFlag_Printout;
-		std::ostream *out;
-		StaticString<128> name;
-		bool critical = false;
-		std::vector<std::string> args;
-	};
+  struct ExecuteParameter
+  {
+    ExecuteFlags flags = eExcFlag_Printout;
+    std::ostream *out;
+    StaticString<128> name;
+    bool critical = false;
+    std::vector<std::string> args;
+  };
 
-	extern void DeleteBuildCache(const Project &project);
-	extern void DeleteBuildDir(const Project &project);
-	extern void SetupHashes(BuildCache &cache, const Project &proj, const BuildConfiguration *config);
+  extern void DeleteBuildCache(const Project &project);
+  extern void DeleteBuildDir(const Project &project);
+  extern void SetupHashes(BuildCache &cache, const Project &proj, const BuildConfiguration *config);
 
-	extern void DeleteUnusedObjFiles(const std::set<FilePath> &object_files, const std::set<FilePath> &used_files);
+  extern void DeleteUnusedObjFiles(const std::set<FilePath> &object_files, const std::set<FilePath> &used_files);
 
-	extern std::vector<int> Execute(const Blob<const ExecuteParameter> &params);
-	extern std::vector<int> Execute_Multithreaded(const Blob<const ExecuteParameter> &params, uint32_t batches);
+  extern std::vector<int> Execute(const Blob<const ExecuteParameter> &params);
+  extern std::vector<int> Execute_Multithreaded(const Blob<const ExecuteParameter> &params, uint32_t batches);
 
-	extern errno_t _Execute_Inner(const Blob<const std::string> &args,
-																const Blob<const ExecuteParameter> &params,
-																Blob<int> results);
+  extern errno_t _Execute_Inner(const Blob<const std::string> &args,
+                                const Blob<const ExecuteParameter> &params,
+                                Blob<int> results);
 
-	extern errno_t _ExecuteParallel_Inner(const Blob<const std::string> &args,
-																				const Blob<const ExecuteParameter> &params,
-																				Blob<int> results,
-																				uint32_t batches);
+  extern errno_t _ExecuteParallel_Inner(const Blob<const std::string> &args,
+                                        const Blob<const ExecuteParameter> &params,
+                                        Blob<int> results,
+                                        uint32_t batches);
 
 
-	extern SourceFileType GetDominantSourceType(Blob<const SourceFileType> file_types);
+  extern SourceFileType GetDominantSourceType(Blob<const SourceFileType> file_types);
 
-	extern SourceFileType DefaultSourceFileTypeForFilePath(const FilePath::char_type *path);
-	extern SourceFileType DefaultSourceFileTypeForFilePath(const FilePath &path);
+  extern SourceFileType DefaultSourceFileTypeForFilePath(const FilePath::char_type *path);
+  extern SourceFileType DefaultSourceFileTypeForFilePath(const FilePath &path);
 
-	extern SourceFileType DefaultSourceFileTypeForExtension( FilePath::string_blob extension);
-	extern SourceFileType DefaultSourceFileTypeForExtension(const FilePath::string_type &extension);
+  extern SourceFileType DefaultSourceFileTypeForExtension(FilePath::string_blob extension);
+  extern SourceFileType DefaultSourceFileTypeForExtension(const FilePath::string_type &extension);
 
-	extern const char *GetSourceFileTypeName(SourceFileType type);
+  extern const char *GetSourceFileTypeName(SourceFileType type);
+
+  // for 'c++' and 'c' and stuff (not for finding file extension's type, see DefaultSourceFileTypeForExtension())
+  extern SourceFileType GetFileTypeFromTypeName(FilePath::string_blob file_type_name);
+
+  static inline SourceFileType GetFileTypeFromTypeName(const FilePath::string_type &str) {
+    return GetFileTypeFromTypeName(FilePath::string_blob{str.c_str(), str.length()});
+  }
 }
 

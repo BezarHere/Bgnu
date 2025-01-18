@@ -38,7 +38,7 @@ void build_tools::DeleteUnusedObjFiles(const std::set<FilePath> &object_files, c
   }
 }
 
-
+#define EXECUTE_CHECK_ERR() if (error != EOK) { Logger::error("failed to execute params in function %s with error=%s, check above logs^^", __FUNCTION__, GetErrorName(error)); }
 
 std::vector<int> build_tools::Execute(const Blob<const ExecuteParameter> &params) {
 
@@ -58,6 +58,8 @@ std::vector<int> build_tools::Execute(const Blob<const ExecuteParameter> &params
     params,
     {results.data(), results.size()}
   );
+
+  EXECUTE_CHECK_ERR();
 
   return results;
 }
@@ -81,6 +83,8 @@ std::vector<int> build_tools::Execute_Multithreaded(const Blob<const ExecutePara
     {results.data(), results.size()},
     batches
   );
+
+  EXECUTE_CHECK_ERR();
 
   return results;
 }
@@ -194,10 +198,12 @@ SourceFileType build_tools::DefaultSourceFileTypeForFilePath(const FilePath &pat
 SourceFileType build_tools::DefaultSourceFileTypeForExtension(FilePath::string_blob extension) {
   constexpr const FilePath::char_type *CPPExtensions[] = {
     "cpp",
+    "c++",
     "cc",
     "cxx",
 
     "hpp",
+    "h++",
     "hh",
     "hxx",
   };
@@ -232,6 +238,10 @@ const char *build_tools::GetSourceFileTypeName(SourceFileType type) {
   default:
     return "unknown";
   }
+}
+
+SourceFileType build_tools::GetFileTypeFromTypeName(FilePath::string_blob  file_type_name) {
+  return DefaultSourceFileTypeForExtension(file_type_name); // yeah...
 }
 
 bool DoesSourceTypeDominate(SourceFileType type, SourceFileType target) {

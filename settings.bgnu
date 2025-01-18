@@ -1,7 +1,10 @@
 no_cache = false
 force_linking = false
 color_output = true
-process_pipe_buffer_sz = null
-clear_cache = false
+rebuild_old_projects = true
 build_multithreaded = true
 build_jobs_count = 8
+process_pipe_buffer_sz = null
+clear_cache = false
+build_expiration_age_sec = 259200
+always_link_build = false
