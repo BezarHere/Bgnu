@@ -40,42 +40,12 @@ namespace commands
   Error BuildCommand::execute(ArgumentReader &reader) {
     m_report = {};
 
-    this->_load_properties(reader);
-
-    if (!m_project_file.exists())
     {
-      Logger::error("No project file exists at \"%s\"", to_cstr(m_project_file.get_text()));
-
-      return Error::Failure;
-    }
-
-    if (!m_project_file.is_file())
-    {
-      Logger::error(
-        "The path \"%s\" is to a directory, not a project file",
-        to_cstr(m_project_file.get_text())
-      );
-
-      return Error::Failure;
-    }
-
-    this->_load_project();
-    if (m_report.code != Error::Ok)
-    {
-      Logger::error(
-        "Building project reported an err code=%d: %s", (int)m_report.code, to_cstr(m_report.message)
-      );
-      return m_report.code;
-    }
-
-    _setup_build_config(reader);
-    if (m_report.code != Error::Ok)
-    {
-      Logger::error(
-        "setting-up the build config reported an error code=%d: %s",
-        (int)m_report.code, to_cstr(m_report.message)
-      );
-      return m_report.code;
+      Error init_error = this->_setup_build(reader);
+      if (init_error != Error::Ok)
+      {
+        return init_error;
+      }
     }
 
     if (m_rebuild)
@@ -86,6 +56,8 @@ namespace commands
 
     // is false if we are rebuilding
     m_loaded_build_cache = !m_rebuild && _load_build_cache();
+
+
     const bool running_rebuild = this->is_running_rebuild();
     // rebuilding is not normal
     const bool running_normal_build = !running_rebuild;
@@ -107,7 +79,6 @@ namespace commands
     const std::set<FilePath> current_source_files = container_tools::keys(input_output_map);
     const std::set<FilePath> current_object_files =
       container_tools::values_set(input_output_map);
-    std::set<FilePath> rebuild_files;
 
     if (m_loaded_build_cache)
     {
@@ -128,6 +99,8 @@ namespace commands
       m_build_cache.build_hash, m_build_cache.config_hash
     );
 
+    std::set<FilePath> rebuild_files = {};
+
     if (this->_try_rebuild_setup())
     {
       rebuild_files = current_source_files;
@@ -145,102 +118,30 @@ namespace commands
 
     for (const FilePath &source_path : rebuild_files)
     {
-      const FilePath &output_path = input_output_map.at(source_path);
-      const hash_t &hash = m_src_processor.get_file_hash(source_path);
-
-      const FileStats file_stats = {source_path};
-
-      BuildCache::FileRecord record;
-      record.hash = hash;
-      record.output_path = output_path;
-      record.source_write_time = file_stats.last_write_time.count();
-
-      m_new_cache.override_old_source_record(
-        source_path, record
-      );
-
-
-      Logger::verbose(
-        "adding \"%s\" -> \"%s\" to the build force",
-        source_path.c_str(), output_path.c_str()
-      );
-
-      const SourceFileType file_type = m_project.get_source_type_or_default(source_path.get_text());
-      
-      Logger::verbose(
-        "source file type for '%s': %s",
-        source_path.c_str(),
-        build_tools::GetSourceFileTypeName(file_type)
-      );
-
-      m_current_build_cfg->build_arguments(
-        build_args.emplace_back().args,
-        source_path.get_text(),
-        output_path.get_text(),
-        file_type
-      );
-
-      build_args.back().name = source_path.c_str();
-      build_args.back().flags |= build_tools::eExcFlag_Printout;
-      build_args.back().out = &std::cout;
+      _process_build_source(input_output_map, source_path, build_args);
     }
 
     m_project.get_output().ensure_available();
 
     Logger::debug("building objects:");
 
-    // diverting build output to independent stream, avoid parallel output shenanigans
-    std::unique_ptr<std::ostringstream[]> build_output_streams{new std::ostringstream[build_args.size()]{}};
 
-    // setting up
-    for (size_t i = 0; i < build_args.size(); i++)
-    {
-      build_args[i].out = build_output_streams.get() + i;
-    }
+    const std::vector<int> build_results = _do_build_on(build_args.data(), build_args.size());
 
-    // building
-    const std::vector<int> build_results = ExecuteBuild({build_args.data(), build_args.size()});
-
-    // unloading
-    for (size_t i = 0; i < build_args.size(); i++)
-    {
-      Logger::notify("'%s' output: ", build_args[i].name.c_str());
-
-      Logger::raise_indent();
-      Logger::write_raw("%s", build_output_streams.get()[i].str().c_str());
-      Logger::lower_indent();
-    }
-
-    // clearing
-    build_output_streams.reset(nullptr);
+    LOG_ASSERT(build_args.size() == build_results.size());
 
     Logger::debug("writing build cache");
+    
     m_new_cache.fix_file_records();
     m_build_cache = m_new_cache;
     _write_build_info();
 
-    const size_t compile_failures = \
-      build_results.size() - std::count(build_results.begin(), build_results.end(), 0);
-    if (compile_failures > 0)
-    {
-      for (size_t i = 0; i < build_results.size(); i++)
-      {
-        if (build_results[i] == 0)
-        {
-          continue;
-        }
-        const auto &execute_params = build_args[i];
-        Logger::verbose("process titled '%s' failed with error code: %d", execute_params.name.c_str(), build_results[i]);
-      }
 
-      Logger::warning(
-        "Linking will fail: %llu out of %llu builds have failed",
-        compile_failures,
-        build_results.size()
-      );
-    }
+    const auto compile_failures_count =
+      _check_report_compile_failures(build_results.data(), build_args.data(), build_results.size());
 
-    const bool intermidiate_build_all_success = (compile_failures == 0);
+
+    const bool intermidiate_build_all_success = (compile_failures_count == 0);
 
     const char *force_linking_setting_name = "force_linking";
 
@@ -337,6 +238,116 @@ namespace commands
 
 
     return Error::Ok;
+  }
+
+  size_t BuildCommand::_check_report_compile_failures(const int *build_results,
+                                                      const build_tools::ExecuteParameter *build_args,
+                                                      const size_t count) const {
+
+    const size_t compile_failures =
+      count - std::count(build_results, build_results + count, 0);
+
+    for (size_t i = 0; i < count; i++)
+    {
+      if (build_results[i] == 0)
+      {
+        continue;
+      }
+      const auto &execute_params = build_args[i];
+      Logger::verbose("process titled '%s' failed with error code: %d", execute_params.name.c_str(), build_results[i]);
+    }
+
+    Logger::warning(
+      "Linking will fail: %llu out of %llu builds have failed",
+      compile_failures,
+      count
+    );
+
+    return compile_failures;
+  }
+
+  std::vector<int> BuildCommand::_do_build_on(build_tools::ExecuteParameter *build_args, const size_t count) const {
+    /*
+      diverting build output to independent stream, avoid parallel output shenanigans
+    */
+    std::vector<std::ostringstream> build_output_streams{};
+    build_output_streams.resize(count);
+
+    const auto *_old_build_output_streams_data = build_output_streams.data();
+
+    // setting up
+    for (size_t i = 0; i < count; i++)
+    {
+      build_args[i].out = build_output_streams.data() + i;
+    }
+
+    // building
+    const std::vector<int> results = ExecuteBuild({build_args, count});
+
+    // unloading
+    for (size_t i = 0; i < count; i++)
+    {
+      Logger::notify("'%s' output: ", build_args[i].name.c_str());
+
+      Logger::raise_indent();
+      Logger::write_raw("%s", build_output_streams[i].str().c_str());
+      Logger::lower_indent();
+    }
+
+    if (_old_build_output_streams_data != build_output_streams.data())
+    {
+      Logger::error(
+        "build's output streams vector was dislocated: old_data=%p, new_data=%p," \
+        " the output streams are referenced by pointers that may now be dangling!" \
+        " (check if the above outputs are intelligible)",
+
+        _old_build_output_streams_data,
+        build_output_streams.data()
+      );
+    }
+
+    return results;
+  }
+
+  void BuildCommand::_process_build_source(const commands::BuildCommand::IOMap &input_output_map, const FilePath &source_path, std::vector<build_tools::ExecuteParameter> &build_args) {
+    const FilePath &output_path = input_output_map.at(source_path);
+    const hash_t &hash = m_src_processor.get_file_hash(source_path);
+
+    const FileStats file_stats = {source_path};
+
+    BuildCache::FileRecord record;
+    record.hash = hash;
+    record.output_path = output_path;
+    record.source_write_time = file_stats.last_write_time.count();
+
+    m_new_cache.override_old_source_record(
+      source_path, record
+    );
+
+
+    Logger::verbose(
+      "adding \"%s\" -> \"%s\" to the build force",
+      source_path.c_str(), output_path.c_str()
+    );
+
+    const SourceFileType file_type = m_project.get_source_type_or_default(source_path.get_text());
+
+    Logger::verbose(
+      "source file type for '%s': %s",
+      source_path.c_str(),
+      build_tools::GetSourceFileTypeName(file_type)
+    );
+
+    m_current_build_cfg->build_arguments(
+      build_args.emplace_back().args,
+      source_path.get_text(),
+      output_path.get_text(),
+      file_type
+    );
+
+    build_args.back().name = source_path.c_str();
+    build_args.back().flags |= build_tools::eExcFlag_Printout;
+    build_args.back().out = &std::cout;
   }
 
   Error BuildCommand::get_help(ArgumentReader &reader, string &out) {
@@ -437,6 +448,48 @@ namespace commands
 
   FilePath BuildCommand::_default_filepath() {
     return FilePath::get_working_directory().join_path(".bgnu");
+  }
+
+  Error BuildCommand::_setup_build(ArgumentReader &reader) {
+    this->_load_properties(reader);
+
+    if (!m_project_file.exists())
+    {
+      Logger::error("No project file exists at \"%s\"", to_cstr(m_project_file.get_text()));
+
+      return Error::Failure;
+    }
+
+    if (!m_project_file.is_file())
+    {
+      Logger::error(
+        "The path \"%s\" is to a directory, not a project file",
+        to_cstr(m_project_file.get_text())
+      );
+
+      return Error::Failure;
+    }
+
+    this->_load_project();
+    if (m_report.code != Error::Ok)
+    {
+      Logger::error(
+        "Building project reported an err code=%d: %s", (int)m_report.code, to_cstr(m_report.message)
+      );
+      return m_report.code;
+    }
+
+    _setup_build_config(reader);
+    if (m_report.code != Error::Ok)
+    {
+      Logger::error(
+        "setting-up the build config reported an error code=%d: %s",
+        (int)m_report.code, to_cstr(m_report.message)
+      );
+      return m_report.code;
+    }
+
+    return Error::Ok;
   }
 
   void BuildCommand::_load_properties(ArgumentReader &reader) {
