@@ -131,7 +131,7 @@ namespace commands
     LOG_ASSERT(build_args.size() == build_results.size());
 
     Logger::debug("writing build cache");
-    
+
     m_new_cache.fix_file_records();
     m_build_cache = m_new_cache;
     _write_build_info();
@@ -284,13 +284,25 @@ namespace commands
     // building
     const std::vector<int> results = ExecuteBuild({build_args, count});
 
+    // yeah!
+    constexpr auto whitespace_predicate = [](char chr) -> bool {return isspace(chr);};
+
     // unloading
     for (size_t i = 0; i < count; i++)
     {
+      const auto output_str = build_output_streams[i].str();
+      
+      if (output_str.empty() || std::all_of(output_str.begin(), output_str.end(), whitespace_predicate))
+      {
+
+        Logger::notify("'%s' had no output.", build_args[i].name.c_str());
+        continue;
+      }
+
       Logger::notify("'%s' output: ", build_args[i].name.c_str());
 
       Logger::raise_indent();
-      Logger::write_raw("%s", build_output_streams[i].str().c_str());
+      Logger::write_raw("%s", output_str.c_str());
       Logger::lower_indent();
     }
 
