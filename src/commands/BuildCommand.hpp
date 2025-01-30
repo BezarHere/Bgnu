@@ -76,7 +76,7 @@ namespace commands
                                       std::set<FilePath> &rebuild_files);
 
     void _add_changed_files(std::set<FilePath> &rebuild_files) const;
-    bool _try_rebuild_setup();
+    bool _check_rebuild_required();
 
     static std::vector<int> ExecuteBuild(const Blob<const ::build_tools::ExecuteParameter> &params);
 

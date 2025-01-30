@@ -43,4 +43,9 @@ build_configurations = {
 output:dir = out
 output:name = "main"
 output:cache_dir = "out/cache/"
-source_selectors = ["**/*.c", "**/*.cpp", "**/*.cc", "**/*.cxx", ]
+source_selectors = {
+  "**/*.c"    = C,
+  "**/*.cpp"  = C++,
+  "**/*.cc"   = C++,
+  "**/*.cxx"  = C++
+}

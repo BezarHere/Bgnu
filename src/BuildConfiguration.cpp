@@ -175,7 +175,7 @@ void BuildConfiguration::_put_standards(vector<string> &output, SourceFileType t
 }
 
 void BuildConfiguration::_put_optimization(vector<string> &output) const {
-
+  
   switch (optimization->type.field())
   {
   case OptimizationType::None:

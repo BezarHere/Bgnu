@@ -48,12 +48,6 @@ namespace commands
       }
     }
 
-    if (m_rebuild)
-    {
-      Logger::note("** rebuilding project: deleting output directory & cache directory **");
-      build_tools::DeleteBuildDir(this->m_project);
-    }
-
     // is false if we are rebuilding
     m_loaded_build_cache = !m_rebuild && _load_build_cache();
 
@@ -101,9 +95,16 @@ namespace commands
 
     std::set<FilePath> rebuild_files = {};
 
-    if (this->_try_rebuild_setup())
+    if (!m_rebuild)
     {
+      m_rebuild = this->_check_rebuild_required();
+    }
+
+    if (m_rebuild)
+    {
+      Logger::note("** rebuilding project: deleting output & cache directory **");
       rebuild_files = current_source_files;
+      build_tools::DeleteBuildDir(this->m_project);
     }
     else
     {
@@ -257,11 +258,14 @@ namespace commands
       Logger::verbose("process titled '%s' failed with error code: %d", execute_params.name.c_str(), build_results[i]);
     }
 
-    Logger::warning(
-      "Linking will fail: %llu out of %llu builds have failed",
-      compile_failures,
-      count
-    );
+    if (compile_failures > 0)
+    {
+      Logger::warning(
+        "Linking will fail: %llu out of %llu builds have failed",
+        compile_failures,
+        count
+      );
+    }
 
     return compile_failures;
   }
@@ -287,22 +291,40 @@ namespace commands
     // yeah!
     constexpr auto whitespace_predicate = [](char chr) -> bool {return isspace(chr);};
 
+    const bool report_silent_builds = Settings::Get("report_silent_builds", FieldVar(false)).get_bool();
+
     // unloading
     for (size_t i = 0; i < count; i++)
     {
-      const auto output_str = build_output_streams[i].str();
-      
+      std::string output_str = build_output_streams[i].str();
+
       if (output_str.empty() || std::all_of(output_str.begin(), output_str.end(), whitespace_predicate))
       {
-
-        Logger::notify("'%s' had no output.", build_args[i].name.c_str());
+        if (report_silent_builds)
+        {
+          Logger::notify("'%s' had no output.", build_args[i].name.c_str());
+        }
         continue;
       }
 
+
       Logger::notify("'%s' output: ", build_args[i].name.c_str());
 
+
       Logger::raise_indent();
+
+      {
+        const std::string tmp = output_str;
+
+        output_str = string_tools::replace<char>(
+          tmp,
+          "\n",
+          std::string(Logger::_get_indent_str()) + '\n'
+        );
+      }
+
       Logger::write_raw("%s", output_str.c_str());
+
       Logger::lower_indent();
     }
 
@@ -421,7 +443,7 @@ namespace commands
     );
   }
 
-  bool BuildCommand::_try_rebuild_setup() {
+  bool BuildCommand::_check_rebuild_required() {
     if (is_running_rebuild())
     {
       return true;
@@ -429,7 +451,7 @@ namespace commands
 
     if (!m_new_cache.is_compatible_with(m_build_cache))
     {
-      Logger::notify("build cache has been invalidated, rebuilding...");
+      Logger::notify("! build cache has been invalidated, rebuilding...");
       build_tools::DeleteBuildCache(m_project);
       return true;
     }
@@ -439,7 +461,7 @@ namespace commands
 
     if (rebuild_old_projects && m_build_cache.too_out_dated_with(m_new_cache))
     {
-      Logger::notify("build cache is too old, rebuilding...");
+      Logger::notify("! build cache is too old, rebuilding...");
       return true;
     }
 

@@ -80,6 +80,13 @@ enum class SIMDType : uint8_t
 	AVX512,
 };
 
+enum class BuildType : uint8_t
+{
+  Binary,
+  Library,
+  Intermediates
+};
+
 struct OptimizationInfo
 {
 	inline hash_t hash() const noexcept {
@@ -154,28 +161,30 @@ struct BuildConfiguration
 
 	static const string_char *get_compiler_name(CompilerType type, SourceFileType file_type);
 
+	NSerializable<BuildType> build_type = {"type", BuildType::Binary, NSerializationStance::Optional};
+
 	// values should be either a string OR a null 
-	NField<FieldVar::Dict> predefines = {"predefines"};
+	NSerializable<FieldVar::Dict> predefines = {"predefines"};
 
-	NField<OptimizationInfo> optimization = {"optimization", OptimizationInfo{}};
-	NField<WarningReportInfo> warnings = {"warnings", WarningReportInfo{}};
+	NSerializable<OptimizationInfo> optimization = {"optimization", OptimizationInfo{}};
+	NSerializable<WarningReportInfo> warnings = {"warnings", WarningReportInfo{}};
 
-	NField<CompilerType> compiler_type = {"compiler_type", CompilerType::GCC};
-	NField<StandardType> standard = {"standard", StandardType::Cpp20};
-	NField<SIMDType> simd_type = {"simd_type", SIMDType::AVX2};
+	NSerializable<CompilerType> compiler_type = {"compiler_type", CompilerType::GCC};
+	NSerializable<StandardType> standard = {"standard", StandardType::Cpp20};
+	NSerializable<SIMDType> simd_type = {"simd_type", SIMDType::AVX2, NSerializationStance::Optional};
 
-	NField<bool> exit_on_errors = {"exit_on_errors", true};
-	NField<bool> print_stats = {"print_stats", false};
-	NField<bool> print_includes = {"print_includes", false};
-	NField<bool> dynamically_linkable = {"dynamically_linkable", true};
-	NField<bool> sanitize_addresses = {"sanitize_addresses", true};
+	NSerializable<bool> exit_on_errors = {"exit_on_errors", true};
+	NSerializable<bool> print_stats = {"print_stats", false};
+	NSerializable<bool> print_includes = {"print_includes", false};
+	NSerializable<bool> dynamically_linkable = {"dynamically_linkable", true};
+	NSerializable<bool> sanitize_addresses = {"sanitize_addresses", false, NSerializationStance::Optional};
 
-	NField<vector<string>> preprocessor_args = {"preprocessor_args"};
-	NField<vector<string>> linker_args = {"linker_args"};
-	NField<vector<string>> assembler_args = {"assembler_args"};
+	NSerializable<vector<string>> preprocessor_args = {"preprocessor_args"};
+	NSerializable<vector<string>> linker_args = {"linker_args"};
+	NSerializable<vector<string>> assembler_args = {"assembler_args"};
 
-	NField<vector<string>> library_names = {"library_names"};
+	NSerializable<vector<string>> library_names = {"library_names"};
 
-	NField<vector<FilePath>> library_directories = {"library_directories"};
-	NField<vector<FilePath>> include_directories = {"include_directories"};
+	NSerializable<vector<FilePath>> library_directories = {"library_directories"};
+	NSerializable<vector<FilePath>> include_directories = {"include_directories"};
 };

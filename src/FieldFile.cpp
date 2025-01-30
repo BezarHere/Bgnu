@@ -7,16 +7,21 @@
 
 constexpr uint32_t FieldFileVersion = 0x01'01;
 
-inline static bool IsIdentifierChar(char c) {
-	return isalnum(c) || c == '_' || c == '.' || c == '-' || c == '+';
+constexpr int base_2 = 2;
+constexpr int base_8 = 8;
+constexpr int base_10 = 10;
+constexpr int base_16 = 16;
+
+inline static bool IsIdentifierChar(char chr) {
+	return isalnum(chr) || chr == '_' || chr == '.' || chr == '-' || chr == '+';
 }
 
-inline static bool IsIdentifierCharExtended(char c) {
-	return IsIdentifierChar(c) || c == ':' || c == '.';
+inline static bool IsIdentifierCharExtended(char chr) {
+	return IsIdentifierChar(chr) || chr == ':' || chr == '.';
 }
 
-inline static bool IsIdentifierFirstChar(char c) {
-	return IsIdentifierCharExtended(c) && !isdigit(c);
+inline static bool IsIdentifierFirstChar(char chr) {
+	return IsIdentifierCharExtended(chr) && !isdigit(chr);
 }
 
 inline static bool is_number_identifier(const char *str, size_t len) {
@@ -35,7 +40,7 @@ inline static bool is_number_identifier(const char *str, size_t len) {
 	return isdigit(*str);
 }
 
-enum ScanNumberType
+enum ScanNumberType : uint8_t
 {
 	eScanNType_None = 0,
 	eScanNType_Float = 1,
@@ -46,7 +51,7 @@ static inline ScanNumberType ScanForNumberType(StrBlob str);
 static inline bool IsValidIdentifierName(StrBlob str);
 static inline FieldVar::Int ParseInt(const string_char *str, size_t max_length);
 static inline int ScanForIntBase(const string_char *str, size_t max_length);
-static inline unsigned IntBaseStartOffset(const int base);
+static inline unsigned IntBaseStartOffset(int base);
 
 #pragma region(tokenizer)
 
@@ -82,8 +87,8 @@ enum StringParseFlags : uint8_t
 
 struct SourcePosition
 {
-	inline SourcePosition() {}
-	inline SourcePosition(uint32_t p_line, uint32_t p_column) : line{p_line}, column{p_column} {}
+	SourcePosition() = default;
+	SourcePosition(uint32_t p_line, uint32_t p_column) : line{p_line}, column{p_column} {}
 
 	uint32_t line = 0, column = 0;
 };
@@ -393,39 +398,39 @@ inline int ScanForIntBase(const string_char *str, size_t max_length) {
 	// needs at least two chars to define a base '0x', '0b'
 	if (max_length < 2)
 	{
-		return 10;
+		return base_10;
 	}
 
 	if (str[0] != '0')
 	{
-		return 10;
+		return base_10;
 	}
 
 	if (str[1] == 'x' || str[1] == 'X')
 	{
-		return 16;
+		return base_16;
 	}
 
 	if (str[1] == 'b' || str[1] == 'B')
 	{
-		return 2;
+		return base_2;
 	}
 
 	if (isdigit(str[1]))
 	{
-		return 8;
+		return base_8;
 	}
 
-	return 10;
+	return base_10;
 }
 
 inline unsigned IntBaseStartOffset(const int base) {
-	if (base == 16 || base == 2)
+	if (base == base_16 || base == base_2)
 	{
 		return 2U;
 	}
 
-	if (base == 8)
+	if (base == base_8)
 	{
 		return 1U;
 	}
@@ -539,39 +544,39 @@ private:
 	FieldVar _parse_var_simple();
 
 	NORETURN void _XUnexpectedToken(const string &msg = "") const {
-		std::ostringstream ss{};
+		std::ostringstream output{};
 
-		ss << "Unexpected " << get_tk();
+		output << "Unexpected " << get_tk();
 
 		if (!msg.empty())
 		{
-			ss << ", expected " << msg;
+			output << ", expected " << msg;
 		}
 
-		throw std::runtime_error(ss.str().c_str());
+		throw std::runtime_error(output.str().c_str());
 	}
 
 private:
 	const Token *m_tokens;
 	const size_t m_size;
-	vector<size_t> m_indicies_stack = {};
+	vector<size_t> m_indicies_stack;
 };
 
 FieldVar::String Parser::_parse_var_string() {
-	const Token &tk = get_tk();
+	const Token &token = get_tk();
 	_advance_tk();
 
-	if (tk.type != TKType::String)
+	if (token.type != TKType::String)
 	{
-		return {tk.str.c_str(), tk.length};
+		return {token.str.c_str(), token.length};
 	}
 
-	if (tk.length < 2)
+	if (token.length < 2)
 	{
 		return {};
 	}
 
-	return {tk.str.c_str() + 1, tk.length - 2};
+	return {token.str.c_str() + 1, token.length - 2};
 }
 
 FieldVar Parser::_parse_var_identifier() {
@@ -636,7 +641,8 @@ FieldVar Parser::_parse_var_simple() {
 	{
 		return _parse_var_float();
 	}
-	else if (n_type == eScanNType_Int)
+	
+  if (n_type == eScanNType_Int)
 	{
 		return _parse_var_int();
 	}
@@ -816,6 +822,12 @@ std::pair<FieldVar::String, FieldVar> Parser::_parse_var_kv() {
 
 	if (!IsAssignTokenType(get_tk().type))
 	{
+    // helpful note?
+    if (get_tk().str[0] == ':')
+    {
+      Logger::note("KeyValue pairs in FieldVar data files expect '=' unlike json-ish data files ':'");
+    }
+    
 		_XUnexpectedToken(format_join('"', ValueAssignOp, '"'));
 	}
 
@@ -861,7 +873,7 @@ public:
 	void write(const FieldVar &data);
 
 	inline void write_indent() {
-		stream << string(m_indent_level * 2, ' ');
+		stream << string(m_indent_level * 2UL, ' ');
 	}
 
 	std::ostringstream &stream;
@@ -877,6 +889,7 @@ void FieldFileWriter::start(const FieldVar::Dict &data) {
 }
 
 void FieldFileWriter::write(FieldVar::Null data) {
+  (void)data;
 	stream << "null";
 }
 
@@ -925,12 +938,12 @@ void FieldFileWriter::write(const FieldVar::Dict &data, bool striped) {
 	}
 
 
-	for (const auto &kv : data)
+	for (const auto &kv_pair : data)
 	{
 		write_indent();
-		write(kv.first);
+		write(kv_pair.first);
 		stream << ' ' << Parser::ValueAssignOp << ' ';
-		write(kv.second);
+		write(kv_pair.second);
 		stream << '\n';
 	}
 
