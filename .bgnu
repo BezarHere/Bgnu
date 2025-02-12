@@ -20,6 +20,29 @@ build_configurations = {
     simd_type = "AVX2"
     library_directories = []
     print_includes = false
+    static_stdlib = false
+  }
+  release_static = {
+    standard = "c++20"
+    exit_on_errors = true
+    preprocessor_args = []
+    library_names = []
+    assembler_args = []
+    linker_args = []
+    include_directories = ["src"]
+    predefines = {
+    }
+    dynamically_linkable = true
+    warnings:level = all
+    warnings:pedantic = false
+    optimization:type = release
+    optimization:degree = high
+    optimization:debug_optimizing-Og = false
+    sanitize_addresses = false
+    print_stats = false
+    simd_type = "AVX2"
+    library_directories = []
+    print_includes = false
     static_stdlib = true # i got no patience to deal with stdlib dll dependencies 
   }
   debug = {
