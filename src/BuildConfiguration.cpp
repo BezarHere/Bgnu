@@ -155,6 +155,12 @@ void BuildConfiguration::_put_flags(vector<string> &output) const {
     output.emplace_back("-Wfatal-errors");
   }
 
+  if (this->static_stdlib.field())
+  {
+    output.emplace_back("-static-libgcc");
+    output.emplace_back("-static-libstdc++");
+  }
+
   // if (this->sanitize_addresses.field())
   // {
   //   output.emplace_back("-fsanitize=address");
@@ -337,6 +343,7 @@ void BuildConfiguration::build_link_arguments(vector<string> &output,
   _put_optimization(output);
   _put_standards(output, type);
   _put_warnings(output);
+  _put_flags(output);
   _put_misc(output);
 
   _put_includes(output);
@@ -372,6 +379,7 @@ hash_t BuildConfiguration::hash() const {
   digester += (hash_t)this->print_includes.field();
   digester += (hash_t)this->dynamically_linkable.field();
   digester += (hash_t)this->sanitize_addresses.field();
+  digester += (hash_t)this->static_stdlib.field();
 
   digester += (hash_t)this->simd_type.field();
 
@@ -462,12 +470,13 @@ BuildConfiguration BuildConfiguration::from_data(FieldDataReader reader, ErrorRe
     config.simd_type.field() = bc_reader._read_enum(config.simd_type.name(), simd_type);
   }
 
-  const array<NField<bool> *, 5> booleans = {
+  const array<NField<bool> *, 6> booleans = {
     &config.exit_on_errors,
     &config.print_stats,
     &config.print_includes,
     &config.dynamically_linkable,
     &config.sanitize_addresses,
+    &config.static_stdlib,
   };
 
   for (auto *bool_ptr : booleans)
@@ -552,6 +561,7 @@ FieldVar::Dict BuildConfiguration::to_data(const BuildConfiguration &config, Err
   writer.write(config.dynamically_linkable);
   writer.write(config.exit_on_errors);
   writer.write(config.sanitize_addresses);
+  writer.write(config.static_stdlib);
 
   writer.write(config.simd_type.name(), get_enum_name(config.simd_type.field()));
   writer.write(config.standard.name(), get_enum_name(config.standard.field()));

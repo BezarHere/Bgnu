@@ -178,6 +178,7 @@ struct BuildConfiguration
 	NSerializable<bool> print_includes = {"print_includes", false};
 	NSerializable<bool> dynamically_linkable = {"dynamically_linkable", true};
 	NSerializable<bool> sanitize_addresses = {"sanitize_addresses", false, NSerializationStance::Optional};
+	NSerializable<bool> static_stdlib = {"static_stdlib", false, NSerializationStance::Optional};
 
 	NSerializable<vector<string>> preprocessor_args = {"preprocessor_args"};
 	NSerializable<vector<string>> linker_args = {"linker_args"};
