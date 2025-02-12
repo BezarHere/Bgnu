@@ -1,3 +1,4 @@
+report_silent_builds = false
 no_cache = false
 force_linking = false
 color_output = true

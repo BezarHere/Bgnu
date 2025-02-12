@@ -14,10 +14,13 @@ build_configurations = {
     warnings:pedantic = false
     optimization:type = release
     optimization:degree = high
+    optimization:debug_optimizing-Og = false
+    sanitize_addresses = false
     print_stats = false
     simd_type = "AVX2"
     library_directories = []
     print_includes = false
+    static_stdlib = true # i got no patience to deal with stdlib dll dependencies 
   }
   debug = {
     standard = "c++20"
@@ -34,10 +37,13 @@ build_configurations = {
     warnings:pedantic = false
     optimization:type = debug
     optimization:degree = high
+    optimization:debug_optimizing-Og = false
+    sanitize_addresses = false
     print_stats = false
     simd_type = "AVX2"
     library_directories = []
     print_includes = false
+    static_stdlib = true
   }
 }
 output:dir = out
