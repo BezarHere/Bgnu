@@ -15,7 +15,7 @@ int Startup::start(ArgumentSource reader) {
 	Settings::Init();
 	Settings::SaveBackup();
 
-	if (reader.empty())
+	if (reader.is_empty())
 	{
 		Logger::warning("no command passed, please pass a command and it's arguments");
 		return 1;
