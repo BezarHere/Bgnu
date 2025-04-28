@@ -15,7 +15,7 @@ namespace chrono
 int main(int argc, const char *argv[]) {
 	const chrono::time_point pre_run_time = chrono::steady_clock::now();
 
-	int result = Startup::start(ArgumentReader(argv + 1, std::max(argc - 1, 0)));
+	int result = Startup::start(ArgumentSource(argv + 1, std::max(argc - 1, 0)));
 
 	const auto run_time = chrono::duration_cast<chrono::milliseconds>(
 		chrono::steady_clock::now() - pre_run_time

@@ -47,16 +47,23 @@ private:
 	bool m_used = false;
 };
 
-class ArgumentReader
+class ArgumentSource
 {
 public:
 	using char_type = string::value_type;
 
-	ArgumentReader(const char_type *argv[], size_t argc);
-	ArgumentReader(const Blob<const Argument> &args);
+	ArgumentSource(const char_type *argv[], size_t argc);
+	ArgumentSource(const Blob<const Argument> &args);
+
+  inline bool is_empty() const { return _find_unused() == npos; }
+
+  string join() const;
 
 	Argument &read();
 	const std::string &read_or(const std::string &default_value);
+
+  // returns npos if not found, does not check used arguments
+  size_t find(const string &name) const;
 
 	Argument *extract(const string &name);
 	Argument *extract_any(const Blob<const string> &names);
@@ -98,24 +105,13 @@ public:
 		return counter;
 	}
 
-	inline size_t empty() const {
-		for (const auto &arg : m_args)
-		{
-			if (!arg.is_used())
-			{
-				return false;
-			}
-		}
-		return true;
-	}
-
 	inline const vector<Argument> &get_args() const { return m_args; }
 
-	inline ArgumentReader slice(size_t start, size_t end) const {
-		return ArgumentReader({m_args.data() + start, m_args.data() + end});
+	inline ArgumentSource slice(size_t start, size_t end) const {
+		return ArgumentSource({m_args.data() + start, m_args.data() + end});
 	}
 
-	inline ArgumentReader slice(size_t start) const { return slice(start, m_args.size()); }
+	inline ArgumentSource slice(size_t start) const { return slice(start, m_args.size()); }
 
 	// removes all the used arguments
 	void simplify();

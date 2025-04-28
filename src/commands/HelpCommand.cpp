@@ -2,7 +2,7 @@
 #include "Logger.hpp"
 
 
-Error commands::HelpCommand::execute(ArgumentReader &reader) {
+Error commands::HelpCommand::execute(ArgumentSource &reader) {
 	size_t commands_length = 0;
 	const CommandDB::command_ptr *commands = CommandDB::get_commands(commands_length);
 
@@ -13,7 +13,7 @@ Error commands::HelpCommand::execute(ArgumentReader &reader) {
 		Logger::raise_indent();
 		Logger::notify("%s", info.desc.c_str());
 		std::string str = "";
-		ArgumentReader reader = {{nullptr}};
+		ArgumentSource reader = {{nullptr}};
 
 		commands[i]->get_help(reader, str);
 		// str.replace("\n", std::string("\n") + Logger::_get_indent_str());
@@ -25,7 +25,7 @@ Error commands::HelpCommand::execute(ArgumentReader &reader) {
 	return Error();
 }
 
-Error commands::HelpCommand::get_help(ArgumentReader &reader, string &out) {
+Error commands::HelpCommand::get_help(ArgumentSource &reader, string &out) {
 	out.append(get_info().desc);
 	return Error::Ok;
 }

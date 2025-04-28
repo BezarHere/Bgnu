@@ -28,8 +28,8 @@ namespace commands
 
     inline BuildCommand() : Command("build", "builds a project") {}
 
-    Error execute(ArgumentReader &reader) override;
-    Error get_help(ArgumentReader &reader, string &out) override;
+    Error execute(ArgumentSource &reader) override;
+    Error get_help(ArgumentSource &reader, string &out) override;
     inline CommandInfo get_info() const override {
       return {
         "build",
@@ -42,13 +42,15 @@ namespace commands
     static FilePath _default_filepath();
 
   private:
-    Error _setup_build(ArgumentReader &reader);
 
-    void _load_properties(ArgumentReader &reader);
+    Error _setup_build(ArgumentSource &reader);
+
+    void _load_properties(ArgumentSource &reader);
     void _load_project();
-    void _setup_build_config(ArgumentReader &reader);
+    void _setup_build_config(ArgumentSource &reader);
     void _write_build_info() const;
     bool _load_build_cache();
+    static void _do_run_check(ArgumentSource &reader, const string &output_path);
 
     std::vector<int> _do_build_on(build_tools::ExecuteParameter *build_args, size_t count) const;
 

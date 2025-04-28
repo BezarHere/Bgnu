@@ -1,16 +1,33 @@
 #include "Argument.hpp"
 
-ArgumentReader::ArgumentReader(const char_type *argv[], size_t argc) {
+ArgumentSource::ArgumentSource(const char_type *argv[], size_t argc) {
 	for (size_t i = 0; i < argc; i++)
 	{
 		m_args.emplace_back(argv[i], false);
 	}
 }
 
-ArgumentReader::ArgumentReader(const Blob<const Argument> &args) : m_args{args.begin(), args.end()} {
+ArgumentSource::ArgumentSource(const Blob<const Argument> &args) : m_args{args.begin(), args.end()} {
 }
 
-Argument &ArgumentReader::read() {
+string ArgumentSource::join() const {
+  string result = {};
+  for (const auto &arg : m_args)
+  {
+    result.append("\"");
+    result.append(arg.get_value());
+    result.append("\" ");
+  }
+
+  if (!result.empty())
+  {
+    result.pop_back();
+  }
+
+  return result;
+}
+
+Argument &ArgumentSource::read() {
 	size_t index = _find_unused();
 
 	if (index == npos)
@@ -21,7 +38,7 @@ Argument &ArgumentReader::read() {
 	return m_args[index];
 }
 
-const std::string &ArgumentReader::read_or(const std::string &default_value) {
+const std::string &ArgumentSource::read_or(const std::string &default_value) {
 	size_t index = _find_unused();
 
 	if (index == npos)
@@ -34,7 +51,19 @@ const std::string &ArgumentReader::read_or(const std::string &default_value) {
 	return m_args[index].get_value();
 }
 
-Argument *ArgumentReader::extract(const string &name) {
+size_t ArgumentSource::find(const string &name) const {
+  for (size_t i = 0; i < m_args.size(); i++)
+  {
+    if (!m_args[i].is_used() && m_args[i].get_value() == name)
+    {
+      return i;
+    }
+  }
+
+  return npos;
+}
+
+Argument *ArgumentSource::extract(const string &name) {
 	for (size_t i = 0; i < m_args.size(); i++) {
 		if (m_args[i].is_used())
 		{
@@ -48,7 +77,7 @@ Argument *ArgumentReader::extract(const string &name) {
 	return nullptr;
 }
 
-Argument *ArgumentReader::extract_any(const Blob<const string> &names) {
+Argument *ArgumentSource::extract_any(const Blob<const string> &names) {
 	for (const string &name : names)
 	{
 		Argument *arg = extract(name);
@@ -63,7 +92,7 @@ Argument *ArgumentReader::extract_any(const Blob<const string> &names) {
 	return nullptr;
 }
 
-bool ArgumentReader::check_flag(const string &name) {
+bool ArgumentSource::check_flag(const string &name) {
 	Argument *arg = extract(name);
 	if (arg)
 	{
@@ -73,7 +102,7 @@ bool ArgumentReader::check_flag(const string &name) {
 	return arg != nullptr;
 }
 
-bool ArgumentReader::check_flag_any(const Blob<const string> &names) {
+bool ArgumentSource::check_flag_any(const Blob<const string> &names) {
 	Argument *arg = extract_any(names);
 	if (arg)
 	{
@@ -83,7 +112,7 @@ bool ArgumentReader::check_flag_any(const Blob<const string> &names) {
 	return arg != nullptr;
 }
 
-void ArgumentReader::simplify() {
+void ArgumentSource::simplify() {
 
 	// reverse iterate to reduce moving values
 	for (size_t i = 1; i <= m_args.size(); i++)

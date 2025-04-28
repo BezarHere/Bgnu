@@ -18,6 +18,7 @@
 
 const string RebuildArgs[] = {"-r", "--rebuild"};
 const string ResaveArgs[] = {"--resave"};
+const string RunArg = "--run";
 
 constexpr const char *InputFilePrefix = "-i=";
 
@@ -37,7 +38,7 @@ static void write_auto_generated_temp_header(std::ostream &stream);
 
 namespace commands
 {
-  Error BuildCommand::execute(ArgumentReader &reader) {
+  Error BuildCommand::execute(ArgumentSource &reader) {
     m_report = {};
 
     {
@@ -237,12 +238,7 @@ namespace commands
     // dump_dep_map(dependencies, m_project.get_output().dir);
     dump_build_args(build_args, m_project.get_output().dir.field());
 
-    if (reader.check_flag("-run"))
-    {
-      Logger::notify("[*] Running \"%s\"...", output_filepath.c_str());
-      std::system(output_filepath.c_str());
-    }
-
+    _do_run_check(reader, output_filepath);
 
     return Error::Ok;
   }
@@ -390,7 +386,7 @@ namespace commands
     build_args.back().out = &std::cout;
   }
 
-  Error BuildCommand::get_help(ArgumentReader &reader, string &out) {
+  Error BuildCommand::get_help(ArgumentSource &reader, string &out) {
     out
       .append("usage: build [-r/--rebuild] [--resave] [-m=<build mode>/--mode=<build mode>]\n");
 
@@ -490,7 +486,7 @@ namespace commands
     return FilePath::get_working_directory().join_path(".bgnu");
   }
 
-  Error BuildCommand::_setup_build(ArgumentReader &reader) {
+  Error BuildCommand::_setup_build(ArgumentSource &reader) {
     this->_load_properties(reader);
 
     if (!m_project_file.exists())
@@ -532,7 +528,7 @@ namespace commands
     return Error::Ok;
   }
 
-  void BuildCommand::_load_properties(ArgumentReader &reader) {
+  void BuildCommand::_load_properties(ArgumentSource &reader) {
     m_rebuild = Argument::try_use(
       reader.extract_any(Blob<const string>(RebuildArgs))
     );
@@ -607,7 +603,7 @@ namespace commands
     }
   }
 
-  void BuildCommand::_setup_build_config(ArgumentReader &reader) {
+  void BuildCommand::_setup_build_config(ArgumentSource &reader) {
     constexpr auto mode_matcher = [](const Argument &arg) {
       return arg.get_value().starts_with("-m=") || arg.get_value().starts_with("--mode=");};
 
@@ -694,6 +690,28 @@ namespace commands
     }
 
     return true;
+  }
+
+  void BuildCommand::_do_run_check(ArgumentSource &reader, const string &output_path) {
+    size_t run_arg_index = reader.find(RunArg);
+    if (run_arg_index == npos)
+    {
+      return;
+    }
+
+    string system_cmd = output_path;
+    string args_joined = reader.slice(run_arg_index + 1).join();
+
+    if (!args_joined.empty())
+    {
+      system_cmd.append(" ");
+      system_cmd.append(args_joined);
+    }
+
+    Logger::verbose("running cmd: \"%s\"", system_cmd.c_str());
+    Logger::notify("[*] Running...");
+
+    std::system(system_cmd.c_str());
   }
 
   void BuildCommand::_build_source_processor() {

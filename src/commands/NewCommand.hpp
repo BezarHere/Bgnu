@@ -10,8 +10,8 @@ namespace commands
 		inline NewCommand() : Command("new", "creates a new project") {
 		}
 
-		Error execute(ArgumentReader &reader) override;
-		Error get_help(ArgumentReader &reader, string &out) override;
+		Error execute(ArgumentSource &reader) override;
+		Error get_help(ArgumentSource &reader, string &out) override;
 		inline CommandInfo get_info() const override {
 			return {
 				"new",

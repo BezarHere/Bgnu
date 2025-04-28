@@ -10,8 +10,8 @@ namespace commands
 		inline HelpCommand() : Command("help", "prints help messages") {
 		}
 
-		Error execute(ArgumentReader &reader) override;
-		Error get_help(ArgumentReader &reader, string &out) override;
+		Error execute(ArgumentSource &reader) override;
+		Error get_help(ArgumentSource &reader, string &out) override;
 		inline CommandInfo get_info() const override {
 			return {
 				"help",

@@ -8,7 +8,7 @@ FieldVar::Dict Startup::s_env = {};
 
 static void StartupMessage();
 
-int Startup::start(ArgumentReader reader) {
+int Startup::start(ArgumentSource reader) {
 	setlocale(LC_ALL, "en_US.utf8");
 
 	StartupMessage();
@@ -39,7 +39,7 @@ int Startup::start(ArgumentReader reader) {
 		return 1;
 	}
 
-	ArgumentReader command_input = reader.slice(1);
+	ArgumentSource command_input = reader.slice(1);
 
 	Console::push_state();
 	Logger::_push_state();
@@ -79,7 +79,7 @@ int Startup::start(ArgumentReader reader) {
 	return (int)error;
 }
 
-void Startup::_build_env(ArgumentReader &reader) {
+void Startup::_build_env(ArgumentSource &reader) {
 	static const string VerboseArgs[] = {"-v", "--verbose"};
 
 	if (Argument::try_use(reader.extract_any(VerboseArgs)))

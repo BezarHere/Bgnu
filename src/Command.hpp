@@ -19,9 +19,9 @@ public:
 
 	virtual ~Command() = default;
 
-	virtual Error execute(ArgumentReader &reader) = 0;
+	virtual Error execute(ArgumentSource &reader) = 0;
 
-	inline virtual Error get_help(ArgumentReader &reader, string &help_str) {
+	inline virtual Error get_help(ArgumentSource &reader, string &help_str) {
 		(void)reader;
 		help_str = "";
 		return Error::NotImplemented;
