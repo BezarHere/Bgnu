@@ -24,7 +24,7 @@ constexpr const char *InputFilePrefix = "-i=";
 typedef SourceProcessor::dependency_map dependency_map;
 typedef vector<vector<string>> build_args_list;
 
-static inline int64_t get_build_time() {
+static inline int64_t get_time() {
   using namespace std;
   return (int64_t)chrono::duration_cast<chrono::microseconds>(
     chrono::steady_clock::now().time_since_epoch()
@@ -160,6 +160,8 @@ namespace commands
 
     const bool linking_unnecessary = all_intermediates_upto_date && !always_link_build && !force_linking;
 
+    const FilePath output_filepath = m_project.get_output().get_result_path().resolve();
+
     build_tools::ExecuteParameter link_param = {};
 
     if (linking_unnecessary)
@@ -187,8 +189,6 @@ namespace commands
         "linker dominate source file type: %s",
         build_tools::GetSourceFileTypeName(dominate_file_type)
       );
-
-      const FilePath output_filepath = m_project.get_output().get_result_path().resolve();
 
       m_current_build_cfg->build_link_arguments(
         link_param.args,
@@ -236,6 +236,12 @@ namespace commands
 
     // dump_dep_map(dependencies, m_project.get_output().dir);
     dump_build_args(build_args, m_project.get_output().dir.field());
+
+    if (reader.check_flag("-run"))
+    {
+      Logger::notify("[*] Running \"%s\"...", output_filepath.c_str());
+      std::system(output_filepath.c_str());
+    }
 
 
     return Error::Ok;
