@@ -165,6 +165,8 @@ namespace commands
 
     build_tools::ExecuteParameter link_param = {};
 
+    int link_result = -1;
+
     if (linking_unnecessary)
     {
       Logger::notify(
@@ -205,7 +207,7 @@ namespace commands
       link_param.out = &link_out;
 
       const auto linking_processes_results = ExecuteBuild({&link_param, 1});
-      const int link_result = linking_processes_results[0];
+      link_result = linking_processes_results[0];
 
       Logger::raise_indent();
       Logger::write_raw("%s", link_out.str().c_str());
@@ -238,7 +240,10 @@ namespace commands
     // dump_dep_map(dependencies, m_project.get_output().dir);
     dump_build_args(build_args, m_project.get_output().dir.field());
 
-    _do_run_check(reader, output_filepath);
+    if (link_result == EOK)
+    {
+      _do_run_check(reader, output_filepath);
+    }
 
     return Error::Ok;
   }
