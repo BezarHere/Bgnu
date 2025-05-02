@@ -54,9 +54,9 @@ namespace commands
 
     std::vector<int> _do_build_on(build_tools::ExecuteParameter *build_args, size_t count) const;
 
-    size_t _check_report_compile_failures(const int *build_results,
+    static size_t _check_report_compile_failures(const int *build_results,
                                           const build_tools::ExecuteParameter *build_args,
-                                          size_t count) const;
+                                                 size_t count);
 
     void _process_build_source(const commands::BuildCommand::IOMap &input_output_map,
                                const FilePath &source_path,
