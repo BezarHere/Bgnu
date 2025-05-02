@@ -35,6 +35,8 @@ Argument &ArgumentSource::read() {
 		throw std::runtime_error("no more arguments to read");
 	}
 
+  m_args[index].mark_used();
+
 	return m_args[index];
 }
 
