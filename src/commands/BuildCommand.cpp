@@ -181,13 +181,19 @@ namespace commands
 
     if (linking_unnecessary)
     {
+      link_result = EOK;
       Logger::notify(
         "All intermediate[s] upto-date, no linking required (flag `always_link_build` is false)."
       );
     }
     else if (intermidiate_build_all_success || force_linking)
     {
-      Logger::notify("preparing the final stage (linking)");
+      const bool linked_by_force = !intermidiate_build_all_success;
+      Logger::notify(
+        "preparing the final stage (linking)%s",
+        linked_by_force ? " [FORCED]" : ""
+      );
+      
       std::vector<StrBlob> link_input_files = _get_linker_inputs(input_output_map);
 
       std::vector<SourceFileType> source_file_types{};
