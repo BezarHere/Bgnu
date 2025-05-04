@@ -291,6 +291,14 @@ namespace string_tools
     return character < 0x7f;
   }
 
+  static constexpr ALWAYS_INLINE bool is_lowercase(const char_type character) {
+    return character >= 'a' && character <= 'z';
+  }
+
+  static constexpr ALWAYS_INLINE bool is_uppercase(const char_type character) {
+    return character >= 'A' && character <= 'Z';
+  }
+
   template <typename _Pred>
   static inline StrBlob trim(const StrBlob &source, _Pred &&trim_pred) {
     size_t leading_c = count(source.begin(), source.length(), trim_pred);
