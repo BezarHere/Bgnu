@@ -5,7 +5,7 @@
 #include "FilePath.hpp"
 #include "misc/Error.hpp"
 #include "Glob.hpp"
-#include "SourceTools.hpp" // for SourceFileType
+#include "code/SourceTools.hpp" // for SourceFileType
 
 #include "utility/NField.hpp"
 
