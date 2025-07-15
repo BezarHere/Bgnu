@@ -4,3 +4,8 @@ out/cache/*.o
 out/*
 output/*
 out/.args
+bgnu-cppcheck-build-dir
+*.cppcheck
+*.exe
+*.dll
+py/*.csv
