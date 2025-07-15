@@ -57,7 +57,7 @@ public:
     return std::max<length_type>(0, m_length - m_position);
   }
 
-  bool depleted() const noexcept { return m_position >= m_length; }
+  bool depleted() const noexcept { return available() == 0; }
   bool invalid() const noexcept { return m_position < 0; }
   bool good() const noexcept { return !invalid() && !depleted(); }
 
@@ -80,7 +80,7 @@ public:
   }
 
   const value_type &operator[](offset_type pos) const {
-    if (pos < -m_position || pos >= m_length - m_position)
+    if (pos < -m_position || pos >= offset_type(m_length - m_position))
     {
       throw std::out_of_range("pos");
     }
