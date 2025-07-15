@@ -31,6 +31,7 @@ build_configurations = {
     linker_args = []
     include_directories = ["src"]
     predefines = {
+      _STATIC_BGNU = null
     }
     dynamically_linkable = true
     warnings:level = all
@@ -54,6 +55,7 @@ build_configurations = {
     linker_args = []
     include_directories = ["src"]
     predefines = {
+      _DEBUG = null
     }
     dynamically_linkable = true
     warnings:level = all
