@@ -1047,6 +1047,7 @@ constexpr StandardType transform_standards(StandardType original, SourceFileType
 
 template<>
 void SetupDefaultConfig<BuildConfigurationDefaultType::Debug>(BuildConfiguration &config) {
+  config.predefines->try_emplace("_DEBUG", nullptr);
   config.optimization->type.field() = OptimizationType::Debug;
   config.optimization->degree.field() = OptimizationDegree::Extreme;
   config.sanitize_addresses.field() = true;
@@ -1054,6 +1055,8 @@ void SetupDefaultConfig<BuildConfigurationDefaultType::Debug>(BuildConfiguration
 
 template<>
 void SetupDefaultConfig<BuildConfigurationDefaultType::Release>(BuildConfiguration &config) {
+  config.predefines->try_emplace("NDEBUG", nullptr);
+  config.predefines->try_emplace("_RELEASE", nullptr);
   config.optimization->type.field() = OptimizationType::Release;
   config.optimization->degree.field() = OptimizationDegree::Extreme;
   config.sanitize_addresses.field() = false;
