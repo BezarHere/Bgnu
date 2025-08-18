@@ -11,6 +11,7 @@ Error commands::RunCommand::execute(ArgumentSource &reader) {
     "-m=" + Settings::Get("run_configuration", "debug").get_string()
   );
 
+  args.emplace_back("--run");
   
   Logger::verbose("forwarding build args...");
   while (!reader.is_empty())
@@ -18,8 +19,6 @@ Error commands::RunCommand::execute(ArgumentSource &reader) {
     args.push_back(Argument(reader.read().get_value()));
     Logger::verbose("+ forwarded arg: \"%s\"", args.back().get_value().c_str());
   }
-  
-  args.emplace_back("--run");
   
   Logger::verbose("creating new forward arg source...");
   reader = ArgumentSource(Blob<const Argument>(args.data(), args.size()));
