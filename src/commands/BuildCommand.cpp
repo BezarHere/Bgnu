@@ -41,6 +41,14 @@ namespace commands
     Logger::verbose("building...");
     m_report = {};
 
+    {
+      Error init_error = this->_setup_build(reader);
+      if (init_error != Error::Ok)
+      {
+        return init_error;
+      }
+    }
+
     if (Logger::is_verbose())
     {
       for (const auto &arg : reader.get_args())
@@ -50,14 +58,6 @@ namespace commands
           arg.get_value().c_str(),
           arg.is_used() ? "used" : "unused"
         );
-      }
-    }
-
-    {
-      Error init_error = this->_setup_build(reader);
-      if (init_error != Error::Ok)
-      {
-        return init_error;
       }
     }
 
@@ -623,12 +623,20 @@ namespace commands
     m_project = Project::from_data(project_file_data.get_dict(), m_report);
     m_project.source_dir = project_dir;
 
-
     if (m_project.get_build_configs().empty())
     {
       m_report = {Error::NoConfig, "Project has no build configurations available"};
       return;
     }
+
+    if (Logger::is_verbose())
+    {
+      for (const auto &config : m_project.get_build_configs())
+      {
+        Logger::verbose("Found build config: '%s'", config.first.c_str());
+      }
+    }
+
   }
 
   void BuildCommand::_setup_build_config(ArgumentSource &reader) {
@@ -646,6 +654,7 @@ namespace commands
     else
     {
       const size_t equal_pos = arg->get_value().find('=');
+      arg->mark_used();
 
       if (equal_pos == string::npos)
       {
