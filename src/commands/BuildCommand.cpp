@@ -736,7 +736,11 @@ namespace commands
       return;
     }
 
-    string system_cmd = output_path;
+    string system_cmd = {};
+    system_cmd.push_back('"');
+    system_cmd.append(output_path);
+    system_cmd.push_back('"');
+
     string args_joined = reader.slice(run_arg_index + 1).join();
 
     if (!args_joined.empty())
