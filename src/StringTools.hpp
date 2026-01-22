@@ -5,6 +5,8 @@
 #include "misc/SpellChecker.hpp"
 #include "Logger.hpp"
 
+#include <concepts>
+
 
 namespace string_tools
 {
@@ -145,9 +147,11 @@ namespace string_tools
     string_type dst_str{};
     dst_str.resize(dst_sz);
 
-    size_t chars_converted = 0;
-    errno_t error =
-      wcstombs_s(&chars_converted, dst_str.data(), dst_sz * sizeof(char_type), src_str, max_count);
+    mbstate_t mb_state = {0};
+    size_t chars_converted = wcsnrtombs(
+      dst_str.data(), &src_str, max_count, dst_sz, &mb_state
+    );
+    errno_t error = errno;
 
     if (error != 0)
     {
@@ -169,9 +173,11 @@ namespace string_tools
     wide_string_type dst_str{};
     dst_str.resize(dst_sz);
 
-    size_t chars_converted = 0;
-    errno_t error =
-      mbstowcs_s(&chars_converted, dst_str.data(), dst_sz * sizeof(wide_char_type), src_str, max_count);
+    mbstate_t mb_state = {0};
+    size_t chars_converted = mbsnrtowcs(
+      dst_str.data(), &src_str, max_count, dst_sz, &mb_state
+    );
+    errno_t error = errno;
 
     if (error != 0)
     {
@@ -188,18 +194,32 @@ namespace string_tools
     return dst_str;
   }
 
-  template <class _Str>
-  static inline _Str convert(const typename _Str::value_type *src_str, const size_t max_count) {
-    (void)max_count;
-    return _Str(src_str);
-  }
 
-  static inline wide_string_type convert(const char_type *src_str, const size_t max_count) {
+  template <typename CHR>
+  static inline std::basic_string<CHR> convert(const char_type *src_str, const size_t max_count);
+  
+  template <>
+  inline string_type convert(const char_type *src_str, const size_t max_count) {
+    return string_type(src_str, strnlen(src_str, max_count));
+  }
+  
+  template <>
+  inline wide_string_type convert(const char_type *src_str, const size_t max_count) {
     return widen(src_str, max_count);
   }
 
-  static inline string_type convert(const wide_char_type *src_str, const size_t max_count) {
+
+  template <typename CHR>
+  static inline std::basic_string<CHR> convert(const wide_char_type *src_str, const size_t max_count);
+  
+  template <>
+  inline string_type convert(const wide_char_type *src_str, const size_t max_count) {
     return narrow(src_str, max_count);
+  }
+  
+  template <>
+  inline wide_string_type convert(const wide_char_type *src_str, const size_t max_count) {
+    return wide_string_type(src_str, wcsnlen(src_str, max_count));
   }
 
   /// @brief 

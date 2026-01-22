@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <errno.h>
+typedef int errno_t;
 
 #ifndef EOK
 #define EOK 0
@@ -119,8 +120,6 @@ static inline const char *GetErrorName(const errno_t error) {
 		return "ERANGE";
 	case EILSEQ:
 		return "EILSEQ";
-	case STRUNCATE:
-		return "STRUNCATE";
 	case ENOTSUP:
 		return "ENOTSUP";
 	case EAFNOSUPPORT:
@@ -163,10 +162,6 @@ static inline const char *GetErrorName(const errno_t error) {
 		return "ECANCELED";
 	case EINPROGRESS:
 		return "EINPROGRESS";
-	case EOPNOTSUPP:
-		return "EOPNOTSUPP";
-	case EWOULDBLOCK:
-		return "EWOULDBLOCK";
 	case EOWNERDEAD:
 		return "EOWNERDEAD";
 	case EPROTO:
@@ -203,7 +198,7 @@ static inline const char *GetErrorName(const errno_t error) {
 		return "EOVERFLOW";
 	default:
 		{
-			sprintf_s(unknown_error_n, "UnkownErr_%d", error);
+			snprintf(unknown_error_n, std::size(unknown_error_n) - 1, "UnkownErr_%d", error);
 			return unknown_error_n;
 		}
 	}

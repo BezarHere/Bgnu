@@ -318,7 +318,6 @@ namespace commands
     // building
     const std::vector<int> results = ExecuteBuild({build_args, count});
 
-    // yeah!
     constexpr auto whitespace_predicate = [](char chr) -> bool {return isspace(chr);};
 
     const bool report_silent_builds = Settings::Get("report_silent_builds", FieldVar(false)).get_bool();
@@ -374,7 +373,7 @@ namespace commands
   }
 
   void BuildCommand::_process_build_source(const commands::BuildCommand::IOMap &input_output_map, const FilePath &source_path, std::vector<build_tools::ExecuteParameter> &build_args) {
-    const FilePath &output_path = input_output_map.at(source_path);
+    const FilePath &output_path = input_output_map.at(source_path).resolved_copy();
     const hash_t &hash = m_src_processor.get_file_hash(source_path);
 
     const FileStats file_stats = {source_path};
@@ -443,14 +442,15 @@ namespace commands
   void BuildCommand::_add_uncompiled_files(const BuildCommand::IOMap &input_output_map, const bool running_normal_build, std::set<FilePath> &rebuild_files) {
     for (const auto &in_out : input_output_map)
     {
-      if (!in_out.second.is_file())
+      FilePath abs_path = in_out.second.resolved_copy();
+      if (!abs_path.is_file())
       {
         if (running_normal_build)
         {
           Logger::debug(
             "rebuilding \"%s\": compiled object at \"%s\" not found",
             in_out.first.c_str(),
-            in_out.second.c_str()
+            abs_path.c_str()
           );
         }
 
@@ -778,7 +778,8 @@ namespace commands
     for (const auto &inputs : m_src_processor.get_inputs())
     {
       result.emplace(
-        inputs.path, _get_output_filepath(inputs.path, m_src_processor.get_file_hash(inputs.path))
+        inputs.path.resolved_copy(),
+        _get_output_filepath(inputs.path, m_src_processor.get_file_hash(inputs.path)).resolved_copy()
       );
     }
 
@@ -787,8 +788,8 @@ namespace commands
 
   FilePath BuildCommand::_get_output_filepath(const FilePath &filepath, const hash_t &hash) const {
     string_char buf[FilePath::MaxPathLength + 1] = {};
-    sprintf_s(
-      buf,
+    snprintf(
+      buf, FilePath::MaxPathLength,
       "%s/%s.%llX.o",
       m_project.get_output().cache_dir->c_str(), filepath.name().c_str(), hash
     );

@@ -19,7 +19,7 @@ namespace spell
 
 		const size_t edit_matrix_size = right.size();
 		edit_distance_t *edit_matrix = \
-			reinterpret_cast<edit_distance_t *>(_alloca(edit_matrix_size * sizeof(*edit_matrix)));
+			reinterpret_cast<edit_distance_t *>(alloca(edit_matrix_size * sizeof(*edit_matrix)));
 
 		edit_distance_t last_left_side = 0;
 

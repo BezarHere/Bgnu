@@ -1,6 +1,8 @@
 #pragma once
 #include "base.hpp"
 
+#include <string_view>
+
 struct Argument
 {
 
@@ -42,6 +44,7 @@ struct Argument
 		return arg->m_value;
 	}
 
+  static std::vector<std::string> BreakArgumentList(const std::string &str);
 private:
 	string m_value = "";
 	bool m_used = false;

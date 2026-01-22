@@ -51,8 +51,7 @@ struct EnumTraits
 struct BuildConfigurationReader
 {
   BuildConfigurationReader(const BuildConfiguration &_config, FieldDataReader &_reader, ErrorReport &_result)
-    : config{_config}, reader{_reader}, result{_result} {
-  }
+    : config{_config}, reader{_reader}, result{_result} {}
 
   void read_predefines(FieldVar::Dict &predefines);
   void read_optimization_info(NField<OptimizationInfo> &info);
@@ -105,9 +104,34 @@ struct BuildConfigurationReader
 
 
 void BuildConfiguration::_put_compiler(vector<string> &output, SourceFileType source_type) const {
-  output.emplace_back(
-    BuildConfiguration::get_compiler_name(this->compiler_type.field(), source_type)
+  const std::string compiler_name = BuildConfiguration::get_compiler_name(
+    this->compiler_type.field(), source_type
   );
+
+  output.emplace_back(
+    compiler_name
+  );
+
+
+  FilePath compiler_abs_path = FilePath::FindExecutableInPATHEnv(compiler_name);
+
+  if (!compiler_abs_path.empty())
+  {
+    compiler_abs_path = compiler_abs_path.parent();
+    if (!compiler_abs_path.is_absolute())
+    {
+      Logger::error(
+        "Compiler '%s' didn't resolve to an absolute path: '%s'",
+        compiler_name.c_str(), compiler_abs_path.c_str()
+      );
+    }
+
+    std::string arg = "-B";
+    arg.append(compiler_abs_path);
+    output.emplace_back(
+      arg
+    );
+  }
 }
 
 void BuildConfiguration::_put_predefines(vector<string> &output) const {
@@ -181,7 +205,7 @@ void BuildConfiguration::_put_standards(vector<string> &output, SourceFileType t
 }
 
 void BuildConfiguration::_put_optimization(vector<string> &output) const {
-  
+
   switch (optimization->type.field())
   {
   case OptimizationType::None:
@@ -264,6 +288,10 @@ void BuildConfiguration::_put_misc(vector<string> &output) const {
     return;
   }
 
+  if (Logger::is_verbose() && Settings::Get("allow_verbose_gcc", false).get_bool())
+  {
+    output.emplace_back("-v");
+  }
   output.emplace_back("-m");
   output.back().append(string_tools::to_lower(get_enum_name(simd_type.field())));
 }
@@ -746,8 +774,7 @@ template <typename Enum>
 struct NamedEnum
 {
   constexpr NamedEnum(Enum _value, const string_char *_name)
-    : name{_name}, value{_value} {
-  }
+    : name{_name}, value{_value} {}
 
   const string_char *name;
   Enum value;
@@ -1024,7 +1051,7 @@ constexpr StandardType transform_standards(StandardType original, SourceFileType
     {
       if (source_type == S::C)
       {
-      	return E::C2x;
+        return E::C2x;
       }
 
       return E::Cpp20;

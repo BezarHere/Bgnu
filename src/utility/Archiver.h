@@ -74,13 +74,13 @@ typedef union archiver_io_data_u
 
 } archiver_io_data_t;
 
-typedef errno_t(*archiver_read_func_t)(void *buffer, size_t bytes,
+typedef int (*archiver_read_func_t)(void *buffer, size_t bytes,
                                        size_t *out_count, archiver_io_data_t data);
 
-typedef errno_t(*archiver_write_func_t)(const void *buffer, size_t bytes,
+typedef int (*archiver_write_func_t)(const void *buffer, size_t bytes,
                                         size_t *out_count, archiver_io_data_t data);
 
-typedef errno_t(*archiver_seek_func_t)(int state, size_t pos, archiver_io_data_t data);
+typedef int (*archiver_seek_func_t)(int state, size_t pos, archiver_io_data_t data);
 typedef size_t(*archiver_tell_func_t)(archiver_io_data_t data);
 
 typedef struct archiver_io_s
@@ -100,16 +100,16 @@ extern "C" {
 
   extern archiver_io_t Archiver_FileOpenPath(const char *path, bool read);
   extern archiver_io_t Archiver_FileOpen(FILE *file);
-  extern errno_t Archiver_FileClose(const archiver_io_t *io_state);
+  extern int Archiver_FileClose(const archiver_io_t *io_state);
 
   extern archiver_io_t ArchiverIO_BufferOpenW(archiver_io_write_buf_t buffer);
   extern archiver_io_t ArchiverIO_BufferOpenR(archiver_io_read_buf_t buffer);
-  extern errno_t ArchiverIO_BufferClose(const archiver_io_t *io_state);
+  extern int ArchiverIO_BufferClose(const archiver_io_t *io_state);
 
-  extern errno_t Archiver_ReadIO(const archiver_io_t *io_state, archive_t *container);
+  extern int Archiver_ReadIO(const archiver_io_t *io_state, archive_t *container);
 
 
-  extern errno_t Archiver_Close(archive_t *archive);
+  extern int Archiver_Close(archive_t *archive);
 
 #ifdef __cplusplus
 }

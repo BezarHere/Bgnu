@@ -134,6 +134,10 @@ errno_t build_tools::_ExecuteParallel_Inner(const Blob<const std::string> &args,
   const auto func = [&args, &params, &progress_index](size_t index) {
     const auto &param = params[index];
     Process process{args[index]};
+    
+#ifdef __linux__
+    process.add_flags(Process::Flag_InheritEnv);
+#endif
     process.set_name(param.name.c_str());
 
     Logger::verbose("processing parallel: '%s'", args[index].c_str());
@@ -312,9 +316,9 @@ bool DoesSourceTypeDominate(SourceFileType type, SourceFileType target) {
     return false;
   }
 
-  for (size_t i = 0; i < std::size(DominationTable); i++)
+  for (const auto &i : DominationTable)
   {
-    if (DominationTable[i] == decltype(DominationTable[0]){type, target})
+    if (i == decltype(DominationTable[0]){type, target})
     {
       return true;
     }
@@ -335,6 +339,6 @@ void GenerateJoinArgs(const Blob<const ExecuteParameter> &params, std::string *r
     }
 
     results[i] = oss.str();
-    results[i].resize(results[i].size() - 1);
+    results[i].pop_back();
   }
 }

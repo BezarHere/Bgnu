@@ -92,7 +92,7 @@ public:
 
 	// narrowing will have gonky behavior
 	inline FilePath(const iterator_entry &entry)
-		: FilePath(string_tools::convert(entry.path().c_str(), npos)) {
+		: FilePath(entry.path().c_str()) {
 	}
 
 	FilePath(const FilePath &copy) = default;
@@ -181,6 +181,9 @@ public:
 
 	std::filesystem::path to_std_path() const;
 
+  /// @returns is the path empty?
+  bool empty() const;
+
 	/// @returns does anything exist at this filepath
 	bool exists() const;
 
@@ -191,6 +194,9 @@ public:
 
 	/// @returns is the path constructed with text and separators data
 	bool is_valid() const;
+
+	/// @returns is this an absolute path? not a relative one
+	bool is_absolute() const;
 
 	// resolves the path to be absolute
 	FilePath &resolve(const FilePath &base);

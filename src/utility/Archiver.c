@@ -42,14 +42,14 @@ static bool IsIOFile(const io_state_t *state);
 
 #pragma region(IO Procs)
 
-static errno_t IO_FileRead(void *buffer, size_t bytes, size_t *read_count, archiver_io_data_t data);
-static errno_t IO_FileWrite(const void *buffer, size_t bytes, size_t *write_count, archiver_io_data_t data);
-static errno_t IO_FileSeek(int state, size_t pos, archiver_io_data_t data);
+static int IO_FileRead(void *buffer, size_t bytes, size_t *read_count, archiver_io_data_t data);
+static int IO_FileWrite(const void *buffer, size_t bytes, size_t *write_count, archiver_io_data_t data);
+static int IO_FileSeek(int state, size_t pos, archiver_io_data_t data);
 static size_t IO_FileTell(archiver_io_data_t data);
 
-static errno_t IO_BufRead(void *buffer, size_t bytes, size_t *read_count, archiver_io_data_t data);
-static errno_t IO_BufWrite(const void *buffer, size_t bytes, size_t *write_count, archiver_io_data_t data);
-static errno_t IO_BufSeek(int state, size_t pos, archiver_io_data_t data);
+static int IO_BufRead(void *buffer, size_t bytes, size_t *read_count, archiver_io_data_t data);
+static int IO_BufWrite(const void *buffer, size_t bytes, size_t *write_count, archiver_io_data_t data);
+static int IO_BufSeek(int state, size_t pos, archiver_io_data_t data);
 static size_t IO_BufTell(archiver_io_data_t data);
 
 #pragma endregion
@@ -66,7 +66,7 @@ static void ParserErrorF(ref_parser_t parser, const char *format, ...);
 #pragma region(IO Processing)
 
 static const io_state_t *PreprocessIOState(const io_state_t *state, io_op_type_t io_op);
-static errno_t SetupBufferIOState(io_state_t *p_state, const void *io_buffer_data, bool write);
+static int SetupBufferIOState(io_state_t *p_state, const void *io_buffer_data, bool write);
 
 #pragma endregion
 
@@ -78,8 +78,8 @@ static errno_t SetupBufferIOState(io_state_t *p_state, const void *io_buffer_dat
 
 #define PARSER_CONTEXT(operation, step) { \
 char buffer[c_parser_context_sz] = {0};\
-sprintf_s(buffer, c_parser_context_sz, "%s::%s", operation, step);\
-strcpy_s(parser->context, c_parser_context_sz, buffer);}
+snprintf(buffer, c_parser_context_sz, "%s::%s", operation, step);\
+strncpy(parser->context, buffer, c_parser_context_sz);}
 
 #define PARSER_CONTEXT_FUNC(step) PARSER_CONTEXT(__FUNCTION__, step)
 #define PARSER_READ_TO_VALIDATE(name, default) if (ParserReadBuf(parser, &(name), sizeof(name)) != sizeof(name)) { parser->error = ENODATA; return default; }
@@ -97,7 +97,7 @@ typedef struct parser_s
   char context[c_parser_context_sz];
 
   bool tiny;
-  errno_t error;
+  int error;
 } parser_t, *ref_parser_t;
 
 static inline unsigned ParserReadBuf(ref_parser_t parser, void *buffer, unsigned count) {
@@ -108,7 +108,7 @@ static inline unsigned ParserReadBuf(ref_parser_t parser, void *buffer, unsigned
   return read_count;
 }
 
-static inline errno_t ParserReadBufFully(ref_parser_t parser, void *buffer, unsigned count) {
+static inline int ParserReadBufFully(ref_parser_t parser, void *buffer, unsigned count) {
   if (ParserReadBuf(parser, buffer, count) != count)
   {
     return EOF;
@@ -139,11 +139,11 @@ static size_t ParserSpaceLeft(ref_parser_t parser);
 
 static uint64_t ParserReadIntStr(ref_parser_t parser, unsigned num_str_len);
 
-static errno_t ReadSignature(ref_parser_t parser);
-static errno_t ReadFileHeader(ref_parser_t parser, archive_file_t *file);
-static errno_t ReadFile(ref_parser_t parser, archive_file_t *file);
+static int ReadSignature(ref_parser_t parser);
+static int ReadFileHeader(ref_parser_t parser, archive_file_t *file);
+static int ReadFile(ref_parser_t parser, archive_file_t *file);
 
-static errno_t ReadAllFiles(ref_parser_t parser);
+static int ReadAllFiles(ref_parser_t parser);
 
 
 #pragma endregion
@@ -166,7 +166,7 @@ archiver_io_t Archiver_FileOpen(FILE *file) {
   return state;
 }
 
-errno_t Archiver_FileClose(const archiver_io_t *io_state) {
+int Archiver_FileClose(const archiver_io_t *io_state) {
   if (!IsIOFile(io_state))
   {
     ErrPrintF("invalid FILE io state");
@@ -180,7 +180,7 @@ errno_t Archiver_FileClose(const archiver_io_t *io_state) {
 
 archiver_io_t ArchiverIO_BufferOpenW(archiver_io_write_buf_t buffer) {
   io_state_t state = {0};
-  errno_t error = 0;
+  int error = 0;
 
   error = SetupBufferIOState(&state, &buffer, true);
   if (error != 0)
@@ -197,7 +197,7 @@ archiver_io_t ArchiverIO_BufferOpenW(archiver_io_write_buf_t buffer) {
 
 archiver_io_t ArchiverIO_BufferOpenR(archiver_io_read_buf_t buffer) {
   io_state_t state = {0};
-  errno_t error = 0;
+  int error = 0;
 
 
   error = SetupBufferIOState(&state, &buffer, false);
@@ -213,13 +213,13 @@ archiver_io_t ArchiverIO_BufferOpenR(archiver_io_read_buf_t buffer) {
   return state;
 }
 
-errno_t ArchiverIO_BufferClose(const archiver_io_t *io_state) {
+int ArchiverIO_BufferClose(const archiver_io_t *io_state) {
 
 
   return 0;
 }
 
-errno_t Archiver_ReadIO(const archiver_io_t *io_state, archive_t *container) {
+int Archiver_ReadIO(const archiver_io_t *io_state, archive_t *container) {
   if (io_state == NULL)
   {
     ErrPrintF("null 'io_state'");
@@ -254,7 +254,7 @@ errno_t Archiver_ReadIO(const archiver_io_t *io_state, archive_t *container) {
   return 0;
 }
 
-errno_t Archiver_Close(archive_t *archive) {
+int Archiver_Close(archive_t *archive) {
   if (archive == NULL)
   {
     ErrPrintF("Null archive to close!");
@@ -297,17 +297,17 @@ inline bool IO_OPIsAdvanced(io_op_type_t type) {
   return (int)type >= eReadingAdvanced;
 }
 
-errno_t IO_FileRead(void *buffer, size_t bytes, size_t *read_count, archiver_io_data_t data) {
+int IO_FileRead(void *buffer, size_t bytes, size_t *read_count, archiver_io_data_t data) {
 
   errno = 0;
-  const size_t read_count_v = fread_s(buffer, bytes, 1, bytes, data.file);
+  const size_t read_count_v = fread(buffer, bytes, 1, data.file);
 
   if (read_count) { *read_count = read_count_v; }
 
   return errno;
 }
 
-errno_t IO_FileWrite(const void *buffer, size_t bytes, size_t *write_count, archiver_io_data_t data) {
+int IO_FileWrite(const void *buffer, size_t bytes, size_t *write_count, archiver_io_data_t data) {
 
   errno = 0;
   const size_t write_count_v = fwrite(buffer, bytes, 1, data.file);
@@ -317,7 +317,7 @@ errno_t IO_FileWrite(const void *buffer, size_t bytes, size_t *write_count, arch
   return errno;
 }
 
-errno_t IO_FileSeek(int state, size_t pos, archiver_io_data_t data) {
+int IO_FileSeek(int state, size_t pos, archiver_io_data_t data) {
 
   if (state != SEEK_SET && state != SEEK_CUR && state != SEEK_END)
   {
@@ -334,7 +334,7 @@ size_t IO_FileTell(archiver_io_data_t data) {
   return ftell(data.file);
 }
 
-errno_t IO_BufRead(void *buffer, size_t bytes, size_t *read_count, archiver_io_data_t data) {
+int IO_BufRead(void *buffer, size_t bytes, size_t *read_count, archiver_io_data_t data) {
   archiver_io_read_buf_t *read_buf = &data.buffer.read_buf;
 
   if (read_buf->data == NULL)
@@ -370,7 +370,7 @@ errno_t IO_BufRead(void *buffer, size_t bytes, size_t *read_count, archiver_io_d
   return 0;
 }
 
-errno_t IO_BufWrite(const void *buffer, size_t bytes, size_t *write_count, archiver_io_data_t data) {
+int IO_BufWrite(const void *buffer, size_t bytes, size_t *write_count, archiver_io_data_t data) {
   archiver_io_write_buf_t *write_buf = &data.buffer.write_buf;
 
   if (write_buf->data == NULL)
@@ -406,7 +406,7 @@ errno_t IO_BufWrite(const void *buffer, size_t bytes, size_t *write_count, archi
   return 0;
 }
 
-errno_t IO_BufSeek(int state, size_t pos, archiver_io_data_t data) {
+int IO_BufSeek(int state, size_t pos, archiver_io_data_t data) {
 
   switch (state)
   {
@@ -445,7 +445,7 @@ size_t IO_BufTell(archiver_io_data_t data) {
 }
 
 void CopyErrMsg(error_msg_t *dst) {
-  strncpy_s(*dst, ERROR_MSG_SZ, g_ErrorMSG, ERROR_MSG_SZ);
+  strncpy(*dst, g_ErrorMSG, ERROR_MSG_SZ);
 }
 
 void ErrPrintF(const char *format, ...) {
@@ -465,13 +465,13 @@ void ErrPrintF(const char *format, ...) {
 }
 
 void VErrPrintF(const char *format, va_list list) {
-  vsprintf_s(
+  vsnprintf(
     g_ErrorMSG, ERROR_MSG_SZ, format, list
   );
 
   if (g_DoErrorLogging)
   {
-    fprintf_s(stderr, "%s", g_ErrorMSG);
+    fprintf(stderr, "%s", g_ErrorMSG);
     fputc('\n', stderr);
     fflush(stderr);
   }
@@ -479,7 +479,7 @@ void VErrPrintF(const char *format, va_list list) {
 
 void ParserErrorF(ref_parser_t parser, const char *format, ...) {
   char buffer[ERROR_MSG_SZ] = {0};
-  sprintf_s(buffer, ERROR_MSG_SZ, "Parser[%s]: %s", parser->context, format);
+  snprintf(buffer, ERROR_MSG_SZ, "Parser[%s]: %s", parser->context, format);
 
   va_list list;
 
@@ -560,7 +560,7 @@ bool IsIOFile(const io_state_t *state) {
   return true;
 }
 
-errno_t SetupBufferIOState(io_state_t *p_state, const void *io_buffer_data, bool write) {
+int SetupBufferIOState(io_state_t *p_state, const void *io_buffer_data, bool write) {
   if (!p_state || !io_buffer_data)
   {
     return ECANCELED;
@@ -654,13 +654,13 @@ uint64_t ParserReadIntStr(ref_parser_t parser, unsigned num_str_len) {
   return strtoull(num_str, NULL, 0);
 }
 
-errno_t ReadSignature(ref_parser_t parser) {
+int ReadSignature(ref_parser_t parser) {
   PARSER_CONTEXT_FUNC("file signature");
   ParserReadBufFully(parser, parser->output->signature, ARCHIVER_SIGN_LEN);
   return parser->error;
 }
 
-errno_t ReadFileHeader(ref_parser_t parser, archive_file_t *file) {
+int ReadFileHeader(ref_parser_t parser, archive_file_t *file) {
 
   file->offset = ParserTellPos(parser);
 
@@ -710,7 +710,7 @@ errno_t ReadFileHeader(ref_parser_t parser, archive_file_t *file) {
   return 0;
 }
 
-errno_t ReadFile(ref_parser_t parser, archive_file_t *file) {
+int ReadFile(ref_parser_t parser, archive_file_t *file) {
   if (ReadFileHeader(parser, file) != 0)
   {
     return parser->error;
@@ -748,7 +748,7 @@ errno_t ReadFile(ref_parser_t parser, archive_file_t *file) {
   return parser->error;
 }
 
-errno_t ReadAllFiles(ref_parser_t parser) {
+int ReadAllFiles(ref_parser_t parser) {
   size_t files_arr_cap = 32;
   size_t files_arr_len = 0;
   archive_file_t *files_arr = calloc(files_arr_cap, sizeof(archive_file_t));

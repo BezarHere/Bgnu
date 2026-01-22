@@ -1,5 +1,6 @@
 report_silent_builds = false
 no_cache = false
+run_configuration = debug
 force_linking = false
 color_output = true
 rebuild_old_projects = true
@@ -9,3 +10,4 @@ process_pipe_buffer_sz = null
 clear_cache = false
 build_expiration_age_sec = 259200
 always_link_build = false
+allow_verbose_gcc = false

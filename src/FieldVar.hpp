@@ -153,8 +153,9 @@ class fieldvar_access_violation : public std::runtime_error
 {
 	static string _generate_msg(const FieldVar &fieldvar, const FieldVarType access_type) {
 		char buffer[inner::ExceptionBufferSz]{0};
-		sprintf_s(
+		snprintf(
 			buffer,
+      std::size(buffer) - 1,
 			"Trying to access a fieldvar [%p] of type '%s' as type '%s'",
 			&fieldvar,
 			FieldVar::get_name_for_type(fieldvar.get_type()),

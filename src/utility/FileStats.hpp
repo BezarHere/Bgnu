@@ -6,12 +6,8 @@ enum eFileFlags : uint16_t
 {
 	eFileFlag_Hidden = 0x01,
 	eFileFlag_ReadOnly = 0x02,
-	eFileFlag_SystemFile = 0x04,
-	eFileFlag_Device = 0x08,
-	eFileFlag_Offline = 0x10,
-	eFileFlag_Virtual = 0x20,
-	eFileFlag_Encrypted = 0x40,
-	eFileFlag_Temporay = 0x80,
+	eFileFlag_Device = 0x04,
+	eFileFlag_Virtual = 0x08,
 
 	eFileFlag_Directory = 0x100,
 };

@@ -5,6 +5,8 @@
 #include <array>
 #include <cstdint>
 
+#include <stdarg.h>
+
 #include <map>
 
 #include <limits>
@@ -48,6 +50,39 @@ static constexpr streamsize streamsize_max = std::numeric_limits<streamsize>::ma
 #define NODISCARD [[__nodiscard__]]
 #define NORETURN __attribute__ ((__noreturn__))
 #define ALWAYS_INLINE inline __attribute__((__always_inline__))
+#endif
+
+#ifdef __unix__
+static ALWAYS_INLINE size_t wcsnlen_s(const wchar_t *wstr, size_t max_count) {
+  return wcsnlen(wstr, max_count);
+}
+static ALWAYS_INLINE error_t wcstombs_s(size_t *out_count, char *out_mbs, size_t mbs_size, const wchar_t *in_wcs, size_t wcs_count) {
+  mbstate_t state = {0};
+  const size_t convert_count = wcsnrtombs(out_mbs, &in_wcs, wcs_count, mbs_size, &state);
+  if (convert_count == (size_t)-1)
+  {
+    return errno;
+  }
+
+  if (out_count != nullptr)
+  {
+    *out_count = convert_count;
+  }
+
+  return 0;
+}
+
+template <size_t N>
+static inline error_t sprintf_s(char (&buf)[N], const char *format, ...) {
+  va_list list;
+  va_start(list, format);
+  error_t r = vsnprintf(
+    buf, N, format, list
+  );
+  va_end(list);
+
+  return r;
+}
 #endif
 
 static ALWAYS_INLINE constexpr const char *to_cstr(const char *value) { return value; }
