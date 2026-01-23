@@ -50,19 +50,7 @@ static inline size_t find_extension(const FilePath::char_type *filename, size_t 
 #endif
 }
 
-enum class RelationSegmentType : uint8_t
-{
-  None = 0,
-
-  // just a ordinary segment path
-  Normal,
-  // should be treated like normal, no effect except being deleted
-  Current,
-
-  Parent, // go one directory up if possible
-
-  DriveLetter, // a drive letter (win32) anchor the path to said drive
-};
+using RelationSegmentType = FilePath::RelationSegmentType;
 
 static constexpr RelationSegmentType
 get_segment_relation_type(const FilePath::string_blob &segment);
@@ -598,46 +586,8 @@ FilePath::string_type FilePath::_resolve_path(const string_blob &text, const str
     {
       const string_blob segment_source = text.slice(last_anchor, i);
 
-      RelationSegmentType rel_type = get_segment_relation_type(segment_source);
-
-      // "some_path"
-      if (rel_type == RelationSegmentType::Normal)
-      {
-        result_str \
-          .append(1, DirectorySeparator)
-          .append(segment_source.data, segment_source.length());
-      }
-      // ".."
-      else if (rel_type == RelationSegmentType::Parent)
-      {
-        string_blob result_blob = {result_str.data(), result_str.length()};
-
-        const size_t parent_sep = _get_last_separator(result_blob);
-
-        // no parent, go back to root
-        if (parent_sep == npos)
-        {
-          string_blob root = get_root_path(result_blob);
-          string_type root_str = string_type(root.data, root.length());
-
-          result_str.assign(root_str);
-        }
-        else
-        {
-          result_str.resize(parent_sep);
-        }
-      }
-      // drive letters ("E:", "C:")
-      else if (rel_type == RelationSegmentType::DriveLetter)
-      {
-        string_type drive_str = string_type(segment_source.data, segment_source.length());
-        result_str.assign(drive_str);
-      }
-      // current ('.')
-      else
-      {
-        // skip 'current' segments
-      }
+      const RelationSegmentType rel_type = get_segment_relation_type(segment_source);
+      _add_resolve_segment(rel_type, result_str, segment_source);
 
       // no need to process next char 
       i++;
@@ -647,6 +597,54 @@ FilePath::string_type FilePath::_resolve_path(const string_blob &text, const str
   }
 
   return result_str;
+}
+
+void FilePath::_add_resolve_segment(RelationSegmentType rel_type, FilePath::string_type &result_str, const FilePath::string_blob &segment_source) {
+  switch (rel_type)
+  {
+  case RelationSegmentType::Normal:
+    {
+      result_str.append(1, DirectorySeparator);
+      result_str.append(segment_source.data, segment_source.length());
+      break;
+    }
+  case RelationSegmentType::Parent:
+    {
+      string_blob result_blob = {result_str.data(), result_str.length()};
+
+      const size_t parent_sep = _get_last_separator(result_blob);
+
+      // no parent, go back to root
+      if (parent_sep == npos)
+      {
+        string_blob root = get_root_path(result_blob);
+        string_type root_str = string_type(root.data, root.length());
+
+        result_str.assign(root_str);
+      }
+      else
+      {
+        result_str.resize(parent_sep);
+      }
+
+      break;
+    }
+  case RelationSegmentType::DriveLetter:
+    {
+      string_type drive_str = string_type(segment_source.data, segment_source.length());
+      result_str.assign(drive_str);
+      break;
+    }
+  case RelationSegmentType::Home:
+    {
+      result_str.append(getenv("HOME"));
+      break;
+    }
+  case RelationSegmentType::Current:
+    break;
+  default:
+    throw std::runtime_error("Unknown segment type");
+  }
 }
 
 bool FilePath::_preprocess(Blob<TextArray::value_type> &text) {
@@ -708,10 +706,19 @@ bool FilePath::_preprocess(Blob<TextArray::value_type> &text) {
 constexpr RelationSegmentType get_segment_relation_type(const FilePath::string_blob &segment) {
 
   // can't be anything except normal or current
-  if (segment.size <= 1)
+  if (segment.size == 1)
   {
-    return (segment.size == 1 && segment[0] == '.') ?
-      RelationSegmentType::Current : RelationSegmentType::Normal;
+    if (segment[0] == '.')
+    {
+      return RelationSegmentType::Current;
+    }
+
+#ifdef __linux__
+    if (segment[0] == '~')
+    {
+      return RelationSegmentType::Home;
+    }
+#endif
   }
 
   if (segment.size == 2)
@@ -721,10 +728,12 @@ constexpr RelationSegmentType get_segment_relation_type(const FilePath::string_b
       return RelationSegmentType::Parent;
     }
 
+#ifdef _WIN32
     if (std::isalpha(segment[0]) && segment[1] == ':')
     {
       return RelationSegmentType::DriveLetter;
     }
+#endif
   }
 
   return RelationSegmentType::Normal;
