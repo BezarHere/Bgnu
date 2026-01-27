@@ -334,7 +334,7 @@ hash_t Project::hash() const {
 
 
 Error ProjectOutputData::ensure_available() const {
-  this->name->parent().create_directory();
+  this->get_result_path().parent().create_directory();
   this->cache_dir->create_directory();
   this->dir->create_directory();
   return Error::Ok;
