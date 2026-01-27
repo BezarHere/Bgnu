@@ -43,12 +43,12 @@ Argument &ArgumentSource::read() {
   return m_args[index];
 }
 
-const std::string &ArgumentSource::read_or(const std::string &default_value) {
+std::string ArgumentSource::read_or(const std::string &default_value) {
   size_t index = _find_unused();
 
   if (index == npos)
   {
-    return std::string(default_value);
+    return default_value;
   }
 
   m_args[index].mark_used();

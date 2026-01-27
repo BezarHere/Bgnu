@@ -7,7 +7,8 @@ static const std::string OverwriteFlags[] = {"-o", "--overwrite"};
 
 
 Error commands::NewCommand::execute(ArgumentSource &reader) {
-	const FilePath save_file = reader.read_or(BuildCommand::_default_filepath().c_str());
+  const std::string save_file_value = reader.read_or(BuildCommand::_default_filepath().c_str());
+	const FilePath save_file = FilePath(save_file_value);
 	const bool overwrite = reader.check_flag_any(OverwriteFlags);
 
 	if (save_file.exists() && !overwrite)

@@ -63,7 +63,7 @@ public:
   string join() const;
 
 	Argument &read();
-	const std::string &read_or(const std::string &default_value);
+	std::string read_or(const std::string &default_value);
 
   // returns npos if not found, does not check used arguments
   size_t find(const string &name) const;
