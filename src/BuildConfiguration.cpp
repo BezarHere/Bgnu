@@ -463,7 +463,7 @@ BuildConfiguration BuildConfiguration::GetDefault(BuildConfigurationDefaultType 
     Logger::error("unknown build configuration default: enum value=%d\n", (int)default_mode);
   }
 
-  return BuildConfiguration();
+  return config;
 }
 
 BuildConfiguration BuildConfiguration::from_data(FieldDataReader reader, ErrorReport &report) {
