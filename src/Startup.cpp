@@ -12,7 +12,7 @@ int Startup::start(ArgumentSource reader) {
 	setlocale(LC_ALL, "en_US.utf8");
 
 	StartupMessage();
-	Settings::Init();
+	Settings::Init(reader);
 	Settings::SaveBackup();
 
 	if (reader.is_empty())

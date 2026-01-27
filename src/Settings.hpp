@@ -2,6 +2,7 @@
 #include "Logger.hpp"
 #include "FieldVar.hpp"
 #include "FilePath.hpp"
+#include "Argument.hpp"
 
 struct SettingValue
 {
@@ -21,7 +22,7 @@ struct Settings
 public:
   static BGnuVersion GetVersion();
 
-  static errno_t Init();
+  static errno_t Init(ArgumentSource &args);
   static errno_t Save(bool overwrite);
   static errno_t SaveBackup();
   static errno_t SaveTo(const FilePath &path, bool overwrite);

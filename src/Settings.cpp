@@ -11,7 +11,7 @@ static constexpr BGnuVersion BGnuVersionHistory[] = {
   {1, 2, 0}, {1, 2, 1}, {1, 2, 2}, {1, 2, 3}, {1, 2, 4},
   {1, 3, 0}, {1, 3, 1}, {1, 3, 2}, {1, 3, 3},
   {1, 4, 0}, {1, 4, 1}, {1, 4, 2}, {1, 4, 3}, {1, 4, 4}, {1, 4, 5},
-  {1, 5, 0}
+  {1, 5, 0}, {1, 5, 1}
 };
 
 struct SettingsData
@@ -44,7 +44,10 @@ BGnuVersion Settings::GetVersion() {
   return BGnuVersionHistory[std::size(BGnuVersionHistory) - 1];
 }
 
-errno_t Settings::Init() {
+errno_t Settings::Init(ArgumentSource &args) {
+  // TODO: handle global flags
+  (void)args;
+  
   if (g_SettingsData.initalized)
   {
     return EALREADY;
@@ -91,6 +94,7 @@ const FieldVar &Settings::Get(const std::string &name, const FieldVar &default_v
 }
 
 void Settings::Set(const std::string &name, const FieldVar &value) {
+  throw std::runtime_error("unimplemented");
 }
 
 const FieldVar &Settings::Reset(const std::string &name) {
