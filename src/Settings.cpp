@@ -1,17 +1,19 @@
 #include "Settings.hpp"
-#include "StringTools.hpp"
-#include "FilePath.hpp"
-#include "FieldFile.hpp"
+
 #include "FieldDataReader.hpp"
+#include "FieldFile.hpp"
+#include "FilePath.hpp"
+#include "StringTools.hpp"
 
 typedef std::map<std::string, SettingValue> SettingMap;
 
 static constexpr BGnuVersion BGnuVersionHistory[] = {
-  {1, 0, 0}, {1, 1, 0},
-  {1, 2, 0}, {1, 2, 1}, {1, 2, 2}, {1, 2, 3}, {1, 2, 4},
-  {1, 3, 0}, {1, 3, 1}, {1, 3, 2}, {1, 3, 3},
-  {1, 4, 0}, {1, 4, 1}, {1, 4, 2}, {1, 4, 3}, {1, 4, 4}, {1, 4, 5},
-  {1, 5, 0}, {1, 5, 1}, {1, 5, 2}
+
+  /**/ { 1, 0, 0 }, { 1, 1, 0 },
+  /**/ { 1, 2, 0 }, { 1, 2, 1 }, { 1, 2, 2 }, { 1, 2, 3 }, { 1, 2, 4 },
+  /**/ { 1, 3, 0 }, { 1, 3, 1 }, { 1, 3, 2 }, { 1, 3, 3 },
+  /**/ { 1, 4, 0 }, { 1, 4, 1 }, { 1, 4, 2 }, { 1, 4, 3 }, { 1, 4, 4 }, { 1, 4, 5 },
+  /**/ { 1, 5, 0 }, { 1, 5, 1 }, { 1, 5, 2 }
 };
 
 struct SettingsData
@@ -22,15 +24,17 @@ struct SettingsData
   SettingMap values;
 };
 
-static const SettingValue DefaultValue = {nullptr, nullptr};
+static const SettingValue DefaultValue = { nullptr, nullptr };
 
-SettingsData g_SettingsData = {0};
+SettingsData g_SettingsData = { 0 };
 
 bool Settings::s_SilentSaveFail = false;
 bool Settings::s_AddRequestValues = true;
 
-static inline errno_t AddField(const std::string &name, const SettingValue &value, bool base_val = true);
-static inline const FieldVar &GetSettingInnerValue(const std::string &name, const FieldVar &def_val);
+static inline errno_t AddField(const std::string &name, const SettingValue &value,
+                               bool base_val = true);
+static inline const FieldVar &GetSettingInnerValue(const std::string &name,
+                                                   const FieldVar &def_val);
 static inline SettingValue *GetSettingValue(const std::string &name);
 
 static inline void ReadSetting(FieldDataReader &reader);
@@ -40,14 +44,12 @@ static inline FieldVar LoadSettingsFile();
 
 static FieldVar::Dict Serialize();
 
-BGnuVersion Settings::GetVersion() {
-  return BGnuVersionHistory[std::size(BGnuVersionHistory) - 1];
-}
+BGnuVersion Settings::GetVersion() { return BGnuVersionHistory[std::size(BGnuVersionHistory) - 1]; }
 
 errno_t Settings::Init(ArgumentSource &args) {
   // TODO: handle global flags
   (void)args;
-  
+
   if (g_SettingsData.initalized)
   {
     return EALREADY;
@@ -57,15 +59,13 @@ errno_t Settings::Init(ArgumentSource &args) {
   Logger::note("initialising settings");
 
   const FieldVar local_settings = LoadSettingsFile();
-  FieldDataReader reader{"local-settings", local_settings.get_dict()};
+  FieldDataReader reader{ "local-settings", local_settings.get_dict() };
   ReadSetting(reader);
 
   return EOK;
 }
 
-errno_t Settings::Save(bool overwrite) {
-  return SaveTo(GetLocalSettingsPath(), overwrite);
-}
+errno_t Settings::Save(bool overwrite) { return SaveTo(GetLocalSettingsPath(), overwrite); }
 
 errno_t Settings::SaveBackup() {
   const FilePath backup_path = GetLocalSettingsPath() + ".backup";
@@ -134,10 +134,8 @@ inline const FieldVar &GetSettingInnerValue(const std::string &name, const Field
     if (Logger::is_verbose())
     {
       const std::string out = value.copy_stringified().get_string();
-      Logger::verbose(
-        "returned setting field value name='%s', value=%s",
-        name.c_str(), out.c_str()
-      );
+      Logger::verbose("returned setting field value name='%s', value=%s", name.c_str(),
+                      out.c_str());
     }
     return value;
   }
@@ -152,7 +150,6 @@ inline const FieldVar &GetSettingInnerValue(const std::string &name, const Field
     value.default_value = def_val;
     AddField(name, value);
   }
-
 
   return def_val;
 }
@@ -169,7 +166,7 @@ inline SettingValue *GetSettingValue(const std::string &name) {
 inline void ReadSetting(FieldDataReader &reader) {
   for (const auto &[name, value] : reader.get_data())
   {
-    const errno_t err = AddField(name, {value, value});
+    const errno_t err = AddField(name, { value, value });
     if (err == EOK)
     {
       Logger::debug("added setting: %s", name.c_str());
@@ -184,9 +181,7 @@ inline FilePath GetLocalSettingsPath() {
   return FilePath::get_working_directory() + "settings.bgnu";
 }
 
-inline FieldVar LoadSettingsFile() {
-  return FieldFile::load(GetLocalSettingsPath());
-}
+inline FieldVar LoadSettingsFile() { return FieldFile::load(GetLocalSettingsPath()); }
 
 FieldVar::Dict Serialize() {
   FieldVar::Dict dict = {};

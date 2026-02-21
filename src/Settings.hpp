@@ -1,8 +1,8 @@
 #pragma once
-#include "Logger.hpp"
+#include "Argument.hpp"
 #include "FieldVar.hpp"
 #include "FilePath.hpp"
-#include "Argument.hpp"
+#include "Logger.hpp"
 
 struct SettingValue
 {
@@ -36,6 +36,7 @@ public:
 
   // defaults to true, when getting a value, adds the value if it's not present (to the default)
   static bool s_AddRequestValues;
+
 private:
   Settings() = delete;
   ~Settings() = delete;

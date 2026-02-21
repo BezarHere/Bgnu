@@ -1,14 +1,13 @@
 #pragma once
-#include "Command.hpp"
-#include "Project.hpp"
-#include "BuildCache.hpp"
-#include "code/SourceProcessor.hpp"
-#include "misc/StaticString.hpp"
-
-#include "BuildTools.hpp"
-
 #include <map>
 #include <set>
+
+#include "BuildCache.hpp"
+#include "BuildTools.hpp"
+#include "Command.hpp"
+#include "Project.hpp"
+#include "code/SourceProcessor.hpp"
+#include "misc/StaticString.hpp"
 
 class SourceProcessor;
 
@@ -20,7 +19,6 @@ namespace commands
   public:
     typedef std::map<FilePath, FilePath> IOMap;
 
-
     struct FileInputOutput
     {
       FilePath input, output;
@@ -31,10 +29,8 @@ namespace commands
     Error execute(ArgumentSource &reader) override;
     Error get_help(ArgumentSource &reader, string &out) override;
     inline CommandInfo get_info() const override {
-      return {
-        "build",
-        "builds the project in the working directory, project files are named '.bgnu'"
-      };
+      return { "build",
+               "builds the project in the working directory, project files are named '.bgnu'" };
     }
 
     bool is_running_rebuild() const;
@@ -42,7 +38,6 @@ namespace commands
     static FilePath _default_filepath();
 
   private:
-
     Error _setup_build(ArgumentSource &reader);
 
     void _load_properties(ArgumentSource &reader);
@@ -55,7 +50,7 @@ namespace commands
     std::vector<int> _do_build_on(build_tools::ExecuteParameter *build_args, size_t count) const;
 
     static size_t _check_report_compile_failures(const int *build_results,
-                                          const build_tools::ExecuteParameter *build_args,
+                                                 const build_tools::ExecuteParameter *build_args,
                                                  size_t count);
 
     void _process_build_source(const commands::BuildCommand::IOMap &input_output_map,

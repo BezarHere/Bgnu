@@ -1,205 +1,202 @@
 #pragma once
-#include <string>
 #include <errno.h>
+
+#include <string>
 typedef int errno_t;
 
 #ifndef EOK
 #define EOK 0
 #endif
 
-enum class Error
-{
-	Ok,
-	Failure,
+enum class Error {
+  Ok,
+  Failure,
 
-	NoData,
-	NullData,
-	InvalidType,
+  NoData,
+  NullData,
+  InvalidType,
 
-	NotImplemented,
+  NotImplemented,
 
-	NoConfig,
+  NoConfig,
 
-	FileNotFound,
-	DirNotFound,
+  FileNotFound,
+  DirNotFound,
 
-	AlreadyExists,
+  AlreadyExists,
 };
 
 struct ErrorReport
 {
-	Error code = Error::Ok;
-	std::string message;
+  Error code = Error::Ok;
+  std::string message;
 
-	inline operator bool() const noexcept { return code != Error::Ok; }
+  inline operator bool() const noexcept { return code != Error::Ok; }
 };
 
-inline constexpr const char *GetErrorName(const Error error) {
-	return "unknown";
-}
+inline constexpr const char *GetErrorName(const Error error) { return "unknown"; }
 
 static inline const char *GetErrorName(const errno_t error) {
-	static char unknown_error_n[80] = {0};
-	switch (error)
-	{
-	case EOK:
-		return "OK";
-	case EPERM:
-		return "EPERM";
-	case ENOENT:
-		return "ENOENT";
-	case ESRCH:
-		return "ESRCH";
-	case EINTR:
-		return "EINTR";
-	case EIO:
-		return "EIO";
-	case ENXIO:
-		return "ENXIO";
-	case E2BIG:
-		return "E2BIG";
-	case ENOEXEC:
-		return "ENOEXEC";
-	case EBADF:
-		return "EBADF";
-	case ECHILD:
-		return "ECHILD";
-	case EAGAIN:
-		return "EAGAIN";
-	case ENOMEM:
-		return "ENOMEM";
-	case EACCES:
-		return "EACCES";
-	case EFAULT:
-		return "EFAULT";
-	case EBUSY:
-		return "EBUSY";
-	case EEXIST:
-		return "EEXIST";
-	case EXDEV:
-		return "EXDEV";
-	case ENODEV:
-		return "ENODEV";
-	case ENOTDIR:
-		return "ENOTDIR";
-	case EISDIR:
-		return "EISDIR";
-	case ENFILE:
-		return "ENFILE";
-	case EMFILE:
-		return "EMFILE";
-	case ENOTTY:
-		return "ENOTTY";
-	case EFBIG:
-		return "EFBIG";
-	case ENOSPC:
-		return "ENOSPC";
-	case ESPIPE:
-		return "ESPIPE";
-	case EROFS:
-		return "EROFS";
-	case EMLINK:
-		return "EMLINK";
-	case EPIPE:
-		return "EPIPE";
-	case EDOM:
-		return "EDOM";
-	case EDEADLK:
-		return "EDEADLK";
-	case ENAMETOOLONG:
-		return "ENAMETOOLONG";
-	case ENOLCK:
-		return "ENOLCK";
-	case ENOSYS:
-		return "ENOSYS";
-	case ENOTEMPTY:
-		return "ENOTEMPTY";
-	case EINVAL:
-		return "EINVAL";
-	case ERANGE:
-		return "ERANGE";
-	case EILSEQ:
-		return "EILSEQ";
-	case ENOTSUP:
-		return "ENOTSUP";
-	case EAFNOSUPPORT:
-		return "EAFNOSUPPORT";
-	case EADDRINUSE:
-		return "EADDRINUSE";
-	case EADDRNOTAVAIL:
-		return "EADDRNOTAVAIL";
-	case EISCONN:
-		return "EISCONN";
-	case ENOBUFS:
-		return "ENOBUFS";
-	case ECONNABORTED:
-		return "ECONNABORTED";
-	case EALREADY:
-		return "EALREADY";
-	case ECONNREFUSED:
-		return "ECONNREFUSED";
-	case ECONNRESET:
-		return "ECONNRESET";
-	case EDESTADDRREQ:
-		return "EDESTADDRREQ";
-	case EHOSTUNREACH:
-		return "EHOSTUNREACH";
-	case EMSGSIZE:
-		return "EMSGSIZE";
-	case ENETDOWN:
-		return "ENETDOWN";
-	case ENETRESET:
-		return "ENETRESET";
-	case ENETUNREACH:
-		return "ENETUNREACH";
-	case ENOPROTOOPT:
-		return "ENOPROTOOPT";
-	case ENOTSOCK:
-		return "ENOTSOCK";
-	case ENOTCONN:
-		return "ENOTCONN";
-	case ECANCELED:
-		return "ECANCELED";
-	case EINPROGRESS:
-		return "EINPROGRESS";
-	case EOWNERDEAD:
-		return "EOWNERDEAD";
-	case EPROTO:
-		return "EPROTO";
-	case EPROTONOSUPPORT:
-		return "EPROTONOSUPPORT";
-	case EBADMSG:
-		return "EBADMSG";
-	case EIDRM:
-		return "EIDRM";
-	case ENODATA:
-		return "ENODATA";
-	case ENOLINK:
-		return "ENOLINK";
-	case ENOMSG:
-		return "ENOMSG";
-	case ENOSR:
-		return "ENOSR";
-	case ENOSTR:
-		return "ENOSTR";
-	case ENOTRECOVERABLE:
-		return "ENOTRECOVERABLE";
-	case ETIME:
-		return "ETIME";
-	case ETXTBSY:
-		return "ETXTBSY";
-	case ETIMEDOUT:
-		return "ETIMEDOUT";
-	case ELOOP:
-		return "ELOOP";
-	case EPROTOTYPE:
-		return "EPROTOTYPE";
-	case EOVERFLOW:
-		return "EOVERFLOW";
-	default:
-		{
-			snprintf(unknown_error_n, std::size(unknown_error_n) - 1, "UnkownErr_%d", error);
-			return unknown_error_n;
-		}
-	}
+  static char unknown_error_n[80] = { 0 };
+  switch (error)
+  {
+  case EOK:
+    return "OK";
+  case EPERM:
+    return "EPERM";
+  case ENOENT:
+    return "ENOENT";
+  case ESRCH:
+    return "ESRCH";
+  case EINTR:
+    return "EINTR";
+  case EIO:
+    return "EIO";
+  case ENXIO:
+    return "ENXIO";
+  case E2BIG:
+    return "E2BIG";
+  case ENOEXEC:
+    return "ENOEXEC";
+  case EBADF:
+    return "EBADF";
+  case ECHILD:
+    return "ECHILD";
+  case EAGAIN:
+    return "EAGAIN";
+  case ENOMEM:
+    return "ENOMEM";
+  case EACCES:
+    return "EACCES";
+  case EFAULT:
+    return "EFAULT";
+  case EBUSY:
+    return "EBUSY";
+  case EEXIST:
+    return "EEXIST";
+  case EXDEV:
+    return "EXDEV";
+  case ENODEV:
+    return "ENODEV";
+  case ENOTDIR:
+    return "ENOTDIR";
+  case EISDIR:
+    return "EISDIR";
+  case ENFILE:
+    return "ENFILE";
+  case EMFILE:
+    return "EMFILE";
+  case ENOTTY:
+    return "ENOTTY";
+  case EFBIG:
+    return "EFBIG";
+  case ENOSPC:
+    return "ENOSPC";
+  case ESPIPE:
+    return "ESPIPE";
+  case EROFS:
+    return "EROFS";
+  case EMLINK:
+    return "EMLINK";
+  case EPIPE:
+    return "EPIPE";
+  case EDOM:
+    return "EDOM";
+  case EDEADLK:
+    return "EDEADLK";
+  case ENAMETOOLONG:
+    return "ENAMETOOLONG";
+  case ENOLCK:
+    return "ENOLCK";
+  case ENOSYS:
+    return "ENOSYS";
+  case ENOTEMPTY:
+    return "ENOTEMPTY";
+  case EINVAL:
+    return "EINVAL";
+  case ERANGE:
+    return "ERANGE";
+  case EILSEQ:
+    return "EILSEQ";
+  case ENOTSUP:
+    return "ENOTSUP";
+  case EAFNOSUPPORT:
+    return "EAFNOSUPPORT";
+  case EADDRINUSE:
+    return "EADDRINUSE";
+  case EADDRNOTAVAIL:
+    return "EADDRNOTAVAIL";
+  case EISCONN:
+    return "EISCONN";
+  case ENOBUFS:
+    return "ENOBUFS";
+  case ECONNABORTED:
+    return "ECONNABORTED";
+  case EALREADY:
+    return "EALREADY";
+  case ECONNREFUSED:
+    return "ECONNREFUSED";
+  case ECONNRESET:
+    return "ECONNRESET";
+  case EDESTADDRREQ:
+    return "EDESTADDRREQ";
+  case EHOSTUNREACH:
+    return "EHOSTUNREACH";
+  case EMSGSIZE:
+    return "EMSGSIZE";
+  case ENETDOWN:
+    return "ENETDOWN";
+  case ENETRESET:
+    return "ENETRESET";
+  case ENETUNREACH:
+    return "ENETUNREACH";
+  case ENOPROTOOPT:
+    return "ENOPROTOOPT";
+  case ENOTSOCK:
+    return "ENOTSOCK";
+  case ENOTCONN:
+    return "ENOTCONN";
+  case ECANCELED:
+    return "ECANCELED";
+  case EINPROGRESS:
+    return "EINPROGRESS";
+  case EOWNERDEAD:
+    return "EOWNERDEAD";
+  case EPROTO:
+    return "EPROTO";
+  case EPROTONOSUPPORT:
+    return "EPROTONOSUPPORT";
+  case EBADMSG:
+    return "EBADMSG";
+  case EIDRM:
+    return "EIDRM";
+  case ENODATA:
+    return "ENODATA";
+  case ENOLINK:
+    return "ENOLINK";
+  case ENOMSG:
+    return "ENOMSG";
+  case ENOSR:
+    return "ENOSR";
+  case ENOSTR:
+    return "ENOSTR";
+  case ENOTRECOVERABLE:
+    return "ENOTRECOVERABLE";
+  case ETIME:
+    return "ETIME";
+  case ETXTBSY:
+    return "ETXTBSY";
+  case ETIMEDOUT:
+    return "ETIMEDOUT";
+  case ELOOP:
+    return "ELOOP";
+  case EPROTOTYPE:
+    return "EPROTOTYPE";
+  case EOVERFLOW:
+    return "EOVERFLOW";
+  default: {
+    snprintf(unknown_error_n, std::size(unknown_error_n) - 1, "UnkownErr_%d", error);
+    return unknown_error_n;
+  }
+  }
 }

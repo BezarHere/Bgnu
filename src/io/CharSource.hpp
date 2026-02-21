@@ -6,10 +6,10 @@ class CharSource : public DataSource<string_char>
 {
 public:
   inline CharSource(const std::basic_string<value_type> &str)
-    : DataSource(str.data(), str.length()) {}
-  
+      : DataSource(str.data(), str.length()) {}
+
   inline CharSource(const std::basic_string_view<value_type> &str)
-    : DataSource(str.data(), str.length()) {}
+      : DataSource(str.data(), str.length()) {}
 
   inline string get(length_type length) {
     if (!good())
@@ -43,6 +43,4 @@ public:
 
     return get(length_type(final_pos - last_pos));
   }
-
 };
-

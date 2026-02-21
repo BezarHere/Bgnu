@@ -1,14 +1,13 @@
 #pragma once
-#include "Project.hpp"
-#include "BuildCache.hpp"
-#include "code/SourceProcessor.hpp"
-
 #include <set>
+
+#include "BuildCache.hpp"
+#include "Project.hpp"
+#include "code/SourceProcessor.hpp"
 
 namespace build_tools
 {
-  enum _ExecuteFlags : uint8_t
-  {
+  enum _ExecuteFlags : uint8_t {
     eExcFlag_Printout = 0x01,
     eExcFlag_PrintoutProgress = 0x02,
   };
@@ -30,20 +29,19 @@ namespace build_tools
   extern void DeleteBuildDir(const Project &project);
   extern void SetupHashes(BuildCache &cache, const Project &proj, const BuildConfiguration *config);
 
-  extern void DeleteUnusedObjFiles(const std::set<FilePath> &object_files, const std::set<FilePath> &used_files);
+  extern void DeleteUnusedObjFiles(const std::set<FilePath> &object_files,
+                                   const std::set<FilePath> &used_files);
 
   extern std::vector<int> Execute(const Blob<const ExecuteParameter> &params);
-  extern std::vector<int> Execute_Multithreaded(const Blob<const ExecuteParameter> &params, uint32_t batches);
+  extern std::vector<int> Execute_Multithreaded(const Blob<const ExecuteParameter> &params,
+                                                uint32_t batches);
 
   extern errno_t _Execute_Inner(const Blob<const std::string> &args,
-                                const Blob<const ExecuteParameter> &params,
-                                Blob<int> results);
+                                const Blob<const ExecuteParameter> &params, Blob<int> results);
 
   extern errno_t _ExecuteParallel_Inner(const Blob<const std::string> &args,
                                         const Blob<const ExecuteParameter> &params,
-                                        Blob<int> results,
-                                        uint32_t batches);
-
+                                        Blob<int> results, uint32_t batches);
 
   extern SourceFileType GetDominantSourceType(Blob<const SourceFileType> file_types);
 
@@ -55,13 +53,14 @@ namespace build_tools
 
   extern const char *GetSourceFileTypeName(SourceFileType type);
 
-  // for 'c++' and 'c' and stuff (not for finding file extension's type, see DefaultSourceFileTypeForExtension())
+  // for 'c++' and 'c' and stuff (not for finding file extension's type, see
+  // DefaultSourceFileTypeForExtension())
   extern SourceFileType GetFileTypeFromTypeName(FilePath::string_blob file_type_name);
 
   static inline SourceFileType GetFileTypeFromTypeName(const FilePath::string_type &str) {
-    return GetFileTypeFromTypeName(FilePath::string_blob{str.c_str(), str.length()});
+    return GetFileTypeFromTypeName(FilePath::string_blob{ str.c_str(), str.length() });
   }
 
-  extern void DumpDependencyMap(const SourceProcessor::dependency_info_map &map, const FilePath &output_path);
+  extern void DumpDependencyMap(const SourceProcessor::dependency_info_map &map,
+                                const FilePath &output_path);
 }
-

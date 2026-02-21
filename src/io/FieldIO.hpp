@@ -5,8 +5,8 @@
 class FieldIO
 {
 public:
-	template <typename T>
-	static inline std::string NestedName(const std::string &parent, const NField<T> &field) {
-		return parent + ":" + (std::string)field.name();
-	}
+  template <typename T>
+  static inline std::string NestedName(const std::string &parent, const NField<T> &field) {
+    return parent + ":" + (std::string)field.name();
+  }
 };

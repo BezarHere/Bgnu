@@ -5,13 +5,12 @@
 class Startup
 {
 public:
-	static int start(ArgumentSource reader);
+  static int start(ArgumentSource reader);
 
 private:
-	static void _build_env(ArgumentSource &reader);
-	static void _check_misspelled_command(const string &name);
-
+  static void _build_env(ArgumentSource &reader);
+  static void _check_misspelled_command(const string &name);
 
 private:
-	static FieldVar::Dict s_env;
+  static FieldVar::Dict s_env;
 };

@@ -11,7 +11,8 @@ ArgumentSource::ArgumentSource(const char_type *argv[], size_t argc) {
   }
 }
 
-ArgumentSource::ArgumentSource(const Blob<const Argument> &args) : m_args{args.begin(), args.end()} {}
+ArgumentSource::ArgumentSource(const Blob<const Argument> &args)
+    : m_args{ args.begin(), args.end() } {}
 
 string ArgumentSource::join() const {
   string result = {};
@@ -69,13 +70,15 @@ size_t ArgumentSource::find(const string &name) const {
 }
 
 Argument *ArgumentSource::extract(const string &name) {
-  for (auto &m_arg : m_args) {
+  for (auto &m_arg : m_args)
+  {
     if (m_arg.is_used())
     {
       continue;
     }
 
-    if (m_arg.get_value() == name) {
+    if (m_arg.get_value() == name)
+    {
       return &m_arg;
     }
   }
@@ -131,7 +134,6 @@ void ArgumentSource::simplify() {
       i--;
     }
   }
-
 }
 
 std::vector<std::string> Argument::BreakArgumentList(const std::string &str) {
@@ -145,9 +147,7 @@ std::vector<std::string> Argument::BreakArgumentList(const std::string &str) {
       break;
     }
 
-    result.push_back(
-      read_argument(str, index)
-    );
+    result.push_back(read_argument(str, index));
 
     index++;
   }
@@ -184,10 +184,7 @@ inline std::string read_argument(const std::string &str, size_t &index) {
     }
   }
 
-  return std::string(
-    str.c_str() + start_index,
-    index - start_index
-  );
+  return std::string(str.c_str() + start_index, index - start_index);
 }
 
 inline std::string read_qouted_argument(const std::string &str, size_t &index) {
@@ -205,8 +202,5 @@ inline std::string read_qouted_argument(const std::string &str, size_t &index) {
     }
   }
 
-  return std::string(
-    str.c_str() + start_index,
-    index - start_index - 1
-  );
+  return std::string(str.c_str() + start_index, index - start_index - 1);
 }

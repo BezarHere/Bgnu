@@ -1,9 +1,12 @@
 #pragma once
-#include "BuildConfiguration.hpp"
 #include <map>
 
-enum class BuildOutputType
-{
+#include "BuildConfiguration.hpp"
+#include "Glob.hpp"
+#include "Result.hpp"
+#include "utility/NField.hpp"
+
+enum class BuildOutputType {
   None,
   Executable,
   StaticLibrary,
@@ -19,24 +22,22 @@ struct ProjectOutputData
   FilePath get_result_path() const;
 
   inline hash_t hash() const {
-    return HashTools::combine(
-      (hash_t)type.field(),
-      HashTools::hash(name->get_text()),
-      HashTools::hash(dir->get_text()),
-      HashTools::hash(cache_dir->get_text())
-    );
+    return HashTools::combine((hash_t)type.field(), HashTools::hash(name->get_text()),
+                              HashTools::hash(dir->get_text()),
+                              HashTools::hash(cache_dir->get_text()));
   }
 
-  NField<BuildOutputType> type = {"type", BuildOutputType::Executable};
-  NField<FilePath> name = {"name", "output"};
-  NField<FilePath> dir = {"dir", "out"};
-  NField<FilePath> cache_dir = {"cache_dir", "out/cache/"};
+  NField<BuildOutputType> type = { "type", BuildOutputType::Executable };
+  NField<FilePath> name = { "name", "output" };
+  NField<FilePath> dir = { "dir", "out" };
+  NField<FilePath> cache_dir = { "cache_dir", "out/cache/" };
 };
 
 struct ProjectModifier
 {
-  enum class ModifierType : uint8_t
-  {
+  enum class Type : uint8_t {
+    None,
+
     Set,
     Del,
 
@@ -46,10 +47,14 @@ struct ProjectModifier
     Div,
   };
 
-  ModifierType type;
-  Glob config_glob; // TODO: extended glob; separating to different globs ("GL*B1|GL*B2")
-  string name;
-  FieldVar var;
+  static Result<ProjectModifier> from_data(const FieldVar::Dict &data);
+
+  static Type NameToType(const std::string &str);
+
+  Type type;
+  Glob target;  // TODO: extended glob; separating to different globs ("GL*B1|GL*B2")
+  string property_name;
+  FieldVar value;
 };
 
 struct SourceTypeGlob
@@ -85,20 +90,20 @@ public:
   hash_t hash() const;
 
   FilePath source_dir = FilePath::get_working_directory();
+
 private:
   static ErrorReport load_various(Project &project, FieldDataReader &reader);
 
 private:
-  NField<ProjectOutputData> m_output = {"output", ProjectOutputData{}};
-  vector<SourceTypeGlob> m_source_selectors = {
-    {"**/*.c", SourceFileType::C},
-    {"**/*.cpp", SourceFileType::CPP},
-    {"**/*.cc", SourceFileType::CPP},
-    {"**/*.cxx", SourceFileType::CPP}
-  };
+  NField<ProjectOutputData> m_output = { "output", ProjectOutputData{} };
+  vector<SourceTypeGlob> m_source_selectors = { { "**/*.c", SourceFileType::C },
+                                                { "**/*.cpp", SourceFileType::CPP },
+                                                { "**/*.cc", SourceFileType::CPP },
+                                                { "**/*.cxx", SourceFileType::CPP } };
 
+  NField<bool> clangd = { "clangd", true };
 
-  vector<ProjectModifier> m_modifiers;
+  NField<vector<ProjectModifier>> m_modifiers = { "modifiers" };
 
-  NField<BuildConfigMap> m_build_configurations = {"build_configurations"};
+  NField<BuildConfigMap> m_build_configurations = { "build_configurations" };
 };

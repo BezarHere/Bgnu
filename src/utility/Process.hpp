@@ -1,8 +1,10 @@
 #pragma once
-#include "misc/StaticString.hpp"
+#include <inttypes.h>
+
 #include <array>
 #include <string>
-#include <inttypes.h>
+
+#include "misc/StaticString.hpp"
 
 class Process
 {
@@ -23,20 +25,14 @@ public:
 
   int start(std::ostream *out = nullptr);
 
-  inline const ProcessName &get_name() const {
-    return m_name;
-  }
+  inline const ProcessName &get_name() const { return m_name; }
 
   inline ProcessFlags get_flags() const { return m_flags; }
   inline ProcessFlags has_flags(ProcessFlags mask) const { return m_flags & mask; }
 
-  inline void set_name(const ProcessName &name) {
-    m_name = name;
-  }
+  inline void set_name(const ProcessName &name) { m_name = name; }
 
-  inline void set_flags(ProcessFlags flags) {
-    m_flags = flags;
-  }
+  inline void set_flags(ProcessFlags flags) { m_flags = flags; }
 
   inline void add_flags(ProcessFlags flags) { m_flags |= flags; }
   inline void remove_flags(ProcessFlags flags) { m_flags &= ~flags; }
@@ -48,5 +44,5 @@ private:
   std::string m_cmd;
   ProcessName m_name = {};
   ProcessFlags m_flags = Flag_None;
-  unsigned long m_wait_time_ms = 1000 * 60; // 1 minutes
+  unsigned long m_wait_time_ms = 1000 * 60;  // 1 minutes
 };

@@ -1,15 +1,13 @@
 #pragma once
-#include <string>
-#include <stack>
-#include <vector>
-#include <array>
-#include <cstdint>
-
 #include <stdarg.h>
 
-#include <map>
-
+#include <array>
+#include <cstdint>
 #include <limits>
+#include <map>
+#include <stack>
+#include <string>
+#include <vector>
 
 #include "misc/Blob.hpp"
 
@@ -18,8 +16,8 @@
 template <typename _T1, typename _T2 = _T1>
 using pair = std::pair<_T1, _T2>;
 
-using std::vector;
 using std::array;
+using std::vector;
 
 template <typename T>
 using vector_stack = std::stack<T, std::vector<T>>;
@@ -41,14 +39,13 @@ typedef Blob<const volatile string_char> CVolatileStrBlob;
 static constexpr size_t npos = (size_t)-1;
 static constexpr streamsize streamsize_max = std::numeric_limits<streamsize>::max();
 
-
 #ifdef _MSC_VER
 #define NODISCARD _NODISCARD
 #define NORETURN __declspec(noreturn)
 #define ALWAYS_INLINE inline __forceinline
 #elif defined(__GNUC__) || defined(__clang__)
 #define NODISCARD [[__nodiscard__]]
-#define NORETURN __attribute__ ((__noreturn__))
+#define NORETURN __attribute__((__noreturn__))
 #define ALWAYS_INLINE inline __attribute__((__always_inline__))
 #endif
 
@@ -56,8 +53,9 @@ static constexpr streamsize streamsize_max = std::numeric_limits<streamsize>::ma
 static ALWAYS_INLINE size_t wcsnlen_s(const wchar_t *wstr, size_t max_count) {
   return wcsnlen(wstr, max_count);
 }
-static ALWAYS_INLINE error_t wcstombs_s(size_t *out_count, char *out_mbs, size_t mbs_size, const wchar_t *in_wcs, size_t wcs_count) {
-  mbstate_t state = {0};
+static ALWAYS_INLINE error_t wcstombs_s(size_t *out_count, char *out_mbs, size_t mbs_size,
+                                        const wchar_t *in_wcs, size_t wcs_count) {
+  mbstate_t state = { 0 };
   const size_t convert_count = wcsnrtombs(out_mbs, &in_wcs, wcs_count, mbs_size, &state);
   if (convert_count == (size_t)-1)
   {
@@ -76,9 +74,7 @@ template <size_t N>
 static inline error_t sprintf_s(char (&buf)[N], const char *format, ...) {
   va_list list;
   va_start(list, format);
-  error_t r = vsnprintf(
-    buf, N, format, list
-  );
+  error_t r = vsnprintf(buf, N, format, list);
   va_end(list);
 
   return r;
@@ -87,97 +83,103 @@ static inline error_t sprintf_s(char (&buf)[N], const char *format, ...) {
 
 static ALWAYS_INLINE constexpr const char *to_cstr(const char *value) { return value; }
 template <typename _T>
-static ALWAYS_INLINE constexpr const char *to_cstr(const Blob<_T> &value) { return value.data; }
+static ALWAYS_INLINE constexpr const char *to_cstr(const Blob<_T> &value) {
+  return value.data;
+}
 static ALWAYS_INLINE const char *to_cstr(const string &value) { return value.c_str(); }
 
 ALWAYS_INLINE constexpr const char *to_boolalpha(const bool value) {
-	return value ? "true" : "false";
+  return value ? "true" : "false";
 }
 
 namespace inner
 {
-	static constexpr size_t ExceptionBufferSz = 1024;
+  static constexpr size_t ExceptionBufferSz = 1024;
 
-	// a struct that can be called with any arguments, but it does not do anything
-	struct DryCallable
-	{
+  // a struct that can be called with any arguments, but it does not do anything
+  struct DryCallable
+  {
 
-		template <typename... _Args>
-		inline void operator()(_Args &&...) const noexcept {
-		}
+    template <typename... _Args>
+    inline void operator()(_Args &&...) const noexcept {}
+  };
 
-	};
+  struct EmptyCTor
+  {
+    template <class T>
+    inline void operator()(T &val) const noexcept {
+      new (&val) T();
+    }
+  };
 
-	struct EmptyCTor
-	{
-		template <class T>
-		inline void operator()(T &val) const noexcept {
-			new (&val) T();
-		}
-	};
+  struct DTor
+  {
+    template <class T>
+    inline void operator()(T &val) const noexcept {
+      val.~T();
+    }
+  };
 
-	struct DTor
-	{
-		template <class T>
-		inline void operator()(T &val) const noexcept {
-			val.~T();
-		}
-	};
+  struct TypelessCTor
+  {
+    inline TypelessCTor(const void *p_ptr = nullptr) : ptr{ p_ptr } {}
 
-	struct TypelessCTor
-	{
-		inline TypelessCTor(const void *p_ptr = nullptr) : ptr{p_ptr} {}
+    template <class T>
+    inline void operator()(T &val) const noexcept {
+      new (&val) T(*reinterpret_cast<const T *>(ptr));
+    }
 
-		template <class T>
-		inline void operator()(T &val) const noexcept {
-			new (&val) T(*reinterpret_cast<const T *>(ptr));
-		}
+    const void *ptr;
+  };
 
-		const void *ptr;
-	};
+  struct TypelessAssign
+  {
+    inline TypelessAssign(const void *p_ptr = nullptr) : ptr{ p_ptr } {}
 
-	struct TypelessAssign
-	{
-		inline TypelessAssign(const void *p_ptr = nullptr) : ptr{p_ptr} {}
+    template <class T>
+    inline void operator()(T &val) const noexcept {
+      val = *reinterpret_cast<const T *>(ptr);
+    }
 
-		template <class T>
-		inline void operator()(T &val) const noexcept {
-			val = *reinterpret_cast<const T *>(ptr);
-		}
+    const void *ptr;
+  };
 
-		const void *ptr;
-	};
+  template <typename T, typename NameType = const char *>
+  struct NamedValue
+  {
+    NameType name;
+    T value;
+  };
 
-	template <typename T, typename NameType = const char *>
-	struct NamedValue
-	{
-		NameType name;
-		T value;
-	};
+  template <typename T>
+  struct EqualTo
+  {
+    inline EqualTo(T &&_value) : value{ _value } {}
 
-	template <typename T>
-	struct EqualTo
-	{
-		inline EqualTo(T &&_value) : value{_value} {}
+    template <typename E>
+    inline bool operator()(E &&other) const {
+      return other == value;
+    }
 
-		template <typename E>
-		inline bool operator()(E &&other) const { return other == value; }
+    template <typename E>
+    inline bool operator()(const E &other) const {
+      return other == value;
+    }
 
-		template <typename E>
-		inline bool operator()(const E &other) const { return other == value; }
+    T value;
+  };
 
-		T value;
-	};
+  template <typename Op>
+  struct InvertOp
+  {
+    inline InvertOp(Op &&_op) : _operator{ _op } {}
 
-	template <typename Op>
-	struct InvertOp
-	{
-		inline InvertOp(Op &&_op) : _operator{_op} {}
+    template <typename T>
+    inline bool operator()(T &&arg) const {
+      return !_operator(arg);
+    }
 
-		template <typename T>
-		inline bool operator()(T &&arg) const { return !_operator(arg); }
-
-		Op _operator;
-	};
+    Op _operator;
+  };
 
 }

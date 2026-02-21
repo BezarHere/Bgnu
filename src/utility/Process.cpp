@@ -1,11 +1,12 @@
 #include "Process.hpp"
-#include "base.hpp"
-#include "StringTools.hpp"
-#include "Settings.hpp"
-#include "Argument.hpp"
 
 #include <algorithm>
 #include <sstream>
+
+#include "Argument.hpp"
+#include "Settings.hpp"
+#include "StringTools.hpp"
+#include "base.hpp"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -16,9 +17,9 @@ struct ProcessInfo
   HANDLE thread;
 };
 #elif __unix__
-#include <unistd.h>
 #include <spawn.h>
 #include <sys/wait.h>
+#include <unistd.h>
 typedef int Pipe;
 struct ProcessInfo
 {
@@ -35,13 +36,11 @@ static void KillProcess(const ProcessInfo &info);
 static string join_args(const Blob<const Process::char_type *const> &args);
 
 Process::Process(int argc, const char_type *const *argv)
-  : Process(join_args({argv, static_cast<size_t>(argc)})) {}
+    : Process(join_args({ argv, static_cast<size_t>(argc) })) {}
 
-Process::Process(const char_type *cmd)
-  : Process(std::string{cmd}) {}
+Process::Process(const char_type *cmd) : Process(std::string{ cmd }) {}
 
-Process::Process(const std::string &cmd)
-  : m_cmd{cmd} {
+Process::Process(const std::string &cmd) : m_cmd{ cmd } {
   m_name = _BuildPrintableCMD(m_cmd.c_str());
 }
 
@@ -60,9 +59,8 @@ int Process::start(std::ostream *const out) {
     sec_attrs.bInheritHandle = true;
     sec_attrs.lpSecurityDescriptor = nullptr;
 
-    CreatePipe(
-      &output_r, &output_w, &sec_attrs, Settings::Get("process_pipe_buffer_sz", 0x100000LL).get_int()
-    );
+    CreatePipe(&output_r, &output_w, &sec_attrs,
+               Settings::Get("process_pipe_buffer_sz", 0x100000LL).get_int());
   }
 
   STARTUPINFOA startup_info = {};
@@ -74,70 +72,45 @@ int Process::start(std::ostream *const out) {
   PROCESS_INFORMATION win_process_info = {};
 
   std::string cmd_copy = m_cmd;
-  const bool create_proc_result = CreateProcessA(
-    nullptr, cmd_copy.data(),
-    nullptr, nullptr,
-    TRUE, 0,
-    nullptr, nullptr,
-    &startup_info, &win_process_info
-  );
+  const bool create_proc_result =
+      CreateProcessA(nullptr, cmd_copy.data(), nullptr, nullptr, TRUE, 0, nullptr, nullptr,
+                     &startup_info, &win_process_info);
 
   if (!create_proc_result)
   {
-    Logger::error(
-      "creating process named '%s' error: %s",
-      m_name.c_str(),
-      Process_GetErrorMessage()
-    );
+    Logger::error("creating process named '%s' error: %s", m_name.c_str(),
+                  Process_GetErrorMessage());
     Logger::verbose("PROC-CMD:: %s", m_cmd.c_str());
 
     return -1;
   }
 
-  ProcessInfo process_info = {
-    win_process_info.hProcess,
-    win_process_info.hThread
-  };
+  ProcessInfo process_info = { win_process_info.hProcess, win_process_info.hThread };
 
   const DWORD wait_ms_timeout = this->m_wait_time_ms;
-  const DWORD object_waiting_res = WaitForSingleObject(
-    process_info.thread, wait_ms_timeout
-  );
+  const DWORD object_waiting_res = WaitForSingleObject(process_info.thread, wait_ms_timeout);
 
   if (object_waiting_res == WAIT_FAILED)
   {
-    Logger::warning(
-      "waiting for process '%s' for %ums error: %s",
-      m_name.c_str(),
-      wait_ms_timeout,
-      Process_GetErrorMessage()
-    );
+    Logger::warning("waiting for process '%s' for %ums error: %s", m_name.c_str(), wait_ms_timeout,
+                    Process_GetErrorMessage());
   }
 
   if (object_waiting_res == WAIT_TIMEOUT)
   {
-    Logger::warning(
-      "waiting for process '%s' for %ums error: %s",
-      m_name.c_str(),
-      wait_ms_timeout,
-      Process_GetErrorMessage()
-    );
+    Logger::warning("waiting for process '%s' for %ums error: %s", m_name.c_str(), wait_ms_timeout,
+                    Process_GetErrorMessage());
   }
 
   for (uint32_t i = 0; i < 64; i++)
   {
-    const bool exit_code_result = GetExitCodeProcess(
-      process_info.process,
-      reinterpret_cast<DWORD *>(&exit_code)
-    );
+    const bool exit_code_result =
+        GetExitCodeProcess(process_info.process, reinterpret_cast<DWORD *>(&exit_code));
 
     if (!exit_code_result)
     {
-      Logger::error(
-        "getting exit code for process '%s' error: %s",
-        m_name.c_str(),
-        Process_GetErrorMessage()
-      );
+      Logger::error("getting exit code for process '%s' error: %s", m_name.c_str(),
+                    Process_GetErrorMessage());
       break;
     }
     break;
@@ -161,15 +134,14 @@ int Process::start(std::ostream *const out) {
     if (pipe(child_pipes) == -1)
     {
       errno_t err = errno;
-      Logger::error("Failed to create pipe for process '%s', ERRNO=%s", m_name.c_str(), strerrorname_np(err));
+      Logger::error("Failed to create pipe for process '%s', ERRNO=%s", m_name.c_str(),
+                    strerrorname_np(err));
 
       return err;
     }
   }
 
-  std::vector<std::string> args = Argument::BreakArgumentList(
-    m_cmd
-  );
+  std::vector<std::string> args = Argument::BreakArgumentList(m_cmd);
 
   if (args.empty())
   {
@@ -184,14 +156,13 @@ int Process::start(std::ostream *const out) {
   }
   arg_ptrs.push_back(nullptr);
 
-  posix_spawn_file_actions_t sfc = {0};
+  posix_spawn_file_actions_t sfc = { 0 };
   posix_spawn_file_actions_init(&sfc);
 
   posix_spawn_file_actions_addclose(&sfc, child_pipes[0]);
   posix_spawn_file_actions_adddup2(&sfc, child_pipes[1], STDOUT_FILENO);
   posix_spawn_file_actions_adddup2(&sfc, child_pipes[1], STDERR_FILENO);
   posix_spawn_file_actions_addclose(&sfc, child_pipes[1]);
-
 
   pid_t child_pid = 0;
   std::string exc_abs_path = FilePath::FindExecutableInPATHEnv(args[0]).c_str();
@@ -218,30 +189,19 @@ int Process::start(std::ostream *const out) {
     env_variables = environ;
   }
 
-  const errno_t spawn_err = posix_spawnp(
-    &child_pid,
-    exc_abs_path.c_str(),
-    &sfc,
-    nullptr,
-    arg_ptrs.data(),
-    env_variables
-  );
+  const errno_t spawn_err =
+      posix_spawnp(&child_pid, exc_abs_path.c_str(), &sfc, nullptr, arg_ptrs.data(), env_variables);
 
   if (spawn_err != 0)
   {
-    Logger::error(
-      "Failed to spawn process named '%s', error: %s",
-      m_name.c_str(), strerrorname_np(spawn_err)
-    );
-
-
+    Logger::error("Failed to spawn process named '%s', error: %s", m_name.c_str(),
+                  strerrorname_np(spawn_err));
 
     return -1;
   }
 
   close(child_pipes[1]);
   waitpid(child_pid, &exit_code, 0);
-
 
   if (child_pipes[0] && out)
   {
@@ -267,12 +227,9 @@ Process::ProcessName Process::_BuildPrintableCMD(const char *string) {
 
     output.append(string[i]);
 
-
-
     if (i == max_copy_length - 1)
     {
       output.append('.', 3);
-
     }
   }
 
@@ -303,14 +260,11 @@ void DumpPipeStr(Pipe pipe, std::ostream *out) {
       break;
     }
 
-
     Logger::verbose("read %llu bytes from pipe %llu", read_sz, pipe);
 
     buffer[read_sz] = 0;
     (*out) << buffer;
   }
-
-
 }
 
 const char *Process_GetErrorMessage() {
@@ -335,10 +289,8 @@ string join_args(const Blob<const Process::char_type *const> &args) {
 
   for (const Process::char_type *arg : args)
   {
-    bool need_enclosure = string_tools::all_of(
-      arg,
-      [](Process::char_type value) {return !isgraph(value);}
-    );
+    bool need_enclosure =
+        string_tools::all_of(arg, [](Process::char_type value) { return !isgraph(value); });
 
     if (need_enclosure)
     {

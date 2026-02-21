@@ -1,15 +1,15 @@
 #pragma once
-#include "../base.hpp"
+#include <string_view>
+
 #include "../Range.hpp"
 #include "../StringTools.hpp"
+#include "../base.hpp"
 #include "../io/CharSource.hpp"
-#include <string_view>
 
 struct CPreprocessor
 {
 
-  enum class Type : uint8_t
-  {
+  enum class Type : uint8_t {
     None,
     Unknown,
 
@@ -37,37 +37,29 @@ struct CPreprocessor
     inline Token() = default;
     Token(const string &name, const string &value);
 
-    inline bool is_valid() const {
-      return (int)type >= (int)Type::Include;
-    }
+    inline bool is_valid() const { return (int)type >= (int)Type::Include; }
 
     Type type = Type::None;
-    string value; // or anything right of the statement
+    string value;  // or anything right of the statement
     uint32_t line = 0;
   };
 
   static constexpr pair<const char *, Type> TypeNamePairs[] = {
-    {"include", Type::Include},
+    { "include", Type::Include },
 
-    {"define", Type::Define},
-    {"undef", Type::Undefine},
+    { "define", Type::Define },   { "undef", Type::Undefine },
 
-    {"if", Type::If},
-    {"else", Type::Else},
-    {"elif", Type::Elif},
-    {"endif", Type::EndIf},
+    { "if", Type::If },           { "else", Type::Else },
+    { "elif", Type::Elif },       { "endif", Type::EndIf },
 
-    {"ifdef", Type::IfDefined},
-    {"ifndef", Type::IfNotDefined},
+    { "ifdef", Type::IfDefined }, { "ifndef", Type::IfNotDefined },
 
-    {"error", Type::Error},
-    {"warning", Type::Warning},
+    { "error", Type::Error },     { "warning", Type::Warning },
 
-    {"pragma", Type::Pragma},
+    { "pragma", Type::Pragma },
   };
 
   using source_t = CharSource &;
-
 
   static void gather_all_tks(const StrBlob &input, vector<Token> &output);
   static Token get_next_tk(source_t source);
@@ -87,5 +79,4 @@ private:
   static void _try_skip_to_usable(source_t source);
 
   static string _escape(const StrBlob &source);
-
 };

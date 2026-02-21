@@ -1,8 +1,7 @@
 #pragma once
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
-
 
 #define ARCHIVER_SIGN_LEN 8
 
@@ -50,8 +49,13 @@ typedef struct archive_container_s
   archive_file_t *files;
 } archive_t;
 
-#define ARCHIVER_IO_BUF_DEF(type, name) struct archiver_io_## name { \
-  size_t length; type data; size_t pos; }
+#define ARCHIVER_IO_BUF_DEF(type, name) \
+  struct archiver_io_##name             \
+  {                                     \
+    size_t length;                      \
+    type data;                          \
+    size_t pos;                         \
+  }
 
 typedef ARCHIVER_IO_BUF_DEF(const void *, read_buf_s) archiver_io_read_buf_t;
 typedef ARCHIVER_IO_BUF_DEF(void *, write_buf_s) archiver_io_write_buf_t;
@@ -74,14 +78,14 @@ typedef union archiver_io_data_u
 
 } archiver_io_data_t;
 
-typedef int (*archiver_read_func_t)(void *buffer, size_t bytes,
-                                       size_t *out_count, archiver_io_data_t data);
+typedef int (*archiver_read_func_t)(void *buffer, size_t bytes, size_t *out_count,
+                                    archiver_io_data_t data);
 
-typedef int (*archiver_write_func_t)(const void *buffer, size_t bytes,
-                                        size_t *out_count, archiver_io_data_t data);
+typedef int (*archiver_write_func_t)(const void *buffer, size_t bytes, size_t *out_count,
+                                     archiver_io_data_t data);
 
 typedef int (*archiver_seek_func_t)(int state, size_t pos, archiver_io_data_t data);
-typedef size_t(*archiver_tell_func_t)(archiver_io_data_t data);
+typedef size_t (*archiver_tell_func_t)(archiver_io_data_t data);
 
 typedef struct archiver_io_s
 {
@@ -95,7 +99,8 @@ typedef struct archiver_io_s
 } archiver_io_t;
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
   extern archiver_io_t Archiver_FileOpenPath(const char *path, bool read);
@@ -107,7 +112,6 @@ extern "C" {
   extern int ArchiverIO_BufferClose(const archiver_io_t *io_state);
 
   extern int Archiver_ReadIO(const archiver_io_t *io_state, archive_t *container);
-
 
   extern int Archiver_Close(archive_t *archive);
 

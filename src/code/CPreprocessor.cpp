@@ -1,10 +1,10 @@
 #include "CPreprocessor.hpp"
-#include "CodeTokenizer.hpp"
 
+#include "CodeTokenizer.hpp"
 
 constexpr auto whitespace_no_newlines = [](char cur) {
   return string_tools::is_whitespace(cur) && !string_tools::is_newline(cur);
-  };
+};
 
 constexpr CPreprocessor::Type CPreprocessor::_get_tk_type(const StrBlob &name) {
   for (const auto &p : TypeNamePairs)
@@ -21,7 +21,7 @@ constexpr CPreprocessor::Type CPreprocessor::_get_tk_type(const StrBlob &name) {
 void CPreprocessor::gather_all_tks(const StrBlob &input, vector<Token> &output) {
   string processed = _escape(input);
 
-  CharSource source = {processed};
+  CharSource source = { processed };
 
   while (!source.depleted())
   {
@@ -40,7 +40,6 @@ void CPreprocessor::gather_all_tks(const StrBlob &input, vector<Token> &output) 
     LOG_ASSERT(source.current() == '\n');
     source.skip(1);
   }
-
 }
 
 CPreprocessor::Token CPreprocessor::get_next_tk(source_t source) {
@@ -81,14 +80,11 @@ CPreprocessor::Token CPreprocessor::get_next_tk(source_t source) {
 }
 
 string CPreprocessor::get_include_path(const std::string_view &value) {
-  constexpr auto is_opening = [](string_char value) {return value == '"' || value == '<';};
-  constexpr auto is_closing = [](string_char value) {return value == '"' || value == '>';};
+  constexpr auto is_opening = [](string_char value) { return value == '"' || value == '<'; };
+  constexpr auto is_closing = [](string_char value) { return value == '"' || value == '>'; };
 
   // pos of the opening quote/bracket
-  size_t opening = CodeTokenizer::match_unescaped(
-    {value.data(), value.length()},
-    is_opening
-  );
+  size_t opening = CodeTokenizer::match_unescaped({ value.data(), value.length() }, is_opening);
 
   if (opening == npos)
   {
@@ -99,9 +95,8 @@ string CPreprocessor::get_include_path(const std::string_view &value) {
 
   // pos of the closing quote/bracket
   const size_t closing = CodeTokenizer::match_unescaped(
-    {value.data() + opening, value.length() - opening},
-    is_closing
-  ) + opening;
+                             { value.data() + opening, value.length() - opening }, is_closing) +
+                         opening;
 
   return string(value.data() + opening, closing - opening);
 }
@@ -162,19 +157,18 @@ string CPreprocessor::_read_preprocessor_value(source_t source) {
 }
 
 string CPreprocessor::_read_value(source_t source) {
-  string result = {0};
+  string result = { 0 };
 
   bool in_string = false;
   while (!source.depleted())
   {
     const char cur = source.current();
 
-    
     if (cur == '"')
     {
-      in_string = !in_string; // toggle it
+      in_string = !in_string;  // toggle it
     }
-    
+
     if (in_string)
     {
       result.push_back(cur);
@@ -215,7 +209,7 @@ void CPreprocessor::_try_skip_comment(source_t source) {
   if (source[1] == '/')
   {
     source.skip_until([](char cur) { return cur == '\n'; });
-    return; // if not depleted, pointing to a newline
+    return;  // if not depleted, pointing to a newline
   }
 
   // block comment
@@ -237,7 +231,6 @@ void CPreprocessor::_try_skip_comment(source_t source) {
     // if not depleted, pointing to anything after '*/'
     return;
   }
-
 }
 
 void CPreprocessor::_try_skip_to_usable(source_t source) {
@@ -267,11 +260,8 @@ string CPreprocessor::_escape(const StrBlob &source) {
     result.push_back(source[i]);
   }
 
-
   return result;
 }
 
-
 CPreprocessor::Token::Token(const string &name, const string &value)
-  : type{_get_tk_type({name.c_str(), name.length()})},
-  value{value} {}
+    : type{ _get_tk_type({ name.c_str(), name.length() }) }, value{ value } {}

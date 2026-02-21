@@ -5,15 +5,15 @@
 */
 
 #pragma once
-#include <ostream>
-#include "Range.hpp"
 #include <array>
-#include <string>
-#include <memory>
-#include <fstream>
 #include <filesystem>
+#include <fstream>
+#include <memory>
+#include <ostream>
+#include <string>
 
 #include "HashTools.hpp"
+#include "Range.hpp"
 #include "StringTools.hpp"
 #include "misc/ArrayList.hpp"
 
@@ -23,8 +23,8 @@ struct FilePath
 {
 public:
   /*
-  * === === Aliases === ===
-  */
+   * === === Aliases === ===
+   */
 
   typedef std::filesystem::directory_iterator iterator;
   typedef iterator::value_type iterator_entry;
@@ -38,8 +38,8 @@ public:
   typedef size_t separator_index;
 
   /*
-  * === === Class Compile-time Constants === ===
-  */
+   * === === Class Compile-time Constants === ===
+   */
 
   static constexpr size_t MaxPathLength = 512;
   static constexpr size_t MaxPathSegCount = MaxPathLength / 8;
@@ -49,17 +49,16 @@ public:
   static constexpr const char_type *EmptyString = &NullChar;
 
   /*
-  * === === Utility Aliases === ===
-  */
+   * === === Utility Aliases === ===
+   */
 
   typedef ArrayList<char_type, MaxPathLength> TextArray;
   typedef ArrayList<separator_index, MaxPathSegCount> SeparatorArray;
 
   /*
-  * === === Enums === ===
-  */
-  enum class RelationSegmentType : uint8_t
-  {
+   * === === Enums === ===
+   */
+  enum class RelationSegmentType : uint8_t {
     None = 0,
 
     // just a ordinary segment path
@@ -67,16 +66,16 @@ public:
     // should be treated like normal, no effect except being deleted
     Current,
 
-    Parent, // go one directory up if possible
+    Parent,  // go one directory up if possible
 
-    DriveLetter, // WIN32: a drive letter 'X:/', anchor the path to said drive
-    Home, // UNIX: home '~'
+    DriveLetter,  // WIN32: a drive letter 'X:/', anchor the path to said drive
+    Home,         // UNIX: home '~'
   };
 
 public:
   /*
-  * === === GLOBALS === ===
-  */
+   * === === GLOBALS === ===
+   */
 
   static const FilePath &get_working_directory();
   static const FilePath &get_parent_directory();
@@ -84,8 +83,8 @@ public:
   static FilePath FindExecutableInPATHEnv(std::string name);
 
   /*
-  * === === Lifetime (Ctors/Dtors/Copy Ctors) === ===
-  */
+   * === === Lifetime (Ctors/Dtors/Copy Ctors) === ===
+   */
 
   inline FilePath() = default;
 
@@ -94,20 +93,18 @@ public:
 
   inline FilePath(const string_type &str) : FilePath(string_blob(str.data(), str.length())) {}
   inline FilePath(const char_type *cstr)
-    : FilePath(string_blob(cstr, string_tools::length(cstr, MaxPathLength - 1))) {}
+      : FilePath(string_blob(cstr, string_tools::length(cstr, MaxPathLength - 1))) {}
 
   inline FilePath(const string_type &str, const string_type &base)
-    : FilePath(string_blob(str.c_str(), str.length()), string_blob(base.c_str(), base.length())) {}
+      : FilePath(string_blob(str.c_str(), str.length()), string_blob(base.c_str(), base.length())) {
+  }
 
   inline FilePath(const char_type *cstr, const char_type *base)
-    : FilePath(
-      string_blob(cstr, string_tools::length(cstr, MaxPathLength - 1)),
-      string_blob(base, string_tools::length(base, MaxPathLength - 1))
-    ) {}
+      : FilePath(string_blob(cstr, string_tools::length(cstr, MaxPathLength - 1)),
+                 string_blob(base, string_tools::length(base, MaxPathLength - 1))) {}
 
   // narrowing will have gonky behavior
-  inline FilePath(const iterator_entry &entry)
-    : FilePath(entry.path().c_str()) {}
+  inline FilePath(const iterator_entry &entry) : FilePath(entry.path().c_str()) {}
 
   FilePath(const FilePath &copy) = default;
   FilePath(FilePath &&move) noexcept = default;
@@ -117,8 +114,8 @@ public:
   ~FilePath();
 
   /*
-  * === === Operators === ===
-  */
+   * === === Operators === ===
+   */
 
   bool operator<(const FilePath &other) const;
   bool operator==(const FilePath &other) const;
@@ -129,8 +126,8 @@ public:
   operator string_type() const;
 
   /*
-  * === === Functionality === ===
-  */
+   * === === Functionality === ===
+   */
 
   // then parent (returns a copy if there is no path, like in roots or drive letters)
   FilePath parent() const;
@@ -164,9 +161,7 @@ public:
   /// @note modifies the path inplace, if you want a joined copy, use join_path()
   FilePath &add_path(const string_blob &path);
 
-  inline FilePath &add_path(const FilePath &path) {
-    return add_path(path.get_text());
-  }
+  inline FilePath &add_path(const FilePath &path) { return add_path(path.get_text()); }
 
   inline FilePath &add_path(const string_type &path) {
     return add_path(string_blob(path.data(), path.size()));
@@ -220,7 +215,7 @@ public:
 
   // resolves a copy to be absolute then returns it
   inline FilePath resolved_copy(const FilePath &base) const {
-    FilePath copy{*this};
+    FilePath copy{ *this };
     copy.resolve(base);
     return copy;
   }
@@ -231,8 +226,8 @@ public:
   hash_t hash() const;
 
   /*
-  * === === Exposed Utility === ===
-  */
+   * === === Exposed Utility === ===
+   */
 
   static string_type _working_directory();
   static string_type _parent_directory();
@@ -251,18 +246,18 @@ public:
   static constexpr size_t _get_last_separator(const string_blob &source);
 
 private:
-
   /*
-  * === === Inner Utility === ===
-  */
+   * === === Inner Utility === ===
+   */
 
   static void _calculate_separators(const string_blob &text, SeparatorArray &out);
   static string_type _resolve_path(const string_blob &text, const string_blob &base);
-  static void _add_resolve_segment(RelationSegmentType rel_type, FilePath::string_type &result_str, const FilePath::string_blob &segment_source);
+  static void _add_resolve_segment(RelationSegmentType rel_type, FilePath::string_type &result_str,
+                                   const FilePath::string_blob &segment_source);
   static bool _preprocess(Blob<TextArray::value_type> &text);
 
   static inline bool _preprocess(TextArray::value_type *text, size_t &length) {
-    Blob<TextArray::value_type> blob{text, length};
+    Blob<TextArray::value_type> blob{ text, length };
     bool result = _preprocess(blob);
     length = blob.length();
     return result;
@@ -274,8 +269,8 @@ private:
 };
 
 /*
-* === === Header Definitions === ===
-*/
+ * === === Header Definitions === ===
+ */
 
 inline constexpr bool FilePath::is_valid_filename_char(const char_type character) {
   switch (character)
@@ -314,8 +309,8 @@ inline constexpr bool FilePath::is_valid_drive_root(const string_blob &path) {
 
 inline constexpr size_t FilePath::_get_last_separator(const string_blob &source) {
   /*
-  *	won't check the first and last characters (if not, will fail on "/file" or "path/dir/")
-  */
+   *	won't check the first and last characters (if not, will fail on "/file" or "path/dir/")
+   */
 
   for (size_t r = 2; r < source.size; r++)
   {

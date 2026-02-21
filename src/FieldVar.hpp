@@ -1,516 +1,496 @@
 #pragma once
-#include "base.hpp"
 #include <iostream>
-#include <unordered_map>
 #include <sstream>
 #include <stdexcept>
+#include <unordered_map>
 
-enum class FieldVarType : char
-{
-	Null,
-	Boolean,
-	Integer,
-	Real,
+#include "base.hpp"
 
-	String,
-	Array,
-	Dict,
+enum class FieldVarType : char {
+  Null,
+  Boolean,
+  Integer,
+  Real,
+
+  String,
+  Array,
+  Dict,
 };
 
 struct FieldVar
 {
 public:
-	using Null = std::nullptr_t;
-	using Bool = bool;
-	using Int = int64_t;
-	using Real = float;
-	using String = string;
-	using Array = vector<FieldVar>;
-	using Dict = std::unordered_map<String, FieldVar>;
+  using Null = std::nullptr_t;
+  using Bool = bool;
+  using Int = int64_t;
+  using Real = float;
+  using String = string;
+  using Array = vector<FieldVar>;
+  using Dict = std::unordered_map<String, FieldVar>;
 
-	// returns the name of the given type
-	static constexpr const char *get_name_for_type(FieldVarType type);
-	static constexpr bool is_convertible(FieldVarType from, FieldVarType to);
-	static constexpr bool is_type_simple(FieldVarType type);
+  // returns the name of the given type
+  static constexpr const char *get_name_for_type(FieldVarType type);
+  static constexpr bool is_convertible(FieldVarType from, FieldVarType to);
+  static constexpr bool is_type_simple(FieldVarType type);
 
-	inline FieldVar(FieldVarType type = FieldVarType::Null);
+  inline FieldVar(FieldVarType type = FieldVarType::Null);
 
-	inline FieldVar(Null) : m_type{FieldVarType::Null} {}
-	inline FieldVar(Bool boolean) : m_type{FieldVarType::Boolean}, m_bool{boolean} {}
-	inline FieldVar(Int integer) : m_type{FieldVarType::Integer}, m_int{integer} {}
-	inline FieldVar(Real number) : m_type{FieldVarType::Real}, m_real{number} {}
-	inline FieldVar(const String &string) : m_type{FieldVarType::String}, m_string{string} {}
-	inline explicit FieldVar(const Array &array) : m_type{FieldVarType::Array}, m_array{array} {}
-	inline explicit FieldVar(const Dict &dict) : m_type{FieldVarType::Dict}, m_dict{dict} {}
+  inline FieldVar(Null) : m_type{ FieldVarType::Null } {}
+  inline FieldVar(Bool boolean) : m_type{ FieldVarType::Boolean }, m_bool{ boolean } {}
+  inline FieldVar(Int integer) : m_type{ FieldVarType::Integer }, m_int{ integer } {}
+  inline FieldVar(Real number) : m_type{ FieldVarType::Real }, m_real{ number } {}
+  inline FieldVar(const String &string) : m_type{ FieldVarType::String }, m_string{ string } {}
+  inline explicit FieldVar(const Array &array) : m_type{ FieldVarType::Array }, m_array{ array } {}
+  inline explicit FieldVar(const Dict &dict) : m_type{ FieldVarType::Dict }, m_dict{ dict } {}
 
-	inline FieldVar(const String::value_type *cstring) : FieldVar(String(cstring)) {}
+  inline FieldVar(const String::value_type *cstring) : FieldVar(String(cstring)) {}
 
-	inline ~FieldVar();
-	inline FieldVar(const FieldVar &copy);
+  inline ~FieldVar();
+  inline FieldVar(const FieldVar &copy);
 
-	inline FieldVar &operator=(const FieldVar &copy);
-	inline bool operator==(const FieldVar &other) const;
+  inline FieldVar &operator=(const FieldVar &copy);
+  inline bool operator==(const FieldVar &other) const;
 
-	inline FieldVarType get_type() const noexcept { return m_type; }
+  inline FieldVarType get_type() const noexcept { return m_type; }
 
-	/// @brief transforms the value to it's string representation
-	/// @brief (e.g. FieldVar(3.14F).string() == FieldVar("3.14"))
-	inline void stringify();
+  /// @brief transforms the value to it's string representation
+  /// @brief (e.g. FieldVar(3.14F).string() == FieldVar("3.14"))
+  inline void stringify();
 
-	/// @brief creates a copy, stringifies it and returns it
-	inline FieldVar copy_stringified() const {
-		FieldVar copy{*this};
-		copy.stringify();
-		return copy;
-	}
+  /// @brief creates a copy, stringifies it and returns it
+  inline FieldVar copy_stringified() const {
+    FieldVar copy{ *this };
+    copy.stringify();
+    return copy;
+  }
 
-	inline String &get_string();
-	inline Array &get_array();
-	inline Dict &get_dict();
+  inline String &get_string();
+  inline Array &get_array();
+  inline Dict &get_dict();
 
-	inline Bool get_bool() const;
-	inline Int get_int() const;
-	inline Real get_real() const;
-	inline const String &get_string() const;
-	inline const Array &get_array() const;
-	inline const Dict &get_dict() const;
+  inline Bool get_bool() const;
+  inline Int get_int() const;
+  inline Real get_real() const;
+  inline const String &get_string() const;
+  inline const Array &get_array() const;
+  inline const Dict &get_dict() const;
 
-	inline operator Bool() const { return get_bool(); }
-	inline operator Int() const { return get_int(); }
-	inline operator Real() const { return get_real(); }
-	inline operator const String &() const { return get_string(); }
-	inline explicit operator const Array &() const { return get_array(); }
-	inline explicit operator const Dict &() const { return get_dict(); }
+  inline operator Bool() const { return get_bool(); }
+  inline operator Int() const { return get_int(); }
+  inline operator Real() const { return get_real(); }
+  inline operator const String &() const { return get_string(); }
+  inline explicit operator const Array &() const { return get_array(); }
+  inline explicit operator const Dict &() const { return get_dict(); }
 
-	/// @brief is the value a null? like it has nothing?
-	inline bool is_null() const { return get_type() == FieldVarType::Null; }
+  /// @brief is the value a null? like it has nothing?
+  inline bool is_null() const { return get_type() == FieldVarType::Null; }
 
-	inline bool is_convertible_to(const FieldVarType type) const {
-		return is_convertible(m_type, type);
-	}
+  inline bool is_convertible_to(const FieldVarType type) const {
+    return is_convertible(m_type, type);
+  }
 
-	inline bool has_simple_type() const {
-		return is_type_simple(m_type);
-	}
+  inline bool has_simple_type() const { return is_type_simple(m_type); }
 
-	// get the name of the field var's type 
-	inline const char *get_type_name() const {
-		return get_name_for_type(m_type);
-	}
+  // get the name of the field var's type
+  inline const char *get_type_name() const { return get_name_for_type(m_type); }
 
 #ifdef FIELDVAR_HASH_DEF
-	hash_t hash() const;
+  hash_t hash() const;
 
-	static hash_t hash_string(const String &str);
-	static hash_t hash_array(const Array &arr);
-	static hash_t hash_dict(const Dict &dict);
+  static hash_t hash_string(const String &str);
+  static hash_t hash_array(const Array &arr);
+  static hash_t hash_dict(const Dict &dict);
 #endif
 
 private:
-	template <typename Transformer>
-	inline void _handle(Transformer &&transformer) {
-		switch (m_type)
-		{
-		case FieldVarType::Boolean:
-			return transformer(m_bool);
-		case FieldVarType::Integer:
-			return transformer(m_int);
-		case FieldVarType::Real:
-			return transformer(m_real);
-		case FieldVarType::String:
-			return transformer(m_string);
-		case FieldVarType::Array:
-			return transformer(m_array);
-		case FieldVarType::Dict:
-			return transformer(m_dict);
-		default:
-			return;
-		}
-	}
+  template <typename Transformer>
+  inline void _handle(Transformer &&transformer) {
+    switch (m_type)
+    {
+    case FieldVarType::Boolean:
+      return transformer(m_bool);
+    case FieldVarType::Integer:
+      return transformer(m_int);
+    case FieldVarType::Real:
+      return transformer(m_real);
+    case FieldVarType::String:
+      return transformer(m_string);
+    case FieldVarType::Array:
+      return transformer(m_array);
+    case FieldVarType::Dict:
+      return transformer(m_dict);
+    default:
+      return;
+    }
+  }
 
-	template <typename Transformer>
-	inline void _handle() { _handle(Transformer()); }
+  template <typename Transformer>
+  inline void _handle() {
+    _handle(Transformer());
+  }
 
-	inline void *_union_ptr() { return &m_bool; }
-	inline const void *_union_ptr() const { return &m_bool; }
-
+  inline void *_union_ptr() { return &m_bool; }
+  inline const void *_union_ptr() const { return &m_bool; }
 
 private:
-	FieldVarType m_type;
+  FieldVarType m_type;
 
-	union
-	{
-		Bool m_bool;
-		Int m_int;
-		Real m_real;
-		String m_string;
-		Array m_array;
-		Dict m_dict;
-	};
+  union
+  {
+    Bool m_bool;
+    Int m_int;
+    Real m_real;
+    String m_string;
+    Array m_array;
+    Dict m_dict;
+  };
 };
 
 class fieldvar_access_violation : public std::runtime_error
 {
-	static string _generate_msg(const FieldVar &fieldvar, const FieldVarType access_type) {
-		char buffer[inner::ExceptionBufferSz]{0};
-		snprintf(
-			buffer,
-      std::size(buffer) - 1,
-			"Trying to access a fieldvar [%p] of type '%s' as type '%s'",
-			&fieldvar,
-			FieldVar::get_name_for_type(fieldvar.get_type()),
-			FieldVar::get_name_for_type(access_type)
-		);
+  static string _generate_msg(const FieldVar &fieldvar, const FieldVarType access_type) {
+    char buffer[inner::ExceptionBufferSz]{ 0 };
+    snprintf(buffer, std::size(buffer) - 1,
+             "Trying to access a fieldvar [%p] of type '%s' as type '%s'", &fieldvar,
+             FieldVar::get_name_for_type(fieldvar.get_type()),
+             FieldVar::get_name_for_type(access_type));
 
-		return buffer;
-	}
+    return buffer;
+  }
 
 public:
-	explicit fieldvar_access_violation(const FieldVar &fieldvar, const FieldVarType access_type)
-		: runtime_error(_generate_msg(fieldvar, access_type)),
-		_access_type{access_type}, _fieldvar{fieldvar} {
-	}
+  explicit fieldvar_access_violation(const FieldVar &fieldvar, const FieldVarType access_type)
+      : runtime_error(_generate_msg(fieldvar, access_type)),
+        _access_type{ access_type },
+        _fieldvar{ fieldvar } {}
 
-	const FieldVarType _access_type;
-	const FieldVar &_fieldvar;
+  const FieldVarType _access_type;
+  const FieldVar &_fieldvar;
 };
 
 namespace std
 {
-	inline ostream &operator<<(ostream &stream, const FieldVar &project_variable) {
-		switch (project_variable.get_type())
-		{
-		case FieldVarType::Null:
-			return stream << "null";
-		case FieldVarType::Boolean:
-			return stream << (project_variable.get_bool() ? "true" : "false");
-		case FieldVarType::Integer:
-			return stream << project_variable.get_int();
-		case FieldVarType::Real:
-			return stream << project_variable.get_real();
-		case FieldVarType::String:
-			return stream << "\"" << project_variable.get_string() << "\"";
-		case FieldVarType::Array:
-			{
-				stream << "[";
-				const FieldVar::Array &array = project_variable.get_array();
+  inline ostream &operator<<(ostream &stream, const FieldVar &project_variable) {
+    switch (project_variable.get_type())
+    {
+    case FieldVarType::Null:
+      return stream << "null";
+    case FieldVarType::Boolean:
+      return stream << (project_variable.get_bool() ? "true" : "false");
+    case FieldVarType::Integer:
+      return stream << project_variable.get_int();
+    case FieldVarType::Real:
+      return stream << project_variable.get_real();
+    case FieldVarType::String:
+      return stream << "\"" << project_variable.get_string() << "\"";
+    case FieldVarType::Array: {
+      stream << "[";
+      const FieldVar::Array &array = project_variable.get_array();
 
-				for (size_t i = 0; i < array.size(); ++i) {
-					if (i)
-					{
-						stream << ", ";
-					}
+      for (size_t i = 0; i < array.size(); ++i)
+      {
+        if (i)
+        {
+          stream << ", ";
+        }
 
-					stream << array[i];
-				}
+        stream << array[i];
+      }
 
-				return stream << "]";
-			}
-		case FieldVarType::Dict:
-			{
-				stream << "{";
-				const FieldVar::Dict &dict = project_variable.get_dict();
+      return stream << "]";
+    }
+    case FieldVarType::Dict: {
+      stream << "{";
+      const FieldVar::Dict &dict = project_variable.get_dict();
 
-				size_t counter = 0;
-				for (const auto &kv : dict) {
-					if (counter)
-					{
-						stream << ", ";
-					}
+      size_t counter = 0;
+      for (const auto &kv : dict)
+      {
+        if (counter)
+        {
+          stream << ", ";
+        }
 
-					++counter;
+        ++counter;
 
-					stream << '"' << kv.first << "\": " << kv.second;
-				}
+        stream << '"' << kv.first << "\": " << kv.second;
+      }
 
-				return stream << "}";
-			}
-		}
-		return stream;
-	}
+      return stream << "}";
+    }
+    }
+    return stream;
+  }
 }
 
 #pragma region(defines)
 inline constexpr const char *FieldVar::get_name_for_type(FieldVarType type) {
-	constexpr const char *Names[]{
-		"null",
-		"boolean",
-		"integer",
-		"real",
-		"string",
-		"array",
-		"dict"
-	};
-	return Names[(int)type];
+  constexpr const char *Names[]{ "null", "boolean", "integer", "real", "string", "array", "dict" };
+  return Names[(int)type];
 }
 
 inline constexpr bool FieldVar::is_convertible(FieldVarType from, FieldVarType to) {
-	// self to self
-	if (from == to)
-	{
-		return true;
-	}
+  // self to self
+  if (from == to)
+  {
+    return true;
+  }
 
-	switch (from)
-	{
-		// should't be converted to anything, null is error to be handled
-	case FieldVarType::Null:
-		return false;
-	case FieldVarType::Integer:
-		return to == FieldVarType::Real || to == FieldVarType::Boolean;
-	case FieldVarType::Real:
-		return to == FieldVarType::Integer;
+  switch (from)
+  {
+    // should't be converted to anything, null is error to be handled
+  case FieldVarType::Null:
+    return false;
+  case FieldVarType::Integer:
+    return to == FieldVarType::Real || to == FieldVarType::Boolean;
+  case FieldVarType::Real:
+    return to == FieldVarType::Integer;
 
-	default:
-		// string, arrays and dicts can't be converted to anything easily
-		return false;
-	}
+  default:
+    // string, arrays and dicts can't be converted to anything easily
+    return false;
+  }
 }
 
 inline constexpr bool FieldVar::is_type_simple(FieldVarType type) {
-	return (int)type < (int)FieldVarType::String;
+  return (int)type < (int)FieldVarType::String;
 }
 
-inline FieldVar::FieldVar(FieldVarType type) : m_type{type} {
-	_handle<inner::EmptyCTor>();
-}
+inline FieldVar::FieldVar(FieldVarType type) : m_type{ type } { _handle<inner::EmptyCTor>(); }
 
-inline FieldVar::~FieldVar() {
-	_handle<inner::DTor>();
-}
+inline FieldVar::~FieldVar() { _handle<inner::DTor>(); }
 
-FieldVar::FieldVar(const FieldVar &copy) : m_type{copy.m_type} {
-	_handle(inner::TypelessCTor(copy._union_ptr()));
+FieldVar::FieldVar(const FieldVar &copy) : m_type{ copy.m_type } {
+  _handle(inner::TypelessCTor(copy._union_ptr()));
 }
 
 inline FieldVar &FieldVar::operator=(const FieldVar &copy) {
-	// type didn't change, just assign data
-	if (copy.m_type == m_type)
-	{
-		_handle(inner::TypelessAssign(copy._union_ptr()));
-		return *this;
-	}
+  // type didn't change, just assign data
+  if (copy.m_type == m_type)
+  {
+    _handle(inner::TypelessAssign(copy._union_ptr()));
+    return *this;
+  }
 
-	// changed data type, destroy old data
-	_handle<inner::DTor>();
+  // changed data type, destroy old data
+  _handle<inner::DTor>();
 
-	m_type = copy.m_type;
+  m_type = copy.m_type;
 
-	// construct new data
-	_handle(inner::TypelessCTor(copy._union_ptr()));
-	return *this;
+  // construct new data
+  _handle(inner::TypelessCTor(copy._union_ptr()));
+  return *this;
 }
 
 inline bool FieldVar::operator==(const FieldVar &other) const {
-	if (!other.is_convertible_to(get_type()))
-	{
-		return false;
-	}
+  if (!other.is_convertible_to(get_type()))
+  {
+    return false;
+  }
 
-	switch (m_type)
-	{
-	case FieldVarType::Null:
-		// null always equals null
-		return true;
-	case FieldVarType::Boolean:
-		return get_bool() == other.get_bool();
-	case FieldVarType::Integer:
-		return get_int() == other.get_int();
-	case FieldVarType::Real:
-		return get_real() == other.get_real();
-	case FieldVarType::String:
-		return get_string() == other.get_string();
-	case FieldVarType::Array:
-		return get_array() == other.get_array();
-	case FieldVarType::Dict:
-		return get_dict() == other.get_dict();
-	default:
-		return false;
-	}
+  switch (m_type)
+  {
+  case FieldVarType::Null:
+    // null always equals null
+    return true;
+  case FieldVarType::Boolean:
+    return get_bool() == other.get_bool();
+  case FieldVarType::Integer:
+    return get_int() == other.get_int();
+  case FieldVarType::Real:
+    return get_real() == other.get_real();
+  case FieldVarType::String:
+    return get_string() == other.get_string();
+  case FieldVarType::Array:
+    return get_array() == other.get_array();
+  case FieldVarType::Dict:
+    return get_dict() == other.get_dict();
+  default:
+    return false;
+  }
 }
 
 inline void FieldVar::stringify() {
-	std::ostringstream stream{};
-	stream << *this;
-	*this = stream.str();
+  std::ostringstream stream{};
+  stream << *this;
+  *this = stream.str();
 }
 
 inline FieldVar::Bool FieldVar::get_bool() const {
-	if (m_type == FieldVarType::Boolean)
-	{
-		return m_bool;
-	}
+  if (m_type == FieldVarType::Boolean)
+  {
+    return m_bool;
+  }
 
-	switch (m_type)
-	{
-	case FieldVarType::Null:
-		return false;
-	case FieldVarType::Integer:
-		return m_int != 0;
-	case FieldVarType::Real:
-		return m_real != 0.0F;
-	case FieldVarType::String:
-		return !m_string.empty();
-	case FieldVarType::Array:
-		return !m_array.empty();
-	case FieldVarType::Dict:
-		return !m_dict.empty();
+  switch (m_type)
+  {
+  case FieldVarType::Null:
+    return false;
+  case FieldVarType::Integer:
+    return m_int != 0;
+  case FieldVarType::Real:
+    return m_real != 0.0F;
+  case FieldVarType::String:
+    return !m_string.empty();
+  case FieldVarType::Array:
+    return !m_array.empty();
+  case FieldVarType::Dict:
+    return !m_dict.empty();
 
-	default:
-		return m_bool;
-	}
+  default:
+    return m_bool;
+  }
 }
 
 inline FieldVar::Int FieldVar::get_int() const {
-	if (m_type == FieldVarType::Integer)
-	{
-		return m_int;
-	}
+  if (m_type == FieldVarType::Integer)
+  {
+    return m_int;
+  }
 
-	switch (m_type)
-	{
-	case FieldVarType::Null:
-		return 0;
-	case FieldVarType::Boolean:
-		return m_bool;
-	case FieldVarType::Real:
-		return Int(m_real);
-		// case FieldVarType::String:
-		// case FieldVarType::Array:
-		// case FieldVarType::Dict:
+  switch (m_type)
+  {
+  case FieldVarType::Null:
+    return 0;
+  case FieldVarType::Boolean:
+    return m_bool;
+  case FieldVarType::Real:
+    return Int(m_real);
+    // case FieldVarType::String:
+    // case FieldVarType::Array:
+    // case FieldVarType::Dict:
 
-	default:
-		return m_bool;
-	}
+  default:
+    return m_bool;
+  }
 }
 
 inline FieldVar::Real FieldVar::get_real() const {
-	if (m_type == FieldVarType::Real)
-	{
-		return m_real;
-	}
+  if (m_type == FieldVarType::Real)
+  {
+    return m_real;
+  }
 
-	switch (m_type)
-	{
-	case FieldVarType::Null:
-		return 0.0F;
-	case FieldVarType::Boolean:
-		return Real(m_bool);
-	case FieldVarType::Integer:
-		return Real(m_int);
-		// case FieldVarType::String:
-		// case FieldVarType::Array:
-		// case FieldVarType::Dict:
+  switch (m_type)
+  {
+  case FieldVarType::Null:
+    return 0.0F;
+  case FieldVarType::Boolean:
+    return Real(m_bool);
+  case FieldVarType::Integer:
+    return Real(m_int);
+    // case FieldVarType::String:
+    // case FieldVarType::Array:
+    // case FieldVarType::Dict:
 
-	default:
-		return m_bool;
-	}
+  default:
+    return m_bool;
+  }
 }
 
 inline FieldVar::String &FieldVar::get_string() {
-	if (m_type == FieldVarType::String)
-	{
-		return m_string;
-	}
+  if (m_type == FieldVarType::String)
+  {
+    return m_string;
+  }
 
-	throw fieldvar_access_violation(*this, FieldVarType::String);
+  throw fieldvar_access_violation(*this, FieldVarType::String);
 }
 
 inline FieldVar::Array &FieldVar::get_array() {
-	if (m_type == FieldVarType::Array)
-	{
-		return m_array;
-	}
+  if (m_type == FieldVarType::Array)
+  {
+    return m_array;
+  }
 
-	throw fieldvar_access_violation(*this, FieldVarType::Array);
+  throw fieldvar_access_violation(*this, FieldVarType::Array);
 }
 
 inline FieldVar::Dict &FieldVar::get_dict() {
-	if (m_type == FieldVarType::Dict)
-	{
-		return m_dict;
-	}
+  if (m_type == FieldVarType::Dict)
+  {
+    return m_dict;
+  }
 
-	throw fieldvar_access_violation(*this, FieldVarType::Dict);
+  throw fieldvar_access_violation(*this, FieldVarType::Dict);
 }
 
 inline const FieldVar::String &FieldVar::get_string() const {
-	if (m_type == FieldVarType::String)
-	{
-		return m_string;
-	}
+  if (m_type == FieldVarType::String)
+  {
+    return m_string;
+  }
 
-	throw fieldvar_access_violation(*this, FieldVarType::String);
+  throw fieldvar_access_violation(*this, FieldVarType::String);
 }
 
 inline const FieldVar::Array &FieldVar::get_array() const {
-	if (m_type == FieldVarType::Array)
-	{
-		return m_array;
-	}
+  if (m_type == FieldVarType::Array)
+  {
+    return m_array;
+  }
 
-	throw fieldvar_access_violation(*this, FieldVarType::Array);
+  throw fieldvar_access_violation(*this, FieldVarType::Array);
 }
 
 inline const FieldVar::Dict &FieldVar::get_dict() const {
-	if (m_type == FieldVarType::Dict)
-	{
-		return m_dict;
-	}
+  if (m_type == FieldVarType::Dict)
+  {
+    return m_dict;
+  }
 
-	throw fieldvar_access_violation(*this, FieldVarType::Dict);
+  throw fieldvar_access_violation(*this, FieldVarType::Dict);
 }
 
 #ifdef FIELDVAR_HASH_DEF
 inline hash_t FieldVar::hash() const {
-	switch (m_type)
-	{
-	case FieldVarType::Null:
-		return 0;
+  switch (m_type)
+  {
+  case FieldVarType::Null:
+    return 0;
 
-	case FieldVarType::Boolean:
-		return m_bool;
+  case FieldVarType::Boolean:
+    return m_bool;
 
-	case FieldVarType::Integer:
-	case FieldVarType::Real: // access the bytes, not the value
-		return m_int;
+  case FieldVarType::Integer:
+  case FieldVarType::Real:  // access the bytes, not the value
+    return m_int;
 
-	case FieldVarType::String:
-		return hash_string(m_string);
-	case FieldVarType::Array:
-		return hash_array(m_array);
-	case FieldVarType::Dict:
-		return hash_dict(m_dict);
-	}
-	return HashTools::StartSeed;
+  case FieldVarType::String:
+    return hash_string(m_string);
+  case FieldVarType::Array:
+    return hash_array(m_array);
+  case FieldVarType::Dict:
+    return hash_dict(m_dict);
+  }
+  return HashTools::StartSeed;
 }
 
 inline hash_t FieldVar::hash_string(const String &str) {
-	return HashTools::hash(StrBlob{str.c_str(), str.length()});
+  return HashTools::hash(StrBlob{ str.c_str(), str.length() });
 }
 
 inline hash_t FieldVar::hash_array(const Array &arr) {
-	hash_t hash_val = HashTools::StartSeed;
-	for (const auto &value : arr)
-	{
-		hash_val = HashTools::hash(value.hash(), hash_val);
-	}
+  hash_t hash_val = HashTools::StartSeed;
+  for (const auto &value : arr)
+  {
+    hash_val = HashTools::hash(value.hash(), hash_val);
+  }
 
-	return hash_val;
+  return hash_val;
 }
 
 inline hash_t FieldVar::hash_dict(const Dict &dict) {
-	hash_t keys_hash = HashTools::StartSeed;
-	hash_t vals_hash = HashTools::StartSeed;
-	for (const auto &[key, value] : dict)
-	{
-		keys_hash = HashTools::hash(StrBlob{key.c_str(), key.length()}, keys_hash);
-		vals_hash = HashTools::hash(value.hash(), vals_hash);
-	}
+  hash_t keys_hash = HashTools::StartSeed;
+  hash_t vals_hash = HashTools::StartSeed;
+  for (const auto &[key, value] : dict)
+  {
+    keys_hash = HashTools::hash(StrBlob{ key.c_str(), key.length() }, keys_hash);
+    vals_hash = HashTools::hash(value.hash(), vals_hash);
+  }
 
-	return HashTools::hash(keys_hash, vals_hash);
+  return HashTools::hash(keys_hash, vals_hash);
 }
 #endif
-
 
 #pragma endregion

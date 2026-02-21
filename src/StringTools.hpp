@@ -1,12 +1,12 @@
 #pragma once
-#include "base.hpp"
-#include "Range.hpp"
 #include <string.h>
-#include "misc/SpellChecker.hpp"
-#include "Logger.hpp"
 
 #include <concepts>
 
+#include "Logger.hpp"
+#include "Range.hpp"
+#include "base.hpp"
+#include "misc/SpellChecker.hpp"
 
 namespace string_tools
 {
@@ -26,7 +26,8 @@ namespace string_tools
   extern size_t MBStrLength(const string_char *str, const size_t max_length = npos);
 
   template <typename StrProcessor>
-  static ALWAYS_INLINE string_type _modify(const string_type &str, const StrProcessor &processor = {}) {
+  static ALWAYS_INLINE string_type _modify(const string_type &str,
+                                           const StrProcessor &processor = {}) {
     if (str.empty())
     {
       return "";
@@ -44,9 +45,9 @@ namespace string_tools
   }
 
   template <typename Comparer = std::equal_to<char_type>>
-  static ALWAYS_INLINE
-    constexpr bool _equal(const char_type *left, const char_type *right,
-                          const size_t max_count, const Comparer &comparer = {}) {
+  static ALWAYS_INLINE constexpr bool _equal(const char_type *left, const char_type *right,
+                                             const size_t max_count,
+                                             const Comparer &comparer = {}) {
     if (max_count == 0)
     {
       return true;
@@ -93,16 +94,16 @@ namespace string_tools
     return _modify(str, [](char_type c) { return (char_type)toupper(c); });
   }
 
-  static constexpr bool equal(const char_type *left, const char_type *right, const size_t max_count = npos) {
+  static constexpr bool equal(const char_type *left, const char_type *right,
+                              const size_t max_count = npos) {
     return _equal(left, right, max_count, std::equal_to{});
   }
 
-  static constexpr bool equal_insensitive(const char_type *left, const char_type *right, const size_t max_count = npos) {
-    return _equal(
-      left, right,
-      max_count,
-      [](const char_type left_c, const char_type right_c) { return tolower(left_c) == tolower(right_c); }
-    );
+  static constexpr bool equal_insensitive(const char_type *left, const char_type *right,
+                                          const size_t max_count = npos) {
+    return _equal(left, right, max_count, [](const char_type left_c, const char_type right_c) {
+      return tolower(left_c) == tolower(right_c);
+    });
   }
 
   template <typename CountPred>
@@ -147,20 +148,14 @@ namespace string_tools
     string_type dst_str{};
     dst_str.resize(dst_sz);
 
-    mbstate_t mb_state = {0};
-    size_t chars_converted = wcsnrtombs(
-      dst_str.data(), &src_str, max_count, dst_sz, &mb_state
-    );
+    mbstate_t mb_state = { 0 };
+    size_t chars_converted = wcsnrtombs(dst_str.data(), &src_str, max_count, dst_sz, &mb_state);
     errno_t error = errno;
 
     if (error != 0)
     {
-      Logger::error(
-        "Error while narrowing string \"%S\" max count=%llu, errno=%d",
-        src_str,
-        max_count,
-        error
-      );
+      Logger::error("Error while narrowing string \"%S\" max count=%llu, errno=%d", src_str,
+                    max_count, error);
     }
 
     dst_str.resize(strnlen(dst_str.c_str(), dst_str.size()));
@@ -173,20 +168,14 @@ namespace string_tools
     wide_string_type dst_str{};
     dst_str.resize(dst_sz);
 
-    mbstate_t mb_state = {0};
-    size_t chars_converted = mbsnrtowcs(
-      dst_str.data(), &src_str, max_count, dst_sz, &mb_state
-    );
+    mbstate_t mb_state = { 0 };
+    size_t chars_converted = mbsnrtowcs(dst_str.data(), &src_str, max_count, dst_sz, &mb_state);
     errno_t error = errno;
 
     if (error != 0)
     {
-      Logger::error(
-        "Error while widening string \"%S\" max count=%llu, error=%s",
-        dst_str.c_str(),
-        max_count,
-        GetErrorName(error)
-      );
+      Logger::error("Error while widening string \"%S\" max count=%llu, error=%s", dst_str.c_str(),
+                    max_count, GetErrorName(error));
     }
 
     dst_str.resize(wcsnlen(dst_str.c_str(), dst_str.size()));
@@ -194,38 +183,37 @@ namespace string_tools
     return dst_str;
   }
 
-
   template <typename CHR>
   static inline std::basic_string<CHR> convert(const char_type *src_str, const size_t max_count);
-  
+
   template <>
   inline string_type convert(const char_type *src_str, const size_t max_count) {
     return string_type(src_str, strnlen(src_str, max_count));
   }
-  
+
   template <>
   inline wide_string_type convert(const char_type *src_str, const size_t max_count) {
     return widen(src_str, max_count);
   }
 
-
   template <typename CHR>
-  static inline std::basic_string<CHR> convert(const wide_char_type *src_str, const size_t max_count);
-  
+  static inline std::basic_string<CHR> convert(const wide_char_type *src_str,
+                                               const size_t max_count);
+
   template <>
   inline string_type convert(const wide_char_type *src_str, const size_t max_count) {
     return narrow(src_str, max_count);
   }
-  
+
   template <>
   inline wide_string_type convert(const wide_char_type *src_str, const size_t max_count) {
     return wide_string_type(src_str, wcsnlen(src_str, max_count));
   }
 
-  /// @brief 
-  /// @param first 
-  /// @param second 
-  /// @returns a value ranging from 0.0F to 1.0F representing the string's similarity 
+  /// @brief
+  /// @param first
+  /// @param second
+  /// @returns a value ranging from 0.0F to 1.0F representing the string's similarity
   static inline float similarity(const string_type &first, const string_type &second) {
     int32_t distance = (int32_t)spell::wagner_fischer_distance(first, second);
 
@@ -239,7 +227,7 @@ namespace string_tools
   /// @tparam _Pred predicate type
   /// @param source the source string
   /// @param pred predicate to match the range
-  /// @returns a range skipping any leading/trailing chars matching pred 
+  /// @returns a range skipping any leading/trailing chars matching pred
   template <typename _Pred>
   static inline IndexRange range(const StrBlob &source, _Pred &&pred) {
 
@@ -258,7 +246,7 @@ namespace string_tools
 
     if (leading == source.size)
     {
-      return {source.size, source.size};
+      return { source.size, source.size };
     }
 
     // count of trailing chars matching `pred`
@@ -276,7 +264,7 @@ namespace string_tools
       break;
     }
 
-    return {leading, source.size - trailing};
+    return { leading, source.size - trailing };
   }
 
   static ALWAYS_INLINE IndexRange printable_range(const StrBlob &source) {
@@ -303,9 +291,7 @@ namespace string_tools
     return character == '\n' || character == '\r';
   }
 
-  static constexpr ALWAYS_INLINE bool is_eof(const char_type character) {
-    return character == 0;
-  }
+  static constexpr ALWAYS_INLINE bool is_eof(const char_type character) { return character == 0; }
 
   static constexpr ALWAYS_INLINE bool is_ascii(const char_type character) {
     return character < 0x7f;
@@ -335,7 +321,7 @@ namespace string_tools
       return StrBlob(source.begin() + leading_c, (size_t)0);
     }
 
-    return {source.begin() + leading_c, source.end() - trailing_c};
+    return { source.begin() + leading_c, source.end() - trailing_c };
   }
 
   static inline StrBlob trim(const StrBlob &source) { return trim(source, &is_whitespace); }
@@ -351,7 +337,6 @@ namespace string_tools
     }
     return true;
   }
-
 
   template <typename _Pred>
   static inline constexpr bool all_of(const char_type *cstr, _Pred &&pred) {
@@ -376,7 +361,8 @@ namespace string_tools
   }
 
   template <typename Predicate>
-  static inline constexpr size_t find(const char_type *str, const size_t max_length, Predicate &&pred) {
+  static inline constexpr size_t find(const char_type *str, const size_t max_length,
+                                      Predicate &&pred) {
     for (size_t i = 0; i < max_length; i++)
     {
       if (pred(str[i]))
@@ -393,7 +379,8 @@ namespace string_tools
   }
 
   template <typename Predicate>
-  static inline constexpr size_t find_last(const char_type *str, const size_t max_length, Predicate &&pred) {
+  static inline constexpr size_t find_last(const char_type *str, const size_t max_length,
+                                           Predicate &&pred) {
     size_t last_find = npos;
     for (size_t i = 0; i < max_length; i++)
     {
@@ -411,16 +398,20 @@ namespace string_tools
     return last_find;
   }
 
-  static inline constexpr size_t find(const char_type *str, char_type chr, const size_t max_length) {
-    return find(str, max_length, [chr](char_type chr2) {return chr == chr2;});
+  static inline constexpr size_t find(const char_type *str, char_type chr,
+                                      const size_t max_length) {
+    return find(str, max_length, [chr](char_type chr2) { return chr == chr2; });
   }
 
-  static inline constexpr size_t find_last(const char_type *str, char_type chr, const size_t max_length) {
-    return find_last(str, max_length, [chr](char_type chr2) {return chr == chr2;});
+  static inline constexpr size_t find_last(const char_type *str, char_type chr,
+                                           const size_t max_length) {
+    return find_last(str, max_length, [chr](char_type chr2) { return chr == chr2; });
   }
 
   template <typename CHR>
-  static inline std::basic_string<CHR> replace(const std::basic_string<CHR> &source, const std::basic_string<CHR> &target, const std::basic_string<CHR> &replacement) {
+  static inline std::basic_string<CHR> replace(const std::basic_string<CHR> &source,
+                                               const std::basic_string<CHR> &target,
+                                               const std::basic_string<CHR> &replacement) {
     if (target.empty() || source.empty())
     {
       return source;
