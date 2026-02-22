@@ -12,12 +12,20 @@ enum class SourceFileType {
 class SourceTools
 {
 public:
-  static constexpr pair<const string_char *, SourceFileType> ExtensionToSourceTable[] = {
-    { "c", SourceFileType::C },     { "h", SourceFileType::C },
+  struct ExtensionInfo
+  {
+    const string_char *name;
+    SourceFileType type;
+    bool compilable = false;
+  };
 
-    { "cpp", SourceFileType::CPP }, { "cc", SourceFileType::CPP },  { "cxx", SourceFileType::CPP },
-    { "c++", SourceFileType::CPP }, { "hpp", SourceFileType::CPP }, { "hh", SourceFileType::CPP },
-    { "hxx", SourceFileType::CPP }, { "h++", SourceFileType::CPP },
+  static constexpr ExtensionInfo ExtensionToSourceTable[] = {
+    { "c", SourceFileType::C, true },      { "h", SourceFileType::C, false },
+
+    { "cpp", SourceFileType::CPP, true },  { "cc", SourceFileType::CPP, true },
+    { "cxx", SourceFileType::CPP, true },  { "c++", SourceFileType::CPP, true },
+    { "hpp", SourceFileType::CPP, false }, { "hh", SourceFileType::CPP, false },
+    { "hxx", SourceFileType::CPP, false }, { "h++", SourceFileType::CPP, false },
 
   };
 
@@ -33,6 +41,7 @@ public:
 
   static inline bool is_compatable_types(SourceFileType type, SourceFileType partner);
   static inline SourceFileType get_extension_file_type(const StrBlob &extension);
+  static inline bool is_extension_compilable(const StrBlob &extension);
   static inline SourceFileType get_default_file_type(const FilePath &filepath) {
     const string extension = filepath.extension();
     return get_extension_file_type({ extension.c_str(), extension.length() });
@@ -54,10 +63,21 @@ inline bool SourceTools::is_compatable_types(SourceFileType type, SourceFileType
 inline SourceFileType SourceTools::get_extension_file_type(const StrBlob &extension) {
   for (size_t i = 0; i < std::size(ExtensionToSourceTable); i++)
   {
-    if (string_tools::equal(extension.begin(), ExtensionToSourceTable[i].first))
+    if (string_tools::equal(extension.begin(), ExtensionToSourceTable[i].name))
     {
-      return ExtensionToSourceTable[i].second;
+      return ExtensionToSourceTable[i].type;
     }
   }
   return SourceFileType::None;
+}
+
+inline bool SourceTools::is_extension_compilable(const StrBlob &extension) {
+  for (size_t i = 0; i < std::size(ExtensionToSourceTable); i++)
+  {
+    if (string_tools::equal(extension.begin(), ExtensionToSourceTable[i].name))
+    {
+      return ExtensionToSourceTable[i].compilable;
+    }
+  }
+  return false;
 }
