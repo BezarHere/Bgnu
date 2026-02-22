@@ -11,11 +11,14 @@
 #include <memory>
 #include <ostream>
 #include <string>
+#include <vector>
 
 #include "HashTools.hpp"
 #include "Range.hpp"
 #include "StringTools.hpp"
+#include "base.hpp"
 #include "misc/ArrayList.hpp"
+#include "misc/StaticString.hpp"
 
 struct FilePath;
 
@@ -52,7 +55,7 @@ public:
    * === === Utility Aliases === ===
    */
 
-  typedef ArrayList<char_type, MaxPathLength> TextArray;
+  typedef StaticString<MaxPathLength> TextArray;
   typedef ArrayList<separator_index, MaxPathSegCount> SeparatorArray;
 
   /*
@@ -176,6 +179,7 @@ public:
   /// @note modifies the path inplace
   FilePath &pop_path();
 
+  FILE *open(const char *mode) const;
   std::ifstream stream_read(bool binary = true) const;
   std::ofstream stream_write(bool binary = true) const;
 
@@ -206,6 +210,13 @@ public:
 
   /// @returns is this an absolute path? not a relative one
   bool is_absolute() const;
+
+  /// @returns is the filepath pointing to an empty file? returns false for directories
+  bool is_empty() const;
+
+  FilePath relative_to(const FilePath &other) const;
+
+  std::vector<string_blob> generate_segments() const; 
 
   // resolves the path to be absolute
   FilePath &resolve(const FilePath &base);
@@ -245,6 +256,11 @@ public:
   // returns `npos` on failure
   static constexpr size_t _get_last_separator(const string_blob &source);
 
+  static StrBlob GetExtension(const StrBlob &filename);
+  static inline StrBlob GetExtension(const string &filename) {
+    return GetExtension(StrBlob{ filename.c_str(), filename.size() });
+  }
+
 private:
   /*
    * === === Inner Utility === ===
@@ -252,7 +268,8 @@ private:
 
   static void _calculate_separators(const string_blob &text, SeparatorArray &out);
   static string_type _resolve_path(const string_blob &text, const string_blob &base);
-  static void _add_resolve_segment(RelationSegmentType rel_type, FilePath::string_type &result_str,
+  static void _add_resolve_segment(RelationSegmentType rel_type,
+                                   FilePath::string_type &result_str,
                                    const FilePath::string_blob &segment_source);
   static bool _preprocess(Blob<TextArray::value_type> &text);
 

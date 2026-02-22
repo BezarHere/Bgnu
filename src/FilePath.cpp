@@ -1,8 +1,12 @@
 #include "FilePath.hpp"
 
 #include <algorithm>
+#include <cstdio>
+#include <vector>
 
 #include "Logger.hpp"
+#include "StringTools.hpp"
+#include "base.hpp"
 #include "misc/Error.hpp"
 
 #ifdef _WIN32
@@ -63,7 +67,7 @@ static FilePath::string_blob get_root_path(const FilePath::string_blob &base);
 FilePath::FilePath(const string_blob &str) {
 
   // copy string
-  m_text.extend(str.data, string_tools::length(str.data, str.length()));
+  m_text.append(str.data, string_tools::length(str.data, str.length()));
 
   // can't write to the entire text region, need to place a null at back
   if (m_text.full())
@@ -215,7 +219,7 @@ FilePath &FilePath::add_path(const string_blob &path) {
     m_text.back() = DirectorySeparator;
   }
 
-  m_text.extend(path.data, path.length());
+  m_text.append(path.data, path.length());
 
   size_t size = m_text.size();
   _preprocess(m_text.data(), size);
@@ -244,6 +248,8 @@ FilePath &FilePath::pop_path() {
 
   return *this;
 }
+
+FILE *FilePath::open(const char *mode) const { return fopen(c_str(), mode); }
 
 std::ifstream FilePath::stream_read(bool binary) const {
   return std::ifstream(
@@ -284,7 +290,9 @@ void FilePath::write(const StrBlob &value) const {
   {
     char msg[inner::ExceptionBufferSz]{ 0 };
 
-    sprintf_s(msg, "Can not write %llu bytes of memory, max is %llu bytes!", value.size,
+    sprintf_s(msg,
+              "Can not write %llu bytes of memory, max is %llu bytes!",
+              value.size,
               static_cast<size_t>(streamsize_max));
 
     throw std::length_error(msg);
@@ -344,6 +352,90 @@ bool FilePath::is_absolute() const {
 #elif __linux__
   return !m_text.empty() and m_text[0] == '/';
 #endif
+}
+
+bool FilePath::is_empty() const {
+  FILE *fp = this->open("rb");
+  char c;
+  bool empty = !fread(&c, 1, 1, fp);
+  fclose(fp);
+  return empty;
+}
+
+FilePath FilePath::relative_to(const FilePath &other) const {
+  if (*this == other)
+  {
+    return {};
+  }
+
+  const auto my_segments = generate_segments();
+  const auto other_segments = other.generate_segments();
+
+  size_t common_segment = 0;
+  const size_t zip_size = std::min(my_segments.size(), other_segments.size());
+
+  for (; common_segment < zip_size; common_segment++)
+  {
+    const auto &my_seg = my_segments[common_segment];
+    const auto &other_seg = other_segments[common_segment];
+
+    if (my_seg.size != other_seg.size)
+    {
+      break;
+    }
+
+    if (!string_tools::equal(my_seg.data, other_seg.data, my_seg.size))
+    {
+      break;
+    }
+  }
+
+  const size_t backtrack_count = my_segments.size() - common_segment;
+
+  std::string str = {};
+
+  for (size_t i = 0; i < backtrack_count; i++)
+  {
+    str.append("..");
+    str.push_back(DirectorySeparator);
+  }
+  
+  const size_t track_count = other_segments.size() - common_segment;
+
+  for (size_t i = 0; i < track_count; i++)
+  {
+    str.append(other_segments[i + common_segment].data, other_segments[i + common_segment].size);
+    str.push_back(DirectorySeparator);
+  }
+
+  if (!str.empty())
+  {
+    str.pop_back();
+  }
+
+  return FilePath(str);
+}
+
+std::vector<FilePath::string_blob> FilePath::generate_segments() const {
+  std::vector<FilePath::string_blob> result{};
+  result.reserve(m_separators.size() + 1);
+
+  size_t last_index = 0;
+  for (size_t i = 0; i < m_separators.size(); i++)
+  {
+    if (m_separators[i] > last_index)
+    {
+      result.emplace_back(m_text.data() + last_index, m_text.data() + m_separators[i]);
+    }
+    last_index = m_separators[i] + 1;
+  }
+
+  if (last_index < m_text.size())
+  {
+    result.emplace_back(m_text.data() + last_index, m_text.end() - 1);
+  }
+
+  return result;
 }
 
 FilePath &FilePath::resolve(const FilePath &base) {
@@ -482,6 +574,16 @@ FilePath::string_blob FilePath::_get_parent(const string_blob &source) {
   return string_blob(source.data, anchor);
 }
 
+StrBlob FilePath::GetExtension(const StrBlob &filename) {
+  const size_t i = find_extension(filename.data, filename.size);
+  if (i >= filename.size)
+  {
+    return StrBlob{ filename.end(), filename.end() };
+  }
+
+  return StrBlob(filename.data + i, filename.size - i);
+}
+
 void FilePath::_calculate_separators(const string_blob &text, SeparatorArray &out) {
 
   // out.data[out.count++] = npos; // first separator
@@ -549,7 +651,8 @@ FilePath::string_type FilePath::_resolve_path(const string_blob &text, const str
   return result_str;
 }
 
-void FilePath::_add_resolve_segment(RelationSegmentType rel_type, FilePath::string_type &result_str,
+void FilePath::_add_resolve_segment(RelationSegmentType rel_type,
+                                    FilePath::string_type &result_str,
                                     const FilePath::string_blob &segment_source) {
   switch (rel_type)
   {
@@ -632,8 +735,11 @@ bool FilePath::_preprocess(Blob<TextArray::value_type> &text) {
       }
 #endif
 
-      Logger::error("FilePath: Invalid path \"%.*s\", Bad char '%c' [%llu]", text.size, text.data,
-                    text[i], i);
+      Logger::error("FilePath: Invalid path \"%.*s\", Bad char '%c' [%llu]",
+                    text.size,
+                    text.data,
+                    text[i],
+                    i);
 
       return false;
     }
