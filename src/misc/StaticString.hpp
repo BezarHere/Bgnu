@@ -23,7 +23,8 @@ public:
   constexpr size_t _length(const char_type *src, size_t max_length = max_str_length);
 
   static constexpr bool _equality(const container_type &left, const container_type &right);
-  static constexpr bool _equality(const char_type *left, const char_type *right,
+  static constexpr bool _equality(const char_type *left,
+                                  const char_type *right,
                                   size_t max_length = max_str_length);
 
   void _set_eof();
@@ -166,6 +167,7 @@ public:
   inline constexpr size_t size() const { return m_length; }
 
   inline constexpr bool empty() const { return m_length == 0; }
+  inline constexpr bool full() const { return m_length >= max_str_length; }
 
   inline constexpr value_type *data() { return m_data; }
   inline constexpr const value_type *data() const { return m_data; }
@@ -177,8 +179,26 @@ public:
   inline constexpr const value_type *begin() const { return m_data; }
   inline constexpr const value_type *end() const { return m_data + m_length; }
 
+  inline constexpr value_type back() const {
+    if (empty())
+    {
+      throw std::length_error("back()");
+    }
+    return m_data[m_length - 1];
+  }
+  inline constexpr value_type front() const { return *m_data; }
+
+  inline constexpr value_type &back() {
+    if (empty())
+    {
+      throw std::length_error("back()");
+    }
+    return m_data[m_length - 1];
+  }
+  inline constexpr value_type &front() { return *m_data; }
+
   inline this_type &append(const char_type character) {
-    if (m_length + 1 >= max_str_length)
+    if (full())
     {
       throw std::length_error("append(char)");
     }
@@ -189,7 +209,7 @@ public:
   }
 
   inline this_type &append(const char_type character, size_t count) {
-    if (m_length + 1 >= max_str_length)
+    if (full())
     {
       throw std::length_error("append(char)");
     }
@@ -206,21 +226,58 @@ public:
     return *this;
   }
 
-  inline this_type &append(const this_type &str) {
-    if (m_length + 1 >= max_str_length)
+  inline this_type &append(const this_type &str) { return append(str.c_str(), str.size()); }
+
+  inline this_type &append(const char_type *cstr, size_t count) {
+    if (full())
     {
       throw std::length_error("append(char)");
     }
     const size_t space_left = max_str_length - size();
-    const size_t chars_to_add = std::min(str.length(), space_left);
+    const size_t chars_to_add = std::min(count, space_left);
 
     for (size_t i = 0; i < chars_to_add; i++)
     {
-      m_data[m_length++] = str[i];
+      m_data[m_length++] = cstr[i];
     }
 
     _set_eof();
     return *this;
+  }
+
+  inline void resize(size_t new_size) {
+    new_size = std::min(new_size, max_str_length);
+
+    for (size_t i = new_size; i <= max_str_length; i++)
+    {
+      m_data[i] = 0;
+    }
+
+    m_length = new_size;
+    _set_eof();
+  }
+
+  inline void emplace_back() {
+    if (full())
+    {
+      throw std::length_error("emplace_pack()");
+    }
+
+    m_data[m_length] = 0;  // new char
+    m_length++;
+    _set_eof();
+  }
+
+  inline char_type pop_back() {
+    if (empty())
+    {
+      throw std::length_error("pop_pack()");
+    }
+
+    m_length--;
+    const char_type c = m_data[m_length];
+    _set_eof();
+    return c;
   }
 
 private:
@@ -234,7 +291,8 @@ template <size_t MaxLen>
 using WStaticString = BasicStaticString<MaxLen, wchar_t>;
 
 template <size_t _MaxLen, typename _T>
-inline constexpr void BasicStaticString<_MaxLen, _T>::_copy(char_type *dst, const char_type *src,
+inline constexpr void BasicStaticString<_MaxLen, _T>::_copy(char_type *dst,
+                                                            const char_type *src,
                                                             size_t length) {
   for (size_t i = 0; i < length && src[i]; i++)
   {
