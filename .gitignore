@@ -10,3 +10,4 @@ bgnu-cppcheck-build-dir
 *.dll
 py/*.csv
 **/*.log
+.cache/*
