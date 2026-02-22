@@ -9,10 +9,12 @@ Project Project::GetDefault() {
   Project project = {};
 
   project.m_build_configurations->try_emplace(
-      "debug", BuildConfiguration::GetDefault(BuildConfigurationDefaultType::Debug));
+      "debug",
+      BuildConfiguration::GetDefault(BuildConfigurationDefaultType::Debug));
 
   project.m_build_configurations->try_emplace(
-      "release", BuildConfiguration::GetDefault(BuildConfigurationDefaultType::Release));
+      "release",
+      BuildConfiguration::GetDefault(BuildConfigurationDefaultType::Release));
 
   return project;
 }
@@ -40,6 +42,12 @@ Project Project::from_data(const FieldVar::Dict &data, ErrorReport &result) {
     return project;
   }
 
+  const FieldVar clangd = reader.try_get_value<FieldVarType::Boolean>(project.clangd.name());
+  if (!clangd.is_null())
+  {
+    *project.clangd = clangd.get_bool();
+  }
+
   for (const auto &[key, value] : build_configs.get_dict())
   {
     Logger::debug("Started parsing build config: %s", to_cstr(key));
@@ -47,8 +55,10 @@ Project Project::from_data(const FieldVar::Dict &data, ErrorReport &result) {
     {
       Logger::error(
           "%s: Invalid value for build configuration '%s': expected type %s, gotten type %s",
-          to_cstr(reader.get_context()), to_cstr(key),
-          to_cstr(FieldVar::get_name_for_type(FieldVarType::Dict)), to_cstr(value.get_type_name()));
+          to_cstr(reader.get_context()),
+          to_cstr(key),
+          to_cstr(FieldVar::get_name_for_type(FieldVarType::Dict)),
+          to_cstr(value.get_type_name()));
 
       result.code = Error::InvalidType;
       result.message = format_join("ill-typed build configuration \"", key, "\"");
@@ -79,7 +89,8 @@ Project Project::from_data(const FieldVar::Dict &data, ErrorReport &result) {
       if (modifier_data.get_type() != FieldVarType::Dict)
       {
         Logger::warning(
-            "Project::Modifier[%llu]: Modifier data should be of type Dict, found type %s", i,
+            "Project::Modifier[%llu]: Modifier data should be of type Dict, found type %s",
+            i,
             to_cstr(modifier_data.get_type_name()));
         continue;
       }
@@ -106,16 +117,6 @@ errno_t Project::to_data(const Project &project, FieldVar &output) {
 
   FieldWriter writer = {};
 
-  FieldVar::Dict glob_selectors = {};
-
-  for (const auto &item : project.m_source_selectors)
-  {
-    glob_selectors.try_emplace(item.glob.get_source().c_str(),
-                               build_tools::GetSourceFileTypeName(item.type));
-  }
-
-  writer.write("source_selectors", glob_selectors);
-
   // writer.write_nested_transform(project.m_output.name(), project.m_output->type);
   writer.write_nested(project.m_output.name(), project.m_output->name);
   writer.write_nested(project.m_output.name(), project.m_output->dir);
@@ -129,11 +130,14 @@ errno_t Project::to_data(const Project &project, FieldVar &output) {
 
     if (report)
     {
-      Logger::error("error while serializing config named '%s' [%d]: %s", name.c_str(),
-                    (int)report.code, report.message.c_str());
+      Logger::error("error while serializing config named '%s' [%d]: %s",
+                    name.c_str(),
+                    (int)report.code,
+                    report.message.c_str());
     }
   }
 
+  writer.write(project.clangd);
   writer.write(project.m_build_configurations.name(), config_dicts);
 
   output = FieldVar(writer.output);
@@ -142,46 +146,6 @@ errno_t Project::to_data(const Project &project, FieldVar &output) {
 }
 
 ErrorReport Project::load_various(Project &project, FieldDataReader &reader) {
-  const FieldVar::Dict &src_slc =
-      reader.try_get_value<FieldVarType::Dict>("source_selectors", FieldVar(FieldVarType::Dict))
-          .get_dict();
-
-  if (src_slc.empty())
-  {
-    Logger::verbose("found no specified source selectors, using default...");
-  }
-  else
-  {
-    Logger::verbose("found %llu source selectors", src_slc.size());
-    project.m_source_selectors.clear();
-  }
-
-  for (const auto &[var, type] : src_slc)
-  {
-    if (type.get_type() != FieldVarType::String)
-    {
-      Logger::error(
-          "project source selector [key='%s'] should have a value of type STRING defining the "
-          "glob's (key) type format (e.x. 'c' or 'c++' or ...)",
-          var.c_str());
-
-      continue;
-    }
-
-    const SourceFileType parsed_type = build_tools::GetFileTypeFromTypeName(type.get_string());
-
-    if (parsed_type == SourceFileType::None)
-    {
-      Logger::error(
-          "project source selector [key='%s'] has an unknown glob's/key's type/value='%s' (e.x. "
-          "'c' or 'c++' or ...)",
-          var.c_str(), type.get_string().c_str());
-      continue;
-    }
-
-    project.m_source_selectors.emplace_back(Glob(var), parsed_type);
-  }
-
   const FieldVar &output_dir = reader.try_get_value<FieldVarType::String>(
       FieldIO::NestedName(project.m_output.name(), project.m_output->dir));
 
@@ -222,48 +186,12 @@ ErrorReport Project::load_various(Project &project, FieldDataReader &reader) {
   return ErrorReport();
 }
 
-vector<FilePath::iterator_entry> Project::get_available_files() const {
-  vector<FilePath::iterator_entry> entries{};
-  vector<FilePath::iterator> iterators{};
-
-  entries.reserve(1024);
-
-  iterators.push_back(this->source_dir.create_iterator());
-
-  while (!iterators.empty())
-  {
-    const auto current_iter = iterators.back();
-    iterators.pop_back();
-
-    for (const auto &path : current_iter)
-    {
-      if (path.is_directory())
-      {
-        iterators.emplace_back(path);
-        continue;
-      }
-
-      if (path.is_regular_file())
-      {
-        entries.push_back(path);
-        continue;
-      }
-
-      // skips other non-regular files
-    }
-  }
-
-  return entries;
-}
-
 vector<FilePath> Project::get_source_files() const {
   vector<FilePath> result_paths{};
 
-  for (const auto &p : get_available_files())
+  for (const auto &path : build_tools::GetAllFilesInDirectory(source_dir, true))
   {
-    FilePath path = p;
-
-    if (is_matching_source(path.get_text()))
+    if (is_source_file_path(path.get_text()))
     {
       result_paths.push_back(path);
     }
@@ -272,23 +200,12 @@ vector<FilePath> Project::get_source_files() const {
   return result_paths;
 }
 
-bool Project::is_matching_source(const StrBlob &path) const {
-  return get_source_type(path) != SourceFileType::None;
-}
-
-SourceFileType Project::get_source_type(const StrBlob &path) const {
-  for (const SourceTypeGlob &stg : m_source_selectors)
-  {
-    if (stg.glob.test(path))
-    {
-      return stg.type;
-    }
-  }
-  return SourceFileType::None;
+bool Project::is_source_file_path(const StrBlob &path) const {
+  return build_tools::IsCompilableSourceFile(path) && build_tools::GetSourceType(path) != SourceFileType::None;
 }
 
 SourceFileType Project::get_source_type_or_default(const StrBlob &path) const {
-  const SourceFileType type = get_source_type(path);
+  const SourceFileType type = build_tools::GetSourceType(path);
 
   if (type == SourceFileType::None)
   {
@@ -300,13 +217,6 @@ SourceFileType Project::get_source_type_or_default(const StrBlob &path) const {
 
 hash_t Project::hash_own(HashDigester &digester) const {
   digester += m_output.field();
-
-  for (const SourceTypeGlob &stg : m_source_selectors)
-  {
-    digester.add((hash_t)stg.type);
-    digester.add(StrBlob{ stg.glob.get_source().c_str(), stg.glob.get_source().length() });
-  }
-
   return digester.value;
 }
 

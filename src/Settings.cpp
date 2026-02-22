@@ -13,7 +13,8 @@ static constexpr BGnuVersion BGnuVersionHistory[] = {
   /**/ { 1, 2, 0 }, { 1, 2, 1 }, { 1, 2, 2 }, { 1, 2, 3 }, { 1, 2, 4 },
   /**/ { 1, 3, 0 }, { 1, 3, 1 }, { 1, 3, 2 }, { 1, 3, 3 },
   /**/ { 1, 4, 0 }, { 1, 4, 1 }, { 1, 4, 2 }, { 1, 4, 3 }, { 1, 4, 4 }, { 1, 4, 5 },
-  /**/ { 1, 5, 0 }, { 1, 5, 1 }, { 1, 5, 2 }
+  /**/ { 1, 5, 0 }, { 1, 5, 1 }, { 1, 5, 2 },
+  /**/ { 1, 6, 0 }
 };
 
 struct SettingsData
@@ -31,7 +32,8 @@ SettingsData g_SettingsData = { 0 };
 bool Settings::s_SilentSaveFail = false;
 bool Settings::s_AddRequestValues = true;
 
-static inline errno_t AddField(const std::string &name, const SettingValue &value,
+static inline errno_t AddField(const std::string &name,
+                               const SettingValue &value,
                                bool base_val = true);
 static inline const FieldVar &GetSettingInnerValue(const std::string &name,
                                                    const FieldVar &def_val);
@@ -134,7 +136,8 @@ inline const FieldVar &GetSettingInnerValue(const std::string &name, const Field
     if (Logger::is_verbose())
     {
       const std::string out = value.copy_stringified().get_string();
-      Logger::verbose("returned setting field value name='%s', value=%s", name.c_str(),
+      Logger::verbose("returned setting field value name='%s', value=%s",
+                      name.c_str(),
                       out.c_str());
     }
     return value;

@@ -55,7 +55,7 @@ namespace commands
 
     void _process_build_source(const commands::BuildCommand::IOMap &input_output_map,
                                const FilePath &source_path,
-                               std::vector<build_tools::ExecuteParameter> &build_args);
+                               build_tools::ExecuteParameter &build_args);
 
     void _build_source_processor();
     std::map<FilePath, FilePath> _gen_io_map() const;
@@ -84,6 +84,7 @@ namespace commands
 
     Project m_project;
     FilePath m_project_file;
+    FilePath m_project_dir;
 
     string m_current_build_cfg_name;
     const BuildConfiguration *m_current_build_cfg = nullptr;

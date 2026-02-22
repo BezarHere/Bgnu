@@ -363,7 +363,7 @@ void BuildConfiguration::build_link_arguments(vector<string> &output,
   _put_libraries(output);
 }
 
-void BuildConfiguration::build_clangd_contents(vector<string> &output) {
+void BuildConfiguration::build_clangd_contents(vector<string> &output) const {
   _put_predefines(output);
   _put_standards(output, SourceFileType::CPP);
   _put_warnings(output);

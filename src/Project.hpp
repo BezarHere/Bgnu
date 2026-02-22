@@ -71,16 +71,14 @@ public:
   static Project GetDefault();
   static Project from_data(const FieldVar::Dict &data, ErrorReport &result);
   static errno_t to_data(const Project &project, FieldVar &output);
-
+  
+  inline bool handle_clangd() const { return *clangd; }
   inline const ProjectOutputData &get_output() const { return m_output.field(); }
-  inline const vector<SourceTypeGlob> &get_source_selector() const { return m_source_selectors; }
   inline const BuildConfigMap &get_build_configs() const { return m_build_configurations.field(); }
 
-  vector<FilePath::iterator_entry> get_available_files() const;
   vector<FilePath> get_source_files() const;
 
-  bool is_matching_source(const StrBlob &path) const;
-  SourceFileType get_source_type(const StrBlob &path) const;
+  bool is_source_file_path(const StrBlob &path) const;
 
   // can return SourceFileType::None if we are dealing with bogus file paths/types
   SourceFileType get_source_type_or_default(const StrBlob &path) const;
@@ -91,15 +89,12 @@ public:
 
   FilePath source_dir = FilePath::get_working_directory();
 
+
 private:
   static ErrorReport load_various(Project &project, FieldDataReader &reader);
 
 private:
   NField<ProjectOutputData> m_output = { "output", ProjectOutputData{} };
-  vector<SourceTypeGlob> m_source_selectors = { { "**/*.c", SourceFileType::C },
-                                                { "**/*.cpp", SourceFileType::CPP },
-                                                { "**/*.cc", SourceFileType::CPP },
-                                                { "**/*.cxx", SourceFileType::CPP } };
 
   NField<bool> clangd = { "clangd", true };
 

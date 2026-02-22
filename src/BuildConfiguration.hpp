@@ -123,7 +123,7 @@ struct BuildConfiguration
   void build_link_arguments(vector<string> &output, const Blob<const StrBlob> &files,
                             const StrBlob &ouput_file, SourceFileType type) const;
 
-  void build_clangd_contents(vector<string> &output);
+  void build_clangd_contents(vector<string> &output) const;
 
   hash_t hash() const;
 

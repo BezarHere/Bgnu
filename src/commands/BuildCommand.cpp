@@ -1,21 +1,21 @@
 #include "BuildCommand.hpp"
 
+#include <algorithm>
 #include <chrono>
-#include <mutex>
 #include <set>
-#include <thread>
 #include <utility/ThreadBatcher.hpp>
+#include <vector>
 
 #include "BuildCache.hpp"
 #include "BuildTools.hpp"
 #include "FieldFile.hpp"
-#include "FileTools.hpp"
+#include "Logger.hpp"
+#include "Project.hpp"
 #include "Settings.hpp"
 #include "code/SourceProcessor.hpp"
 #include "code/SourceTools.hpp"
 #include "misc/ContainerTools.hpp"
 #include "utility/FileStats.hpp"
-#include "utility/Process.hpp"
 
 const string RebuildArgs[] = { "-r", "--rebuild" };
 const string ResaveArgs[] = { "--resave" };
@@ -54,7 +54,8 @@ namespace commands
     {
       for (const auto &arg : reader.get_args())
       {
-        Logger::verbose("+ has arg: \"%s\" [%s]", arg.get_value().c_str(),
+        Logger::verbose("+ has arg: \"%s\" [%s]",
+                        arg.get_value().c_str(),
                         arg.is_used() ? "used" : "unused");
       }
     }
@@ -95,10 +96,12 @@ namespace commands
     build_tools::SetupHashes(m_new_cache, m_project, m_current_build_cfg);
 
     Logger::verbose("## build cache hashes: new[%llX, %llX]  old[%llX, %llX] ##",
-                    m_new_cache.build_hash, m_new_cache.config_hash, m_build_cache.build_hash,
+                    m_new_cache.build_hash,
+                    m_new_cache.config_hash,
+                    m_build_cache.build_hash,
                     m_build_cache.config_hash);
 
-    std::set<FilePath> rebuild_files = {};
+    std::set<FilePath> needs_rebuild = {};
 
     if (!m_rebuild)
     {
@@ -108,23 +111,52 @@ namespace commands
     if (m_rebuild)
     {
       Logger::note("** rebuilding project: deleting output & cache directory **");
-      rebuild_files = current_source_files;
+      needs_rebuild = current_source_files;
       build_tools::DeleteBuildDir(this->m_project);
     }
     else
     {
       // add files that have changed from last build
-      _add_changed_files(rebuild_files);
+      _add_changed_files(needs_rebuild);
 
       // add files with no compiled object file
-      _add_uncompiled_files(input_output_map, !is_running_rebuild(), rebuild_files);
+      _add_uncompiled_files(input_output_map, !is_running_rebuild(), needs_rebuild);
     }
 
+    std::vector<build_tools::ExecuteParameter> project_build_args{};
+    std::vector<const FilePath *> source_paths_ordered{};
     std::vector<build_tools::ExecuteParameter> build_args{};
 
-    for (const FilePath &source_path : rebuild_files)
+    for (const FilePath &source_path : current_source_files)
     {
-      _process_build_source(input_output_map, source_path, build_args);
+      _process_build_source(input_output_map, source_path, project_build_args.emplace_back());
+      source_paths_ordered.emplace_back(&source_path);
+      if (needs_rebuild.contains(source_path))
+      {
+        build_args.emplace_back(project_build_args.back());
+      }
+    }
+
+    if (m_project.handle_clangd())
+    {
+      Logger::debug("Written clangd compile flags");
+      build_tools::TryCreateClangdCompileFlagsFile(*m_current_build_cfg, m_project_dir);
+
+      std::vector<string> cmds = {};
+      std::vector<string> names = {};
+
+      for (size_t i = 0; i < project_build_args.size(); i++)
+      {
+        cmds.emplace_back(build_tools::JoinArguments(project_build_args[i].args.data(),
+                                                     project_build_args[i].args.size()));
+        names.emplace_back(m_project_dir.relative_to(source_paths_ordered[i]->resolved_copy()));
+      }
+
+      Logger::debug("Written clangd compile file");
+      build_tools::WriteClangdCompileCommandsFile(cmds.data(),
+                                                  names.data(),
+                                                  cmds.size(),
+                                                  m_project_dir);
     }
 
     m_project.get_output().ensure_available();
@@ -141,8 +173,9 @@ namespace commands
     m_build_cache = m_new_cache;
     _write_build_info();
 
-    const auto compile_failures_count = _check_report_compile_failures(
-        build_results.data(), build_args.data(), build_results.size());
+    const auto compile_failures_count = _check_report_compile_failures(build_results.data(),
+                                                                       build_args.data(),
+                                                                       build_results.size());
 
     const bool intermidiate_build_all_success = (compile_failures_count == 0);
 
@@ -157,7 +190,7 @@ namespace commands
     const bool always_link_build = Settings::Get("always_link_build", true).get_bool();
 
     // no intermediates required rebuilding
-    const bool all_intermediates_upto_date = rebuild_files.empty() && build_results.empty();
+    const bool all_intermediates_upto_date = needs_rebuild.empty() && build_results.empty();
 
     // should we link
     const bool link_upto_date_intermediates = always_link_build || !all_intermediates_upto_date;
@@ -199,8 +232,10 @@ namespace commands
                       build_tools::GetSourceFileTypeName(dominate_file_type));
 
       m_current_build_cfg->build_link_arguments(
-          link_param.args, { link_input_files.data(), link_input_files.size() },
-          output_filepath.get_text(), dominate_file_type);
+          link_param.args,
+          { link_input_files.data(), link_input_files.size() },
+          output_filepath.get_text(),
+          dominate_file_type);
 
       link_param.name = "binary";
       link_param.flags |= build_tools::eExcFlag_Printout;
@@ -253,7 +288,8 @@ namespace commands
   }
 
   size_t BuildCommand::_check_report_compile_failures(
-      const int *build_results, const build_tools::ExecuteParameter *build_args,
+      const int *build_results,
+      const build_tools::ExecuteParameter *build_args,
       const size_t count) {
 
     const size_t compile_failures = count - std::count(build_results, build_results + count, 0);
@@ -265,13 +301,15 @@ namespace commands
         continue;
       }
       const auto &execute_params = build_args[i];
-      Logger::verbose("process titled '%s' failed with error code: %d", execute_params.name.c_str(),
+      Logger::verbose("process titled '%s' failed with error code: %d",
+                      execute_params.name.c_str(),
                       build_results[i]);
     }
 
     if (compile_failures > 0)
     {
-      Logger::warning("Linking will fail: %llu out of %llu builds have failed", compile_failures,
+      Logger::warning("Linking will fail: %llu out of %llu builds have failed",
+                      compile_failures,
                       count);
     }
 
@@ -340,7 +378,8 @@ namespace commands
           " the output streams are referenced by pointers that may now be dangling!"
           " (check if the above outputs are intelligible)",
 
-          _old_build_output_streams_data, build_output_streams.data());
+          _old_build_output_streams_data,
+          build_output_streams.data());
     }
 
     return results;
@@ -348,7 +387,7 @@ namespace commands
 
   void BuildCommand::_process_build_source(const commands::BuildCommand::IOMap &input_output_map,
                                            const FilePath &source_path,
-                                           std::vector<build_tools::ExecuteParameter> &build_args) {
+                                           build_tools::ExecuteParameter &out_params) {
     const FilePath &output_path = input_output_map.at(source_path).resolved_copy();
     const hash_t &hash = m_src_processor.get_file_hash(source_path);
 
@@ -361,20 +400,24 @@ namespace commands
 
     m_new_cache.override_old_source_record(source_path, record);
 
-    Logger::verbose("adding \"%s\" -> \"%s\" to the build force", source_path.c_str(),
+    Logger::verbose("adding \"%s\" -> \"%s\" to the build force",
+                    source_path.c_str(),
                     output_path.c_str());
 
     const SourceFileType file_type = m_project.get_source_type_or_default(source_path.get_text());
 
-    Logger::verbose("source file type for '%s': %s", source_path.c_str(),
+    Logger::verbose("source file type for '%s': %s",
+                    source_path.c_str(),
                     build_tools::GetSourceFileTypeName(file_type));
 
-    m_current_build_cfg->build_arguments(build_args.emplace_back().args, source_path.get_text(),
-                                         output_path.get_text(), file_type);
+    m_current_build_cfg->build_arguments(out_params.args,
+                                         source_path.get_text(),
+                                         output_path.get_text(),
+                                         file_type);
 
-    build_args.back().name = source_path.c_str();
-    build_args.back().flags |= build_tools::eExcFlag_Printout;
-    build_args.back().out = &std::cout;
+    out_params.name = source_path.c_str();
+    out_params.flags |= build_tools::eExcFlag_Printout;
+    out_params.out = &std::cout;
   }
 
   Error BuildCommand::get_help(ArgumentSource &reader, string &out) {
@@ -411,7 +454,8 @@ namespace commands
         if (running_normal_build)
         {
           Logger::debug("rebuilding \"%s\": compiled object at \"%s\" not found",
-                        in_out.first.c_str(), abs_path.c_str());
+                        in_out.first.c_str(),
+                        abs_path.c_str());
         }
 
         rebuild_files.insert(in_out.first);
@@ -422,7 +466,8 @@ namespace commands
   void BuildCommand::_add_changed_files(std::set<FilePath> &rebuild_files) const {
     const SourceProcessor::file_change_list changed_files = m_src_processor.gen_file_change_table();
 
-    std::for_each(changed_files.begin(), changed_files.end(),
+    std::for_each(changed_files.begin(),
+                  changed_files.end(),
                   [&rebuild_files](const pair<FilePath, hash_t> &input) {
                     Logger::debug("rebuilding \"%s\": cached object file invalidated",
                                   input.first.c_str());
@@ -492,7 +537,8 @@ namespace commands
     this->_load_project();
     if (m_report.code != Error::Ok)
     {
-      Logger::error("Building project reported an err code=%d: %s", (int)m_report.code,
+      Logger::error("Building project reported an err code=%d: %s",
+                    (int)m_report.code,
                     to_cstr(m_report.message));
       return m_report.code;
     }
@@ -500,7 +546,8 @@ namespace commands
     _setup_build_config(reader);
     if (m_report.code != Error::Ok)
     {
-      Logger::error("setting-up the build config reported an error code=%d: %s", (int)m_report.code,
+      Logger::error("setting-up the build config reported an error code=%d: %s",
+                    (int)m_report.code,
                     to_cstr(m_report.message));
       return m_report.code;
     }
@@ -541,25 +588,29 @@ namespace commands
       return;
     }
 
-    const FilePath project_dir = m_project_file.parent();
+    m_project_dir = m_project_file.parent();
     const FieldVar project_file_data = FieldFile::load(m_project_file);
 
     if (project_file_data.is_null())
     {
-      m_report = { Error::NullData, format_join("Null project data file at '", m_project_file,
-                                                "'; this shouldn't happen, bug?") };
+      m_report = { Error::NullData,
+                   format_join("Null project data file at '",
+                               m_project_file,
+                               "'; this shouldn't happen, bug?") };
       return;
     }
 
     if (project_file_data.get_dict().empty())
     {
-      m_report = { Error::NoData, format_join("Empty project data file at '", m_project_file,
-                                              "', check your file!") };
+      m_report = {
+        Error::NoData,
+        format_join("Empty project data file at '", m_project_file, "', check your file!")
+      };
       return;
     }
 
     m_project = Project::from_data(project_file_data.get_dict(), m_report);
-    m_project.source_dir = project_dir;
+    m_project.source_dir = m_project_dir;
 
     if (m_project.get_build_configs().empty())
     {
@@ -718,8 +769,12 @@ namespace commands
 
   FilePath BuildCommand::_get_output_filepath(const FilePath &filepath, const hash_t &hash) const {
     string_char buf[FilePath::MaxPathLength + 1] = {};
-    snprintf(buf, FilePath::MaxPathLength, "%s/%s.%llX.o",
-             m_project.get_output().cache_dir->c_str(), filepath.name().c_str(), hash);
+    snprintf(buf,
+             FilePath::MaxPathLength,
+             "%s/%s.%llX.o",
+             m_project.get_output().cache_dir->c_str(),
+             filepath.name().c_str(),
+             hash);
 
     return FilePath(buf);
   }
@@ -765,6 +820,7 @@ void dump_build_args(const std::vector<build_tools::ExecuteParameter> &list,
     stream << '\n';
   }
 
-  Logger::verbose("dumped the build argument list: size=%lld bytes to '%s'", stream.tellp() - start,
+  Logger::verbose("dumped the build argument list: size=%lld bytes to '%s'",
+                  stream.tellp() - start,
                   output_path.c_str());
 }
