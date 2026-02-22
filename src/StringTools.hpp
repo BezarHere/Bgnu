@@ -170,6 +170,7 @@ namespace string_tools
 
     mbstate_t mb_state = { 0 };
     size_t chars_converted = mbsnrtowcs(dst_str.data(), &src_str, max_count, dst_sz, &mb_state);
+    (void)chars_converted;
     errno_t error = errno;
 
     if (error != 0)
