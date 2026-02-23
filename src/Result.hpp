@@ -11,12 +11,12 @@
   {
     // has value!
   }
-  
+
   if (!result)
   {
     // no value :(
   }
-  
+
 */
 template <typename T>
 class Result
@@ -31,6 +31,7 @@ public:
   inline Result(value_type &&value) : m_value{ std::forward<value_type>(value) } {}
   inline Result(Error error, const std::string &msg)
       : m_value{ std::nullopt }, m_error{ error }, m_message{ msg } {}
+  inline Result(const ErrorReport report) : Result(report.code, report.message) {}
 
   template <typename U = value_type>
     requires(std::is_default_constructible_v<U>)
@@ -77,13 +78,17 @@ public:
 
   inline bool has_value() const { return m_value.has_value(); }
 
+  inline bool has_error() const { return m_error != Error::Ok; }
+
   inline value_type &value() { return m_value.value(); }
-  
+
   inline const value_type &value() const { return m_value.value(); }
-  
+
   inline error_type error() const { return m_error; }
-  
+
   inline const message_type &message() const { return m_message; }
+
+  inline ErrorReport to_error_report() const { return {m_error, m_message}; }
 
 private:
   std::optional<value_type> m_value;
