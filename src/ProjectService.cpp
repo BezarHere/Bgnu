@@ -212,6 +212,7 @@ Error ProjectService::LoadCaches() {
     return err.code;
   }
 
+  s_cache_loaded = true;
   return Error::Ok;
 }
 

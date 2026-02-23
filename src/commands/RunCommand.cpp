@@ -5,7 +5,6 @@
 #include "BuildTools.hpp"
 #include "ProjectService.hpp"
 
-
 Error commands::RunCommand::execute(ArgumentSource &reader) {
   Logger::verbose("do a run-build...");
 
@@ -63,6 +62,7 @@ Error commands::RunCommand::execute(ArgumentSource &reader) {
   Logger::notify("[*] Running...");
 
   std::system(system_cmd.c_str());
+  return Error::Ok;
 }
 
 Error commands::RunCommand::get_help(ArgumentSource &reader, string &out) {

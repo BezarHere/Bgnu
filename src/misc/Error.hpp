@@ -59,6 +59,8 @@ inline constexpr const char *GetErrorName(const Error error) {
     return "AlreadyExists";
     break;
   }
+
+  return "UNKNOWN";
 }
 
 static inline const char *GetErrorName(const errno_t error) {
