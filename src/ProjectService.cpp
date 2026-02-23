@@ -394,8 +394,9 @@ Error ProjectService::LinkBuiltFiles() {
   const bool all_intermediates_upto_date =
       intermidiate_build_all_success && GetBuildSuccessCount() == 0;
 
-  const bool linking_necessary =
-      (all_intermediates_upto_date && always_link_build) || force_linking;
+  const bool linking_necessary = !all_intermediates_upto_date ||
+                                 (all_intermediates_upto_date && always_link_build) ||
+                                 force_linking;
 
   s_linking_result_code = -1;
   if (!linking_necessary)
