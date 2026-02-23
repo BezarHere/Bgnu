@@ -113,7 +113,7 @@ FieldVar::Dict BuildCache::write() const {
 
 inline std::string ParseToHex(hash_t hash) {
   char buffer[32] = { 0 };
-  snprintf(buffer, std::size(buffer), "%llX", hash);
+  snprintf(buffer, std::size(buffer), "%lX", hash);
   return { buffer };
 }
 

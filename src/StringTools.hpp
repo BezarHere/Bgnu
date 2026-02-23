@@ -1,12 +1,11 @@
 #pragma once
 #include <string.h>
 
-#include <concepts>
-
 #include "Logger.hpp"
 #include "Range.hpp"
 #include "base.hpp"
 #include "misc/SpellChecker.hpp"
+
 
 namespace string_tools
 {
@@ -45,7 +44,8 @@ namespace string_tools
   }
 
   template <typename Comparer = std::equal_to<char_type>>
-  static ALWAYS_INLINE constexpr bool _equal(const char_type *left, const char_type *right,
+  static ALWAYS_INLINE constexpr bool _equal(const char_type *left,
+                                             const char_type *right,
                                              const size_t max_count,
                                              const Comparer &comparer = {}) {
     if (max_count == 0)
@@ -94,12 +94,14 @@ namespace string_tools
     return _modify(str, [](char_type c) { return (char_type)toupper(c); });
   }
 
-  static constexpr bool equal(const char_type *left, const char_type *right,
+  static constexpr bool equal(const char_type *left,
+                              const char_type *right,
                               const size_t max_count = npos) {
     return _equal(left, right, max_count, std::equal_to{});
   }
 
-  static constexpr bool equal_insensitive(const char_type *left, const char_type *right,
+  static constexpr bool equal_insensitive(const char_type *left,
+                                          const char_type *right,
                                           const size_t max_count = npos) {
     return _equal(left, right, max_count, [](const char_type left_c, const char_type right_c) {
       return tolower(left_c) == tolower(right_c);
@@ -150,12 +152,15 @@ namespace string_tools
 
     mbstate_t mb_state = { 0 };
     size_t chars_converted = wcsnrtombs(dst_str.data(), &src_str, max_count, dst_sz, &mb_state);
+    (void)chars_converted;
     errno_t error = errno;
 
     if (error != 0)
     {
-      Logger::error("Error while narrowing string \"%S\" max count=%llu, errno=%d", src_str,
-                    max_count, error);
+      Logger::error("Error while narrowing string \"%S\" max count=%llu, errno=%d",
+                    src_str,
+                    max_count,
+                    error);
     }
 
     dst_str.resize(strnlen(dst_str.c_str(), dst_str.size()));
@@ -175,8 +180,10 @@ namespace string_tools
 
     if (error != 0)
     {
-      Logger::error("Error while widening string \"%S\" max count=%llu, error=%s", dst_str.c_str(),
-                    max_count, GetErrorName(error));
+      Logger::error("Error while widening string \"%S\" max count=%llu, error=%s",
+                    dst_str.c_str(),
+                    max_count,
+                    GetErrorName(error));
     }
 
     dst_str.resize(wcsnlen(dst_str.c_str(), dst_str.size()));
@@ -362,7 +369,8 @@ namespace string_tools
   }
 
   template <typename Predicate>
-  static inline constexpr size_t find(const char_type *str, const size_t max_length,
+  static inline constexpr size_t find(const char_type *str,
+                                      const size_t max_length,
                                       Predicate &&pred) {
     for (size_t i = 0; i < max_length; i++)
     {
@@ -380,7 +388,8 @@ namespace string_tools
   }
 
   template <typename Predicate>
-  static inline constexpr size_t find_last(const char_type *str, const size_t max_length,
+  static inline constexpr size_t find_last(const char_type *str,
+                                           const size_t max_length,
                                            Predicate &&pred) {
     size_t last_find = npos;
     for (size_t i = 0; i < max_length; i++)
@@ -399,12 +408,14 @@ namespace string_tools
     return last_find;
   }
 
-  static inline constexpr size_t find(const char_type *str, char_type chr,
+  static inline constexpr size_t find(const char_type *str,
+                                      char_type chr,
                                       const size_t max_length) {
     return find(str, max_length, [chr](char_type chr2) { return chr == chr2; });
   }
 
-  static inline constexpr size_t find_last(const char_type *str, char_type chr,
+  static inline constexpr size_t find_last(const char_type *str,
+                                           char_type chr,
                                            const size_t max_length) {
     return find_last(str, max_length, [chr](char_type chr2) { return chr == chr2; });
   }

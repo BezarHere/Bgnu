@@ -74,7 +74,7 @@ Result<Project> Project::from_data(const FieldVar::Dict &data) {
       return project;
     }
 
-    project.m_build_configurations->insert_or_assign(key, config);
+    project.m_build_configurations->insert_or_assign(key, *config);
   }
 
   const FieldVar &modifiers = reader.try_get_value<FieldVarType::Array>(project.m_modifiers.name());

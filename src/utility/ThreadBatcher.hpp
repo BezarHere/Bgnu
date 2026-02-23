@@ -1,6 +1,7 @@
 #pragma once
 #include <thread>
-#include <vector>
+#include "Logger.hpp"
+#include "Range.hpp"
 
 template <typename Func, typename FuncExporter>
 class ThreadBatcher

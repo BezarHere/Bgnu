@@ -54,6 +54,8 @@ class ArgumentSource
 public:
   using char_type = string::value_type;
 
+  ArgumentSource() = default;
+
   ArgumentSource(const char_type *argv[], size_t argc);
   ArgumentSource(const Blob<const Argument> &args);
 
@@ -62,6 +64,7 @@ public:
   string join() const;
 
   Argument &read();
+  const Argument &peek() const;
   std::string read_or(const std::string &default_value);
 
   // returns npos if not found, does not check used arguments

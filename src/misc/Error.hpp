@@ -34,7 +34,32 @@ struct ErrorReport
   inline operator bool() const noexcept { return code != Error::Ok; }
 };
 
-inline constexpr const char *GetErrorName(const Error error) { return "unknown"; }
+inline constexpr const char *GetErrorName(const Error error) {
+  switch (error)
+  {
+  case Error::Ok:
+    return "Ok";
+  case Error::Failure:
+    return "Failure";
+  case Error::NoData:
+    return "NoData";
+  case Error::NullData:
+    return "NullData";
+  case Error::InvalidType:
+    return "InvalidType";
+  case Error::NotImplemented:
+    return "NotImplemented";
+  case Error::NoConfig:
+    return "NoConfig";
+  case Error::FileNotFound:
+    return "FileNotFound";
+  case Error::DirNotFound:
+    return "DirNotFound";
+  case Error::AlreadyExists:
+    return "AlreadyExists";
+    break;
+  }
+}
 
 static inline const char *GetErrorName(const errno_t error) {
   static char unknown_error_n[80] = { 0 };

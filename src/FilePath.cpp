@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <vector>
 
+#include "HashTools.hpp"
 #include "Logger.hpp"
 #include "StringTools.hpp"
 #include "base.hpp"
@@ -399,7 +400,7 @@ FilePath FilePath::relative_to(const FilePath &other) const {
     str.append("..");
     str.push_back(DirectorySeparator);
   }
-  
+
   const size_t track_count = other_segments.size() - common_segment;
 
   for (size_t i = 0; i < track_count; i++)
@@ -698,7 +699,9 @@ void FilePath::_add_resolve_segment(RelationSegmentType rel_type,
 }
 
 bool FilePath::_preprocess(Blob<TextArray::value_type> &text) {
+#if _WIN32
   bool driver_column = false;
+#endif
 
   size_t drag_offset = 0;
   size_t last_dir_separator = npos;

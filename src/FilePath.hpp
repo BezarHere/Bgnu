@@ -5,20 +5,17 @@
 */
 
 #pragma once
-#include <array>
 #include <filesystem>
 #include <fstream>
-#include <memory>
 #include <ostream>
 #include <string>
 #include <vector>
 
-#include "HashTools.hpp"
-#include "Range.hpp"
 #include "StringTools.hpp"
 #include "base.hpp"
 #include "misc/ArrayList.hpp"
 #include "misc/StaticString.hpp"
+#include "misc/hash128.hpp"
 
 struct FilePath;
 
