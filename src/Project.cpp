@@ -4,6 +4,7 @@
 #include "FieldDataReader.hpp"
 #include "FieldVar.hpp"
 #include "io/FieldWriter.hpp"
+#include "misc/Error.hpp"
 
 Project Project::GetDefault() {
   Project project = {};
@@ -19,16 +20,16 @@ Project Project::GetDefault() {
   return project;
 }
 
-Project Project::from_data(const FieldVar::Dict &data, ErrorReport &result) {
+Result<Project> Project::from_data(const FieldVar::Dict &data) {
   Project project{};
 
   FieldDataReader reader{ "Project", data };
 
-  result = load_various(project, reader);
-  if (result)
+  ErrorReport err = load_various(project, reader);
+  if (err)
   {
-    Logger::error(result);
-    return project;
+    Logger::error(err);
+    return err;
   }
 
   const FieldVar &build_configs =
@@ -36,9 +37,9 @@ Project Project::from_data(const FieldVar::Dict &data, ErrorReport &result) {
 
   if (build_configs.is_null())
   {
-    result.code = Error::NoData;
-    result.message = "No build configs ('build_configurations') set";
-    Logger::error("Project: %s", to_cstr(result.message));
+    constexpr char msg[] = "No build configs ('build_configurations') set";
+    Logger::error("Project: %s", to_cstr(msg));
+    return { Error::NoData, msg };
     return project;
   }
 
@@ -60,17 +61,14 @@ Project Project::from_data(const FieldVar::Dict &data, ErrorReport &result) {
           to_cstr(FieldVar::get_name_for_type(FieldVarType::Dict)),
           to_cstr(value.get_type_name()));
 
-      result.code = Error::InvalidType;
-      result.message = format_join("ill-typed build configuration \"", key, "\"");
-      return project;
+      return { Error::InvalidType, format_join("ill-typed build configuration \"", key, "\"") };
     }
 
-    BuildConfiguration config = BuildConfiguration::from_data(
+    Result<BuildConfiguration> config = BuildConfiguration::from_data(
         FieldDataReader(format_join(reader.get_context(), "::", "BuildCfg[", key, ']'),
-                        value.get_dict()),
-        result);
+                        value.get_dict()));
 
-    if (result.code != Error::Ok)
+    if (config.has_error())
     {
       Logger::debug("Failure in parsing and loading build cfg named '%s'", to_cstr(key));
       return project;
@@ -201,7 +199,8 @@ vector<FilePath> Project::get_source_files() const {
 }
 
 bool Project::is_source_file_path(const StrBlob &path) const {
-  return build_tools::IsCompilableSourceFile(path) && build_tools::GetSourceType(path) != SourceFileType::None;
+  return build_tools::IsCompilableSourceFile(path) &&
+         build_tools::GetSourceType(path) != SourceFileType::None;
 }
 
 SourceFileType Project::get_source_type_or_default(const StrBlob &path) const {

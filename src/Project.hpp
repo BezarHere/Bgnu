@@ -69,10 +69,10 @@ public:
   typedef std::map<FieldVar::String, BuildConfiguration> BuildConfigMap;
 
   static Project GetDefault();
-  static Project from_data(const FieldVar::Dict &data, ErrorReport &result);
+  static Result<Project> from_data(const FieldVar::Dict &data);
   static errno_t to_data(const Project &project, FieldVar &output);
   
-  inline bool handle_clangd() const { return *clangd; }
+  inline bool should_handle_clangd() const { return *clangd; }
   inline const ProjectOutputData &get_output() const { return m_output.field(); }
   inline const BuildConfigMap &get_build_configs() const { return m_build_configurations.field(); }
 

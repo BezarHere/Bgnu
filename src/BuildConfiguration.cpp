@@ -4,10 +4,12 @@
 
 #include "FieldDataReader.hpp"
 #include "Logger.hpp"
+#include "Result.hpp"
 #include "Settings.hpp"
 #include "StringTools.hpp"
 #include "code/SourceTools.hpp"
 #include "io/FieldWriter.hpp"
+#include "misc/Error.hpp"
 
 static constexpr StandardType transform_standards(StandardType original,
                                                   SourceFileType source_type);
@@ -415,7 +417,7 @@ hash_t BuildConfiguration::hash() const {
   expr;                         \
   if (report.code != Error::Ok) \
   {                             \
-    return config;              \
+    return report;              \
   }
 
 BuildConfiguration BuildConfiguration::GetDefault(BuildConfigurationDefaultType default_mode) {
@@ -437,9 +439,10 @@ BuildConfiguration BuildConfiguration::GetDefault(BuildConfigurationDefaultType 
   return config;
 }
 
-BuildConfiguration BuildConfiguration::from_data(FieldDataReader reader, ErrorReport &report) {
+Result<BuildConfiguration> BuildConfiguration::from_data(FieldDataReader reader) {
   BuildConfiguration config{};
 
+  ErrorReport report = {};
   BuildConfigurationReader bc_reader{ config, reader, report };
 
   CHECK_REPORT(bc_reader.read_predefines(config.predefines.field()));

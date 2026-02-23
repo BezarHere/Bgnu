@@ -6,6 +6,7 @@
 // other includes
 #include "FieldDataReader.hpp"
 #include "FilePath.hpp"
+#include "Result.hpp"
 #include "base.hpp"
 #include "code/SourceTools.hpp"  // for SourceFileType
 #include "misc/Error.hpp"
@@ -128,7 +129,7 @@ struct BuildConfiguration
   hash_t hash() const;
 
   static BuildConfiguration GetDefault(BuildConfigurationDefaultType default_mode);
-  static BuildConfiguration from_data(FieldDataReader reader, ErrorReport &report);
+  static Result<BuildConfiguration> from_data(FieldDataReader reader);
   static FieldVar::Dict to_data(const BuildConfiguration &config, ErrorReport &report);
 
   static const char *get_enum_name(OptimizationType opt_type);
