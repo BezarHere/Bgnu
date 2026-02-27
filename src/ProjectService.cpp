@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <memory_resource>
 #include <utility>
 #include <vector>
 
@@ -29,8 +30,10 @@ vector<FilePath> ProjectService::s_source_files = {};
 vector<FilePath> ProjectService::s_modified_source_files = {};
 vector<FilePath> ProjectService::s_compile_needed_source_files = {};
 
-vector<build_tools::BuildCommandInfo> ProjectService::s_total_build_commands = {};
-vector<build_tools::BuildCommandInfo> ProjectService::s_used_build_commands = {};
+vector<build_tools::BuildCommandInfo>
+    ProjectService::s_total_build_commands = {};
+vector<build_tools::BuildCommandInfo>
+    ProjectService::s_used_build_commands = {};
 vector<int> ProjectService::s_source_build_result_codes = {};
 
 std::map<FilePath, FilePath> ProjectService::s_source_io_map = {};
@@ -48,6 +51,7 @@ BuildCache ProjectService::s_updated_cache = {};
 bool ProjectService::s_cache_loaded = false;
 bool ProjectService::s_forced_rebuild = false;
 bool ProjectService::s_resave_required = false;
+bool ProjectService::s_hash_mismatched = false;
 
 constexpr string RebuildArgs[] = { "-r", "--rebuild" };
 constexpr string ResaveArgs[] = { "--resave" };
@@ -84,15 +88,19 @@ void ProjectService::Clear() {
   s_cache_loaded = false;
   s_forced_rebuild = false;
   s_resave_required = false;
+  s_hash_mismatched = false;
 }
 
 Error ProjectService::ExecuteStep(BuildStep step) {
   Error result = ExecuteStep_Inner(step);
-  Logger::debug("Running build step '%s' resulted in %s", GetStepName(step), GetErrorName(result));
+  Logger::debug("Running build step '%s' resulted in %s",
+                GetStepName(step),
+                GetErrorName(result));
   return result;
 }
 
-std::pair<Error, BuildStep> ProjectService::ExecuteStepsTo(BuildStep final_step) {
+std::pair<Error, BuildStep> ProjectService::ExecuteStepsTo(
+    BuildStep final_step) {
   constexpr BuildStep first_step = BuildStep::ArgsSetup;
   constexpr BuildStep last_step = BuildStep::PostLinking;
 
@@ -121,9 +129,11 @@ void ProjectService::SetArguments(ArgumentSource args) {
 Error ProjectService::SetupArgs() {
   Clear();
 
-  s_forced_rebuild = Argument::try_use(s_arguments.extract_any(Blob<const string>(RebuildArgs)));
+  s_forced_rebuild = Argument::try_use(
+      s_arguments.extract_any(Blob<const string>(RebuildArgs)));
 
-  s_resave_required = Argument::try_use(s_arguments.extract_any(Blob<const string>(ResaveArgs)));
+  s_resave_required = Argument::try_use(
+      s_arguments.extract_any(Blob<const string>(ResaveArgs)));
 
   Logger::verbose("rebuild = %s", to_boolalpha(s_forced_rebuild));
   Logger::verbose("resave = %s", to_boolalpha(s_resave_required));
@@ -134,12 +144,14 @@ Error ProjectService::SetupArgs() {
   Argument *argument = s_arguments.extract_matching(arg_value_prefix_check);
 
   const string default_input_file = "";
-  const string &input_file_str = Argument::try_get_value(argument, default_input_file);
+  const string &input_file_str =
+      Argument::try_get_value(argument, default_input_file);
 
   Logger::verbose("input file string = \"%s\"", input_file_str.c_str());
 
-  s_project_file =
-      input_file_str.empty() ? build_tools::DefaultProjectFilePath() : FilePath(input_file_str);
+  s_project_file = input_file_str.empty()
+                       ? build_tools::DefaultProjectFilePath()
+                       : FilePath(input_file_str);
 
   Logger::verbose("input path = \"%s\"", to_cstr(s_project_file.get_text()));
 
@@ -156,7 +168,9 @@ Error ProjectService::SetupArgs() {
   {
     for (const auto &arg : s_arguments.get_args())
     {
-      Logger::verbose("+ has arg: \"%s\" [%s]", arg.get_value().c_str(), arg.is_used() ? "U" : " ");
+      Logger::verbose("+ has arg: \"%s\" [%s]",
+                      arg.get_value().c_str(),
+                      arg.is_used() ? "U" : " ");
     }
   }
   return Error::Ok;
@@ -165,7 +179,8 @@ Error ProjectService::SetupArgs() {
 Error ProjectService::SetupProject() {
   if (!s_project_file.exists())
   {
-    Logger::error("No project file exists at \"%s\"", to_cstr(s_project_file.get_text()));
+    Logger::error("No project file exists at \"%s\"",
+                  to_cstr(s_project_file.get_text()));
 
     return Error::Failure;
   }
@@ -213,6 +228,7 @@ Error ProjectService::LoadCaches() {
   }
 
   s_cache_loaded = true;
+  UpdateHashMismatchFlag();
   return Error::Ok;
 }
 
@@ -250,8 +266,9 @@ Error ProjectService::LoadSourceInfo() {
 Error ProjectService::RemoveUnusedCacheFiles() {
   if (s_cache_loaded)
   {
-    build_tools::DeleteUnusedObjFiles(s_current_cache.extract_compiled_paths(),
-                                      container_tools::values_set(s_source_io_map));
+    build_tools::DeleteUnusedObjFiles(
+        s_current_cache.extract_compiled_paths(),
+        container_tools::values_set(s_source_io_map));
   }
 
   return Error::Ok;
@@ -302,7 +319,8 @@ Error ProjectService::PopulateCompileNeededFiles() {
 Error ProjectService::PopulateBuildCommands() {
   for (const FilePath &source_path : s_source_files)
   {
-    ErrorReport err = SetupBuildCommand(source_path, s_total_build_commands.emplace_back());
+    ErrorReport err =
+        SetupBuildCommand(source_path, s_total_build_commands.emplace_back());
     if (err)
     {
       Logger::error(err);
@@ -328,17 +346,19 @@ Error ProjectService::PostBuildCommandsStep() {
   if (s_project->should_handle_clangd())
   {
     Logger::debug("Written clangd compile flags");
-    build_tools::TryCreateClangdCompileFlagsFile(*s_current_config, s_build_directory);
+    build_tools::TryCreateClangdCompileFlagsFile(*s_current_config,
+                                                 s_build_directory);
 
     std::vector<string> cmds = {};
     std::vector<string> names = {};
 
     for (size_t i = 0; i < s_total_build_commands.size(); i++)
     {
-      cmds.emplace_back(build_tools::JoinArguments(s_total_build_commands[i].args.data(),
-                                                   s_total_build_commands[i].args.size()));
-      names.emplace_back(
-          s_build_directory.relative_to(s_total_build_commands[i].in_path.resolved_copy()));
+      cmds.emplace_back(
+          build_tools::JoinArguments(s_total_build_commands[i].args.data(),
+                                     s_total_build_commands[i].args.size()));
+      names.emplace_back(s_build_directory.relative_to(
+          s_total_build_commands[i].in_path.resolved_copy()));
     }
 
     Logger::debug("Written clangd compile commands");
@@ -384,45 +404,52 @@ Error ProjectService::LinkBuiltFiles() {
 
   // forces linking even if one or more intermediates failed building, overrides
   // `always_link_build` if `true`
-  const bool force_linking = Settings::Get(force_linking_setting_name, false).get_bool();
+  const bool force_linking =
+      Settings::Get(force_linking_setting_name, false).get_bool();
 
-  // always link building even if no intermediates (object files) changed (lib/config changes are
-  // handled above)
-  const bool always_link_build = Settings::Get("always_link_build", true).get_bool();
+  // always link building even if no intermediates (object files) changed
+  // (lib/config changes are handled above)
+  const bool always_link_build =
+      Settings::Get("always_link_build", true).get_bool();
 
   // no intermediates required rebuilding
   // no failures and no success => No files needed a rebuild
   const bool all_intermediates_upto_date =
       intermidiate_build_all_success && GetBuildSuccessCount() == 0;
 
-  const bool linking_necessary = !all_intermediates_upto_date ||
-                                 (all_intermediates_upto_date && always_link_build) ||
-                                 force_linking;
+  const bool linking_necessary =
+      !all_intermediates_upto_date ||
+      (all_intermediates_upto_date && always_link_build) || force_linking;
 
   s_linking_result_code = -1;
   if (!linking_necessary)
   {
     s_linking_result_code = EOK;
     Logger::notify(
-        "All intermediate[s] upto-date, no linking required (flag `always_link_build` is "
+        "All intermediate[s] upto-date, no linking required (flag "
+        "`always_link_build` is "
         "false).");
     return Error::Ok;
   }
 
   if (!force_linking && !intermidiate_build_all_success)
   {
-    Logger::error("Linking not viable: intermidiate file/object compilation failed...");
+    Logger::error(
+        "Linking not viable: intermidiate file/object compilation failed...");
     Logger::note(
-        "* you can set the setting field '%s' to 'true' to proceed linking even if the "
+        "* you can set the setting field '%s' to 'true' to proceed linking "
+        "even if the "
         "compilation step failed",
         force_linking_setting_name);
     return Error::Failure;
   }
 
-  const FilePath output_filepath = s_project->get_output().get_result_path().resolve();
+  const FilePath output_filepath =
+      s_project->get_output().get_result_path().resolve();
 
   const bool linked_by_force = !intermidiate_build_all_success;
-  Logger::notify("preparing the final stage (linking)%s", linked_by_force ? " [FORCED]" : "");
+  Logger::notify("preparing the final stage (linking)%s",
+                 linked_by_force ? " [FORCED]" : "");
 
   std::vector<StrBlob> link_input_files = GenerateLinkerInputs();
 
@@ -430,20 +457,22 @@ Error ProjectService::LinkBuiltFiles() {
 
   for (const FilePath &source_path : s_compile_needed_source_files)
   {
-    source_file_types.emplace_back(build_tools::DefaultSourceFileTypeForFilePath(source_path));
+    source_file_types.emplace_back(
+        build_tools::DefaultSourceFileTypeForFilePath(source_path));
   }
 
-  const SourceFileType dominate_file_type =
-      build_tools::GetDominantSourceType({ source_file_types.data(), source_file_types.size() });
+  const SourceFileType dominate_file_type = build_tools::GetDominantSourceType(
+      { source_file_types.data(), source_file_types.size() });
 
   Logger::verbose("linker dominate source file type: %s",
                   build_tools::GetSourceFileTypeName(dominate_file_type));
 
   s_linking_build_cmd = {};
-  s_current_config->build_link_arguments(s_linking_build_cmd.args,
-                                         { link_input_files.data(), link_input_files.size() },
-                                         output_filepath.get_text(),
-                                         dominate_file_type);
+  s_current_config->build_link_arguments(
+      s_linking_build_cmd.args,
+      { link_input_files.data(), link_input_files.size() },
+      output_filepath.get_text(),
+      dominate_file_type);
 
   s_linking_build_cmd.name = "binary";
   s_linking_build_cmd.flags |= build_tools::eExcFlag_Printout;
@@ -451,7 +480,8 @@ Error ProjectService::LinkBuiltFiles() {
   std::ostringstream link_out{};
   s_linking_build_cmd.out = &link_out;
 
-  ErrorReport err = ExecuteBuildCommands(&s_linking_build_cmd, &s_linking_result_code, 1);
+  ErrorReport err =
+      ExecuteBuildCommands(&s_linking_build_cmd, &s_linking_result_code, 1);
   if (err)
   {
     Logger::error(err);
@@ -477,7 +507,8 @@ Error ProjectService::PostLinkingStep() {
   // if 'no_cache' or 'clear_cache', the cache will be deleted
   if (Settings::Get("no_cache", Settings::Get("clear_cache", false)))
   {
-    Logger::notify("Applying 'no_cache' rule: deleting build cache post finalizing");
+    Logger::notify(
+        "Applying 'no_cache' rule: deleting build cache post finalizing");
     build_tools::DeleteBuildCache(*s_project);
   }
 
@@ -488,13 +519,15 @@ Error ProjectService::PostLinkingStep() {
 Error ProjectService::DumpAvailableBuildCommands() {
   s_total_build_commands.emplace_back(s_linking_build_cmd);
 
-  DumpBuildCommands(s_total_build_commands.data(), s_total_build_commands.size());
+  DumpBuildCommands(s_total_build_commands.data(),
+                    s_total_build_commands.size());
 
   s_total_build_commands.pop_back();
   return Error::Ok;
 }
 
-FilePath ProjectService::GetCompiledOutputPath(const FilePath &path, hash_t hash) {
+FilePath ProjectService::GetCompiledOutputPath(const FilePath &path,
+                                               hash_t hash) {
   string_char buf[FilePath::MaxPathLength + 1] = {};
   snprintf(buf,
            FilePath::MaxPathLength,
@@ -507,12 +540,15 @@ FilePath ProjectService::GetCompiledOutputPath(const FilePath &path, hash_t hash
 }
 
 size_t ProjectService::GetBuildFailureCount() {
-  LOG_ASSERT(s_used_build_commands.size() == s_source_build_result_codes.size());
+  LOG_ASSERT(s_used_build_commands.size() ==
+             s_source_build_result_codes.size());
   return s_used_build_commands.size() - GetBuildSuccessCount();
 }
 
 size_t ProjectService::GetBuildSuccessCount() {
-  return std::count(s_source_build_result_codes.begin(), s_source_build_result_codes.end(), 0);
+  return std::count(s_source_build_result_codes.begin(),
+                    s_source_build_result_codes.end(),
+                    0);
 }
 
 const char *ProjectService::GetStepName(BuildStep step) {
@@ -585,6 +621,26 @@ std::string ProjectService::GetDefaultConfigName() {
   return "";
 }
 
+void ProjectService::UpdateHashMismatchFlag() {
+  if (!s_project || !s_current_config)
+  {
+    Logger::error(
+        "Can't update has mismatch flag if the project or current build config "
+        "aren't already set");
+    return;
+  }
+
+  s_hash_mismatched = !IsBuildHashMatching() || !IsConfigHashMatching();
+}
+
+bool ProjectService::IsBuildHashMatching() {
+  return s_project->hash() == s_current_cache.build_hash;
+}
+
+bool ProjectService::IsConfigHashMatching() {
+  return s_current_config->hash() == s_current_cache.config_hash;
+}
+
 Error ProjectService::ExecuteStep_Inner(BuildStep step) {
   switch (step)
   {
@@ -628,16 +684,18 @@ ErrorReport ProjectService::LoadProject() {
 
   if (project_file_data.is_null())
   {
-    return {
-      Error::NullData,
-      format_join("Null project data file at '", s_project_file, "'; this shouldn't happen, bug?")
-    };
+    return { Error::NullData,
+             format_join("Null project data file at '",
+                         s_project_file,
+                         "'; this shouldn't happen, bug?") };
   }
 
   if (project_file_data.get_dict().empty())
   {
     return { Error::NoData,
-             format_join("Empty project data file at '", s_project_file, "', check your file!") };
+             format_join("Empty project data file at '",
+                         s_project_file,
+                         "', check your file!") };
   }
 
   {
@@ -670,7 +728,8 @@ ErrorReport ProjectService::LoadProject() {
 
 ErrorReport ProjectService::SetupConfigArgs(ArgumentSource &src) {
   constexpr auto mode_matcher = [](const Argument &arg) {
-    return arg.get_value().starts_with("-m=") || arg.get_value().starts_with("--mode=");
+    return arg.get_value().starts_with("-m=") ||
+           arg.get_value().starts_with("--mode=");
   };
 
   Argument *arg = src.extract_matching(mode_matcher);
@@ -688,14 +747,17 @@ ErrorReport ProjectService::SetupConfigArgs(ArgumentSource &src) {
     if (equal_pos == string::npos)
     {
       return { Error::Failure,
-               "found an argument with a specified build mode, but it has no equality (BUG?)" };
+               "found an argument with a specified build mode, but it has no "
+               "equality (BUG?)" };
       ;
     }
 
     s_current_config_name = arg->get_value().substr(equal_pos + 1);
-    if (s_current_config_name.starts_with('"') && s_current_config_name.ends_with('"'))
+    if (s_current_config_name.starts_with('"') &&
+        s_current_config_name.ends_with('"'))
     {
-      s_current_config_name = s_current_config_name.substr(1, s_current_config_name.size() - 2);
+      s_current_config_name =
+          s_current_config_name.substr(1, s_current_config_name.size() - 2);
     }
   }
 
@@ -707,14 +769,19 @@ ErrorReport ProjectService::SetupConfig() {
   if (s_current_config_name.empty())
   {
     s_current_config_name = GetDefaultConfigName();
-    Logger::notify("No config set, Defaulting to '%s'", s_current_config_name.c_str());
+    Logger::notify("No config set, Defaulting to '%s'",
+                   s_current_config_name.c_str());
   }
 
-  const auto config_pos = s_project->get_build_configs().find(s_current_config_name);
+  const auto config_pos =
+      s_project->get_build_configs().find(s_current_config_name);
 
   if (config_pos == s_project->get_build_configs().end())
   {
-    return { Error::NoConfig, format_join("No config found named '", s_current_config_name, "'") };
+    return {
+      Error::NoConfig,
+      format_join("No config found named '", s_current_config_name, "'")
+    };
   }
 
   s_current_config = &config_pos->second;
@@ -741,8 +808,9 @@ ErrorReport ProjectService::ReadBuildCache() {
 
   ErrorReport report = {};
 
-  s_current_cache =
-      BuildCache::load(FieldDataReader("BuildCache", old_build_cache_data.get_dict()), report);
+  s_current_cache = BuildCache::load(
+      FieldDataReader("BuildCache", old_build_cache_data.get_dict()),
+      report);
 
   if (report.code != Error::Ok)
   {
@@ -758,7 +826,9 @@ ErrorReport ProjectService::BuildSourceProcessor(SourceProcessor &processor) {
 
   for (const FilePath &path : s_current_config->include_directories.field())
   {
-    processor.included_directories.emplace_back(path.get_text(), s_project->source_dir.get_text());
+    processor.included_directories.emplace_back(
+        path.get_text(),
+        s_project->source_dir.get_text());
   }
 
   for (const auto &path : s_project->get_source_files())
@@ -775,7 +845,8 @@ ErrorReport ProjectService::SetupSourceProperties(SourceProcessor &processor) {
   {
     s_source_io_map.emplace(
         inputs.path.resolved_copy(),
-        GetCompiledOutputPath(inputs.path, processor.get_file_hash(inputs.path)).resolved_copy());
+        GetCompiledOutputPath(inputs.path, processor.get_file_hash(inputs.path))
+            .resolved_copy());
     s_source_files.emplace_back(inputs.path);
   }
 
@@ -796,7 +867,8 @@ ErrorReport ProjectService::SetupSourceProperties(SourceProcessor &processor) {
 ErrorReport ProjectService::PopulateModifiedSourceFiles() {
   for (const auto &path : s_modified_source_files)
   {
-    Logger::debug("rebuilding \"%s\": cached object file invalidated", path.c_str());
+    Logger::debug("rebuilding \"%s\": cached object file invalidated",
+                  path.c_str());
     s_compile_needed_source_files.push_back(path);
   }
   return {};
@@ -821,8 +893,9 @@ ErrorReport ProjectService::PopulateUncachedSourceFiles() {
   return {};
 }
 
-ErrorReport ProjectService::SetupBuildCommand(const FilePath &source_path,
-                                              build_tools::BuildCommandInfo &cmd_info) {
+ErrorReport ProjectService::SetupBuildCommand(
+    const FilePath &source_path,
+    build_tools::BuildCommandInfo &cmd_info) {
   const FilePath &output_path = s_source_io_map.at(source_path).resolved_copy();
   const hash_t &hash = s_source_files_hashes_map.at(source_path);
 
@@ -839,7 +912,8 @@ ErrorReport ProjectService::SetupBuildCommand(const FilePath &source_path,
                   source_path.c_str(),
                   output_path.c_str());
 
-  const SourceFileType file_type = s_project->get_source_type_or_default(source_path.get_text());
+  const SourceFileType file_type =
+      s_project->get_source_type_or_default(source_path.get_text());
 
   Logger::verbose("source file type for '%s': %s",
                   source_path.c_str(),
@@ -861,7 +935,8 @@ ErrorReport ProjectService::SetupBuildCommand(const FilePath &source_path,
 
 ErrorReport ProjectService::DispatchBuildCommands(int *output_codes) {
   /*
-    diverting build output to independent streams, avoid parallel output shenanigans
+    diverting build output to independent streams, avoid parallel output
+    shenanigans
   */
 
   const size_t count = s_used_build_commands.size();
@@ -877,7 +952,8 @@ ErrorReport ProjectService::DispatchBuildCommands(int *output_codes) {
   }
 
   // building
-  ErrorReport err = ExecuteBuildCommands(s_used_build_commands.data(), output_codes, count);
+  ErrorReport err =
+      ExecuteBuildCommands(s_used_build_commands.data(), output_codes, count);
   if (err)
   {
     Logger::error(err);
@@ -891,7 +967,9 @@ ErrorReport ProjectService::DispatchBuildCommands(int *output_codes) {
     names.emplace_back(cmd.name);
   }
 
-  err = DumpBuildCommandsOutoutStreams(build_output_streams.data(), names.data(), count);
+  err = DumpBuildCommandsOutoutStreams(build_output_streams.data(),
+                                       names.data(),
+                                       count);
   if (err)
   {
     Logger::error(err);
@@ -908,8 +986,10 @@ ErrorReport ProjectService::DispatchBuildCommands(int *output_codes) {
   if (_old_build_output_streams_data != build_output_streams.data())
   {
     Logger::error(
-        "build's output streams vector was dislocated: old_data=%p, new_data=%p,"
-        " the output streams are referenced by pointers that may now be dangling!"
+        "build's output streams vector was dislocated: old_data=%p, "
+        "new_data=%p,"
+        " the output streams are referenced by pointers that may now be "
+        "dangling!"
         " (check if the above outputs are intelligible)",
 
         _old_build_output_streams_data,
@@ -919,18 +999,23 @@ ErrorReport ProjectService::DispatchBuildCommands(int *output_codes) {
   return {};
 }
 
-ErrorReport ProjectService::ExecuteBuildCommands(const build_tools::BuildCommandInfo *cmds,
-                                                 int *output_codes,
-                                                 size_t count) {
-  const bool multithreaded = Settings::Get("build_multithreaded", false).get_bool();
-  const int64_t threads_count = Settings::Get("build_jobs_count", (FieldVar::Int)8).get_int();
+ErrorReport ProjectService::ExecuteBuildCommands(
+    const build_tools::BuildCommandInfo *cmds,
+    int *output_codes,
+    size_t count) {
+  const bool multithreaded =
+      Settings::Get("build_multithreaded", false).get_bool();
+  const int64_t threads_count =
+      Settings::Get("build_jobs_count", (FieldVar::Int)8).get_int();
 
-  const Blob<const build_tools::BuildCommandInfo> build_cmds_blob = { cmds, count };
+  const Blob<const build_tools::BuildCommandInfo> build_cmds_blob = { cmds,
+                                                                      count };
 
   std::vector<int> result_codes = {};
   if (multithreaded)
   {
-    result_codes = build_tools::Execute_Multithreaded(build_cmds_blob, threads_count);
+    result_codes =
+        build_tools::Execute_Multithreaded(build_cmds_blob, threads_count);
   }
   else
   {
@@ -943,10 +1028,13 @@ ErrorReport ProjectService::ExecuteBuildCommands(const build_tools::BuildCommand
   return {};
 }
 
-ErrorReport ProjectService::DumpBuildCommandsOutoutStreams(const std::ostringstream *streams,
-                                                           const string *names,
-                                                           size_t count) {
-  constexpr auto whitespace_predicate = [](char chr) -> bool { return isspace(chr); };
+ErrorReport ProjectService::DumpBuildCommandsOutoutStreams(
+    const std::ostringstream *streams,
+    const string *names,
+    size_t count) {
+  constexpr auto whitespace_predicate = [](char chr) -> bool {
+    return isspace(chr);
+  };
   const bool report_silent_builds =
       Settings::Get("report_silent_builds", FieldVar(false)).get_bool();
 
@@ -971,8 +1059,10 @@ ErrorReport ProjectService::DumpBuildCommandsOutoutStreams(const std::ostringstr
     {
       const std::string tmp = output_str;
 
-      output_str =
-          string_tools::replace<char>(tmp, "\n", std::string(Logger::_get_indent_str()) + '\n');
+      output_str = string_tools::replace<char>(
+          tmp,
+          "\n",
+          std::string(Logger::_get_indent_str()) + '\n');
     }
 
     Logger::write_raw("%s", output_str.c_str());
@@ -1019,14 +1109,17 @@ vector<StrBlob> ProjectService::GenerateLinkerInputs() {
   return result;
 }
 
-void ProjectService::DumpBuildCommands(const build_tools::BuildCommandInfo *cmds, size_t count) {
+void ProjectService::DumpBuildCommands(
+    const build_tools::BuildCommandInfo *cmds,
+    size_t count) {
   FilePath output_path = s_project->get_output().dir->join_path(".args");
   std::ofstream stream = output_path.stream_write(false);
 
   const std::streampos start = stream.tellp();
 
   build_tools::WriteAutoGeneratedHeader(stream);
-  stream << "# below are the arguments for building the intermediates (object files) and "
+  stream << "# below are the arguments for building the intermediates (object "
+            "files) and "
             "linking/compiling final\n";
 
   // We can do it by converting 'map' to field var and save it

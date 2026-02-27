@@ -74,7 +74,9 @@ public:
 
   static inline bool IsCacheLoaded() { return s_cache_loaded; }
   static inline bool IsRebuildRequired() { return s_forced_rebuild; }
-  static inline bool ShouldRebuild() { return s_forced_rebuild || !s_cache_loaded; }
+  static inline bool ShouldRebuild() {
+    return s_forced_rebuild || !s_cache_loaded || s_hash_mismatched;
+  }
 
   static inline BuildStep GetStep() { return s_current_step; }
 
@@ -91,31 +93,34 @@ public:
   static FilePath GetLinkOutputPath();
   static std::string GetDefaultConfigName();
 
+  static void UpdateHashMismatchFlag();
+  static bool IsBuildHashMatching();
+  static bool IsConfigHashMatching();
+
 private:
   static Error ExecuteStep_Inner(BuildStep step);
-
 
   static ErrorReport LoadProject();
   static ErrorReport SetupConfigArgs(ArgumentSource &src);
   static ErrorReport SetupConfig();
-  
+
   static ErrorReport ReadBuildCache();
   static ErrorReport BuildSourceProcessor(SourceProcessor &processor);
   static ErrorReport SetupSourceProperties(SourceProcessor &processor);
-  
+
   static ErrorReport PopulateModifiedSourceFiles();
   static ErrorReport PopulateUncachedSourceFiles();
 
   static ErrorReport SetupBuildCommand(const FilePath &source_path,
-    build_tools::BuildCommandInfo &cmd_info);
-    
-    static ErrorReport DispatchBuildCommands(int *output_codes);
-    static ErrorReport ExecuteBuildCommands(const build_tools::BuildCommandInfo *cmds,
-      int *output_codes,
-      size_t count);
-      static ErrorReport DumpBuildCommandsOutoutStreams(const std::ostringstream *streams,
-        const string *names,
-        size_t count);
+                                       build_tools::BuildCommandInfo &cmd_info);
+
+  static ErrorReport DispatchBuildCommands(int *output_codes);
+  static ErrorReport ExecuteBuildCommands(const build_tools::BuildCommandInfo *cmds,
+                                          int *output_codes,
+                                          size_t count);
+  static ErrorReport DumpBuildCommandsOutoutStreams(const std::ostringstream *streams,
+                                                    const string *names,
+                                                    size_t count);
 
   static ErrorReport ReportSourceBuildFailures();
 
@@ -151,4 +156,5 @@ private:
   static bool s_cache_loaded;
   static bool s_forced_rebuild;
   static bool s_resave_required;
+  static bool s_hash_mismatched;
 };
