@@ -49,7 +49,8 @@ const Argument &ArgumentSource::peek() const {
 
   if (index == npos)
   {
-    throw std::runtime_error("no more arguments to read");
+    static const Argument default_arg = { "", false };
+    return default_arg;
   }
 
   return m_args[index];
