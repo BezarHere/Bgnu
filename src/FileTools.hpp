@@ -43,7 +43,7 @@ namespace FileTools
     }
 
     // -1 length for text files
-    input.read(output.data, std::streamsize(output.size) - (kind == FileKind::Binary ? 0 : 1));
+    input.read(output.data, std::streamsize(output.length) - (kind == FileKind::Binary ? 0 : 1));
 
     // TODO: get read size
     return 1;

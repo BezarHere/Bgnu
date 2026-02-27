@@ -20,7 +20,7 @@ public:
   Glob(const Glob &copy);
   Glob &operator=(const Glob &copy);
 
-  inline bool is_valid() const { return m_segments.size > 0; }
+  inline bool is_valid() const { return m_segments.length > 0; }
 
   bool test(const FilePath &path) const;
   bool test(const StrBlob &path) const;

@@ -321,13 +321,13 @@ void BuildConfiguration::build_arguments(vector<string> &output, const StrBlob &
   output.emplace_back("-c");
 
   output.emplace_back("\"");
-  output.back().append(input_file.begin(), input_file.length());
+  output.back().append(input_file.begin(), input_file.size());
   output.back().append("\"");
 
   output.emplace_back("-o");
 
   output.emplace_back("\"");
-  output.back().append(output_file.begin(), output_file.length());
+  output.back().append(output_file.begin(), output_file.size());
   output.back().append("\"");
 
   _put_libraries(output);
@@ -352,14 +352,14 @@ void BuildConfiguration::build_link_arguments(vector<string> &output,
   for (const StrBlob &blob : files)
   {
     output.emplace_back(1, '"');
-    output.back().append(blob.begin(), blob.length());
+    output.back().append(blob.begin(), blob.size());
     output.back().append(1, '"');
   }
 
   output.emplace_back("-o");
 
   output.emplace_back(1, '"');
-  output.back().append(ouput_file.begin(), ouput_file.length());
+  output.back().append(ouput_file.begin(), ouput_file.size());
   output.back().append(1, '"');
 
   _put_libraries(output);

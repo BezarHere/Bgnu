@@ -31,6 +31,8 @@ public:
   inline Result(value_type &&value) : m_value{ std::forward<value_type>(value) } {}
   inline Result(Error error, const std::string &msg)
       : m_value{ std::nullopt }, m_error{ error }, m_message{ msg } {}
+  inline Result(Error error)
+      : Result(error, "") {}
   inline Result(const ErrorReport report) : Result(report.code, report.message) {}
 
   template <typename U = value_type>

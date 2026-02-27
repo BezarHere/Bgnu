@@ -18,7 +18,7 @@ public:
 
   template <typename E>
     requires std::is_same_v<T, std::remove_const_t<E>>
-  DataSource(const Blob<E> &data) : DataSource(data.data, data.size) {}
+  DataSource(const Blob<E> &data) : DataSource(data.data, data.length) {}
 
   template <typename E>
     requires std::is_same_v<T, std::remove_const_t<E>>

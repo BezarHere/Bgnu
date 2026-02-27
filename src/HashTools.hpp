@@ -133,7 +133,7 @@ inline constexpr hash_t HashTools::hash(hash_t left, hash_t right) {
 }
 
 inline hash_t HashTools::hash(const StrBlob &data, hash_t seed) {
-  for (size_t i = 0; i < data.size; i++)
+  for (size_t i = 0; i < data.length; i++)
   {
     seed ^= Math::rotr(CipherTable[(uint8_t)data[i]], (int)i);
   }

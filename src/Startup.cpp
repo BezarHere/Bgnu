@@ -2,6 +2,7 @@
 
 #include "Command.hpp"
 #include "FieldFile.hpp"
+#include "GlobalConfiguration.hpp"
 #include "Logger.hpp"
 #include "Settings.hpp"
 
@@ -11,6 +12,7 @@ static void StartupMessage();
 
 int Startup::start(ArgumentSource reader) {
   setlocale(LC_ALL, "en_US.utf8");
+  GlobalConfiguration::Load();
 
   StartupMessage();
   Settings::Init(reader);

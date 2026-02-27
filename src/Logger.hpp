@@ -102,7 +102,7 @@ public:
   }
 
   static inline void error(const ErrorReport &report) {
-    return error("ERR[%d]: %s", (int)report.code, report.message.c_str());
+    return error("ERR[%s]: %s", GetErrorName(report.code), report.message.c_str());
   }
 
   static inline void warning(const char *format, ...) {

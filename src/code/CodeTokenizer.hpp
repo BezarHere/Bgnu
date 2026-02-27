@@ -33,7 +33,7 @@ struct CodeTokenizer
 
 template <typename Pred>
 inline size_t CodeTokenizer::match_unescaped(const StrBlob &source, Pred &&predicate) {
-  for (size_t i = 0; i < source.size; i++)
+  for (size_t i = 0; i < source.length; i++)
   {
     // skip escaped
     if (source[i] == escape)

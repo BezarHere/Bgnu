@@ -9,7 +9,7 @@ constexpr auto whitespace_no_newlines = [](char cur) {
 constexpr CPreprocessor::Type CPreprocessor::_get_tk_type(const StrBlob &name) {
   for (const auto &p : TypeNamePairs)
   {
-    if (string_tools::equal(name.data, p.first, name.length()))
+    if (string_tools::equal(name.data, p.first, name.size()))
     {
       return p.second;
     }
@@ -241,11 +241,11 @@ void CPreprocessor::_try_skip_to_usable(source_t source) {
 
 string CPreprocessor::_escape(const StrBlob &source) {
   string result{};
-  result.reserve(source.length());
+  result.reserve(source.size());
 
-  for (size_t i = 0; i < source.size; i++)
+  for (size_t i = 0; i < source.length; i++)
   {
-    if (i + 1 < source.size && source[i] == '\\')
+    if (i + 1 < source.length && source[i] == '\\')
     {
       // skip escaped new lines
       if (source[i + 1] == '\n')

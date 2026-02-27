@@ -240,9 +240,9 @@ namespace string_tools
   static inline IndexRange range(const StrBlob &source, _Pred &&pred) {
 
     // count of leading chars matching `pred`
-    size_t leading = source.size;
+    size_t leading = source.length;
 
-    for (size_t i = 0; i < source.size; i++)
+    for (size_t i = 0; i < source.length; i++)
     {
       if (pred(source[i]))
       {
@@ -252,15 +252,15 @@ namespace string_tools
       break;
     }
 
-    if (leading == source.size)
+    if (leading == source.length)
     {
-      return { source.size, source.size };
+      return { source.length, source.length };
     }
 
     // count of trailing chars matching `pred`
     size_t trailing = 0;
 
-    for (size_t i = source.size; i > leading; i--)
+    for (size_t i = source.length; i > leading; i--)
     {
       const size_t rindex = (i - 1);
 
@@ -272,7 +272,7 @@ namespace string_tools
       break;
     }
 
-    return { leading, source.size - trailing };
+    return { leading, source.length - trailing };
   }
 
   static ALWAYS_INLINE IndexRange printable_range(const StrBlob &source) {
@@ -315,16 +315,16 @@ namespace string_tools
 
   template <typename _Pred>
   static inline StrBlob trim(const StrBlob &source, _Pred &&trim_pred) {
-    size_t leading_c = count(source.begin(), source.length(), trim_pred);
+    size_t leading_c = count(source.begin(), source.size(), trim_pred);
 
-    if (leading_c >= source.size)
+    if (leading_c >= source.length)
     {
       return StrBlob(source.end(), (size_t)0);
     }
 
-    size_t trailing_c = rcount(source.begin() + leading_c, source.length() - leading_c, trim_pred);
+    size_t trailing_c = rcount(source.begin() + leading_c, source.size() - leading_c, trim_pred);
 
-    if (trailing_c + leading_c >= source.size)
+    if (trailing_c + leading_c >= source.length)
     {
       return StrBlob(source.begin() + leading_c, (size_t)0);
     }

@@ -336,7 +336,7 @@ inline ScanNumberType ScanForNumberType(StrBlob str) {
     str = str.slice(1);
   }
 
-  const size_t dot_pos = string_tools::find(str.data, str.size, [](char c) { return c == '.'; });
+  const size_t dot_pos = string_tools::find(str.data, str.length, [](char c) { return c == '.'; });
 
   if (dot_pos != npos)
   {
@@ -349,7 +349,7 @@ inline ScanNumberType ScanForNumberType(StrBlob str) {
                                                                        : eScanNType_None;
   }
 
-  return string_tools::all_of(str.data, str.size, isdigit) ? eScanNType_Int : eScanNType_None;
+  return string_tools::all_of(str.data, str.length, isdigit) ? eScanNType_Int : eScanNType_None;
 }
 
 inline bool IsValidIdentifierName(StrBlob str) {
@@ -363,7 +363,7 @@ inline bool IsValidIdentifierName(StrBlob str) {
     return false;
   }
 
-  return string_tools::all_of(str.data, str.size, IsIdentifierCharExtended);
+  return string_tools::all_of(str.data, str.length, IsIdentifierCharExtended);
 }
 
 inline FieldVar::Int ParseInt(const string_char *str, size_t max_length) {

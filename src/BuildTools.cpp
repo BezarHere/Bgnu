@@ -63,9 +63,9 @@ FilePath build_tools::DefaultProjectFilePath() {
 
 string build_tools::EscapeQuotes(const StrBlob &str) {
   string result = {};
-  result.reserve(str.size);
+  result.reserve(str.length);
 
-  for (size_t i = 0; i < str.size; i++)
+  for (size_t i = 0; i < str.length; i++)
   {
     if (str[i] == '"')
     {
@@ -129,12 +129,12 @@ void build_tools::DeleteUnusedObjFiles(const std::set<FilePath> &object_files,
 std::vector<int> build_tools::Execute(const Blob<const BuildCommandInfo> &params) {
 
   std::vector<std::string> joined_commands{};
-  joined_commands.resize(params.length());
+  joined_commands.resize(params.size());
 
   GenerateJoinArgs(params, joined_commands.data());
 
   vector<int> results{};
-  results.resize(params.length());
+  results.resize(params.size());
 
   const errno_t error = _Execute_Inner({ joined_commands.data(), joined_commands.size() },
                                        params,
@@ -149,12 +149,12 @@ std::vector<int> build_tools::Execute_Multithreaded(const Blob<const BuildComman
                                                     uint32_t batches) {
 
   std::vector<std::string> joined_commands{};
-  joined_commands.resize(params.length());
+  joined_commands.resize(params.size());
 
   GenerateJoinArgs(params, joined_commands.data());
 
   vector<int> results{};
-  results.resize(params.length());
+  results.resize(params.size());
 
   const errno_t error = _ExecuteParallel_Inner({ joined_commands.data(), joined_commands.size() },
                                                params,
@@ -169,7 +169,7 @@ std::vector<int> build_tools::Execute_Multithreaded(const Blob<const BuildComman
 errno_t build_tools::_Execute_Inner(const Blob<const std::string> &args,
                                     const Blob<const BuildCommandInfo> &params,
                                     Blob<int> results) {
-  for (size_t i = 0; i < args.size; i++)
+  for (size_t i = 0; i < args.length; i++)
   {
     const auto &param = params[i];
     Process process{ args[i] };
@@ -188,7 +188,7 @@ errno_t build_tools::_Execute_Inner(const Blob<const std::string> &args,
                      param.name.c_str(),
                      results[i],
                      i,
-                     args.size);
+                     args.length);
     }
   }
 
@@ -227,7 +227,7 @@ errno_t build_tools::_ExecuteParallel_Inner(const Blob<const std::string> &args,
                GetErrorName(result),
                result,
                (size_t)progress_index,
-               args.size);
+               args.length);
     }
 
     return result;
@@ -237,7 +237,7 @@ errno_t build_tools::_ExecuteParallel_Inner(const Blob<const std::string> &args,
 
   ThreadBatcher batcher = { batches, func, exporter };
 
-  batcher.run(args.size);
+  batcher.run(args.length);
 
   return errno_t();
 }
@@ -458,7 +458,7 @@ bool DoesSourceTypeDominate(SourceFileType type, SourceFileType target) {
 
 void GenerateJoinArgs(const Blob<const BuildCommandInfo> &params, std::string *results) {
 
-  for (size_t i = 0; i < params.length(); i++)
+  for (size_t i = 0; i < params.size(); i++)
   {
     std::ostringstream oss;
 

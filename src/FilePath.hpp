@@ -69,7 +69,7 @@ public:
     Parent,  // go one directory up if possible
 
     DriveLetter,  // WIN32: a drive letter 'X:/', anchor the path to said drive
-    Home,         // UNIX: home '~'
+    Home,         // home '~', unix: /home/MYUSER   win: C:/users/MYUSER
   };
 
 public:
@@ -213,7 +213,7 @@ public:
 
   FilePath relative_to(const FilePath &other) const;
 
-  std::vector<string_blob> generate_segments() const; 
+  std::vector<string_blob> generate_segments() const;
 
   // resolves the path to be absolute
   FilePath &resolve(const FilePath &base);
@@ -273,7 +273,7 @@ private:
   static inline bool _preprocess(TextArray::value_type *text, size_t &length) {
     Blob<TextArray::value_type> blob{ text, length };
     bool result = _preprocess(blob);
-    length = blob.length();
+    length = blob.size();
     return result;
   }
 
@@ -306,7 +306,7 @@ inline constexpr bool FilePath::is_valid_path_char(const char_type character) {
 }
 
 inline constexpr bool FilePath::is_valid_drive_root(const string_blob &path) {
-  if (path.size < 2)
+  if (path.length < 2)
   {
     return false;
   }
@@ -326,9 +326,9 @@ inline constexpr size_t FilePath::_get_last_separator(const string_blob &source)
    *	won't check the first and last characters (if not, will fail on "/file" or "path/dir/")
    */
 
-  for (size_t r = 2; r < source.size; r++)
+  for (size_t r = 2; r < source.length; r++)
   {
-    const size_t i = source.size - r;
+    const size_t i = source.length - r;
     if (string_tools::is_directory_separator(source[i]))
     {
       return i;

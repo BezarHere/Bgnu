@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <stdexcept>
 
 /// @brief holds a pointer and a size of a region in memory,
@@ -14,10 +15,10 @@ struct Blob final
   inline constexpr Blob(std::nullptr_t) noexcept {}
 
   inline constexpr Blob(value_type *_data, size_type _size) noexcept
-      : size{ _size }, data{ _data } {}
+      : length{ _size }, data{ _data } {}
 
   inline constexpr Blob(value_type *begin, value_type *end)
-      : size{ static_cast<size_t>(end - begin) }, data{ begin } {
+      : length{ static_cast<size_t>(end - begin) }, data{ begin } {
     if (end < begin)
     {
       throw std::range_error("end < begin");
@@ -25,28 +26,28 @@ struct Blob final
   }
 
   template <size_type N>
-  inline constexpr Blob(value_type (&memory)[N]) noexcept : size{ N }, data{ memory } {}
+  inline constexpr Blob(value_type (&memory)[N]) noexcept : length{ N }, data{ memory } {}
 
   // blob does not own the memory, so we can directly use it for container types
   template <class Cnt, std::enable_if_t<!std::is_void_v<typename Cnt::size>>>
   inline constexpr Blob(const Cnt &container) noexcept
-      : size{ container.size() }, data{ container.data() } {}
+      : length{ container.size() }, data{ container.data() } {}
 
   inline value_type *begin() const noexcept { return data; }
-  inline value_type *end() const noexcept { return data + size; }
+  inline value_type *end() const noexcept { return data + length; }
 
   // returns a slice from start to the end of the blob
   inline Blob slice(size_type start) const {
-    if (start > size)
+    if (start > length)
     {
       throw std::range_error("'start' should be contained in [0, size)");
     }
-    return { data + start, data + size };
+    return { data + start, data + length };
   }
 
   // returns a slice from start to end (exclusive end)
   inline Blob slice(size_type start, size_type end) const {
-    if (start > size || end > size || end < start)
+    if (start > length || end > length || end < start)
     {
       throw std::range_error(
           "'start' and 'end' should be contained in [0, size), with 'start' <= 'end'");
@@ -54,12 +55,31 @@ struct Blob final
     return { data + start, data + end };
   }
 
-  inline size_t length() const noexcept { return size; }
-  inline bool empty() const noexcept { return size == 0 || data == nullptr; }
+  inline size_t size() const noexcept { return length; }
+  inline bool empty() const noexcept { return length == 0 || data == nullptr; }
+
+  inline void shift_begin(intptr_t offset) {
+    if (offset > length)
+    {
+      throw std::out_of_range("offset");
+    }
+
+    length -= offset;
+    data += offset;
+  }
+
+  inline void shift_end(intptr_t offset) {
+    if (offset < 0 && -offset > length)
+    {
+      throw std::out_of_range("offset");
+    }
+
+    length += offset;
+  }
 
   // we don't handle out-of-range errors, this is a blob
   inline value_type &operator[](const size_type index) const { return data[index]; }
 
-  size_type size = 0;
+  size_type length = 0;
   value_type *data = nullptr;
 };

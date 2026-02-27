@@ -96,7 +96,7 @@ bool Glob::test(const StrBlob &path) const {
 
   // std::cout << "glob: " << path << " equals " << len << '\n';
 
-  return len == path.length();
+  return len == path.size();
 }
 
 struct MatchFrame
@@ -112,7 +112,7 @@ size_t Glob::run_match_all(size_t start_index, const StrBlob &source) const {
   constexpr size_t RunMatchAllLimit = 1024;
 
   vector<MatchFrame> frames{};
-  frames.reserve(m_segments.size);
+  frames.reserve(m_segments.length);
 
   // start segment, start of source
   frames.emplace_back(start_index, 0);
@@ -122,7 +122,7 @@ size_t Glob::run_match_all(size_t start_index, const StrBlob &source) const {
   // two conditions:
   // * one, to break processing on failure (no frames)
   // * two to break on success (all segments matched thus creating frames)
-  while (!frames.empty() && frames.back().segment_index < m_segments.size)
+  while (!frames.empty() && frames.back().segment_index < m_segments.length)
   {
 
     // limit checks
@@ -189,7 +189,7 @@ size_t Glob::run_match(size_t index, const StrBlob &source, size_t skip, size_t 
   const auto &seg = m_segments[index];
 
   // a greedy segments that is not the last one
-  if (seg.is_greedy() && index < m_segments.size - 1)
+  if (seg.is_greedy() && index < m_segments.length - 1)
   {
     // where and how much did the next non-greedy segment get?
     Match end_range = match_segment(index + 1, source, skip);
@@ -217,7 +217,7 @@ size_t Glob::run_match(size_t index, const StrBlob &source, size_t skip, size_t 
 }
 
 Glob::Match Glob::match_segment(size_t index, const StrBlob &source, size_t skip) const {
-  for (size_t i = 0; i < source.size; i++)
+  for (size_t i = 0; i < source.length; i++)
   {
     size_t len = test_segment(index, source.slice(i));
     if (len == 0)
@@ -238,7 +238,7 @@ Glob::Match Glob::match_segment(size_t index, const StrBlob &source, size_t skip
 }
 
 size_t Glob::test_segment(size_t index, const StrBlob &source) const {
-  if (index >= m_segments.size)
+  if (index >= m_segments.length)
   {
     //? should we throw an out of range?
     return false;
@@ -250,7 +250,7 @@ size_t Glob::test_segment(size_t index, const StrBlob &source) const {
   {
   case SegmentType::Text: {
     // can't possibly match, source too short
-    if (source.size < segment.range.length())
+    if (source.length < segment.range.length())
     {
       return false;
     }
@@ -270,7 +270,7 @@ size_t Glob::test_segment(size_t index, const StrBlob &source) const {
 
   case SegmentType::DirectorySeparator: {
     size_t count =
-        string_tools::count(source.data, source.size, string_tools::is_directory_separator);
+        string_tools::count(source.data, source.length, string_tools::is_directory_separator);
     return count;
   }
 
@@ -296,19 +296,19 @@ size_t Glob::test_segment(size_t index, const StrBlob &source) const {
       return inverted;
     };
 
-    size_t selected_count = string_tools::count(source.data, source.size, proc);
+    size_t selected_count = string_tools::count(source.data, source.length, proc);
     return selected_count;
   }
 
   case SegmentType::AnyCharacter: {
     // not enough chars to match all the '?'
-    if (source.size < segment.range.length())
+    if (source.length < segment.range.length())
     {
       return 0;
     }
 
     size_t count = string_tools::count(
-        source.data, std::min(source.size, segment.range.length()),
+        source.data, std::min(source.length, segment.range.length()),
         // only continue if we found anything except directory separators ('?' can't match dir seps)
         inner::InvertOp(&string_tools::is_directory_separator));
 
@@ -333,7 +333,7 @@ size_t Glob::test_segment(size_t index, const StrBlob &source) const {
 }
 
 size_t Glob::find_last_non_greedy() const {
-  size_t index = m_segments.size;
+  size_t index = m_segments.length;
 
   // iterates from last to first
   while (index != 0)
@@ -355,11 +355,11 @@ size_t Glob::find_last_non_greedy() const {
 
 void Glob::_clear() {
   delete[] m_segments.data;
-  m_segments.size = 0;
+  m_segments.length = 0;
 }
 
 size_t Glob::test_any_name(const StrBlob &source) {
-  for (size_t i = 0; i < source.size; i++)
+  for (size_t i = 0; i < source.length; i++)
   {
     if (string_tools::is_directory_separator(source[i]))
     {
@@ -367,23 +367,23 @@ size_t Glob::test_any_name(const StrBlob &source) {
     }
   }
 
-  return source.size;
+  return source.length;
 }
 
 size_t Glob::test_any_path(const StrBlob &source) {
   // match everything
-  return source.size;
+  return source.length;
 }
 
 Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
   vector<Segment> segments{};
 
-  for (size_t i = 0; i < blob.size; i++)
+  for (size_t i = 0; i < blob.length; i++)
   {
     if (string_tools::is_directory_separator(blob[i]))
     {
       size_t count =
-          string_tools::count(&blob[i], blob.size - i, string_tools::is_directory_separator);
+          string_tools::count(&blob[i], blob.length - i, string_tools::is_directory_separator);
       i += count - 1;
       segments.emplace_back(SegmentType::DirectorySeparator, IndexRange(i, i + count));
       continue;
@@ -391,7 +391,7 @@ Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
 
     if (blob[i] == '?')
     {
-      size_t count = string_tools::count(&blob[i], blob.size - i, inner::EqualTo('?'));
+      size_t count = string_tools::count(&blob[i], blob.length - i, inner::EqualTo('?'));
       i += count - 1;
       segments.emplace_back(SegmentType::AnyCharacter, IndexRange(i, i + count));
       continue;
@@ -401,7 +401,7 @@ Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
     {
       size_t count = string_tools::count(&blob[i],
                                          // check either 1 or more stars in a row
-                                         blob.size - i, inner::EqualTo('*'));
+                                         blob.length - i, inner::EqualTo('*'));
 
       i += count - 1;
 
@@ -423,7 +423,7 @@ Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
     }
 
     size_t text_length =
-        string_tools::count(&blob[i], blob.size - i, inner::InvertOp(&is_char_reserved));
+        string_tools::count(&blob[i], blob.length - i, inner::InvertOp(&is_char_reserved));
     segments.emplace_back(SegmentType::Text, IndexRange(i, i + text_length));
     i += text_length - 1;
   }
@@ -441,10 +441,10 @@ Glob::SegmentCollection Glob::parse(const StrBlob &blob) {
 Glob::SegmentCollection copy_segments(const Glob::SegmentCollection &collection) {
   Glob::SegmentCollection segments;
 
-  segments.size = collection.size;
-  segments.data = new Glob::Segment[segments.size];
+  segments.length = collection.length;
+  segments.data = new Glob::Segment[segments.length];
 
-  for (size_t i = 0; i < segments.size; i++)
+  for (size_t i = 0; i < segments.length; i++)
   {
     segments[i] = collection[i];
   }
@@ -454,9 +454,9 @@ Glob::SegmentCollection copy_segments(const Glob::SegmentCollection &collection)
 
 Glob::Segment parse_char_selector(const StrBlob &blob) {
   size_t closure_counter = 0;
-  size_t end = blob.size;
+  size_t end = blob.length;
 
-  for (size_t i = 0; i < blob.size; i++)
+  for (size_t i = 0; i < blob.length; i++)
   {
     if (blob[i] == '[')
     {
@@ -478,7 +478,7 @@ Glob::Segment parse_char_selector(const StrBlob &blob) {
   }
 
   // no closing ']' found
-  if (end == blob.size)
+  if (end == blob.length)
   {
     //? should this print out an error?
   }
