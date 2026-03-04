@@ -354,9 +354,11 @@ Error ProjectService::PostBuildCommandsStep() {
 
     for (size_t i = 0; i < s_total_build_commands.size(); i++)
     {
-      cmds.emplace_back(
-          build_tools::JoinArguments(s_total_build_commands[i].args.data(),
-                                     s_total_build_commands[i].args.size()));
+
+      cmds.emplace_back(build_tools::JoinArguments(
+          s_total_build_commands[i].args.data(),
+          s_total_build_commands[i].args.size(),
+          build_tools::IsAllowedArgumentForClangdFiles));
       names.emplace_back(s_build_directory.relative_to(
           s_total_build_commands[i].in_path.resolved_copy()));
     }
