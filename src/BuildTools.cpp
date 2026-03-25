@@ -1,9 +1,11 @@
 #include "BuildTools.hpp"
 
+#include <cstdio>
 #include <fstream>
 #include <vector>
 
 #include "FilePath.hpp"
+#include "HashTools.hpp"
 #include "Settings.hpp"
 #include "base.hpp"
 #include "utility/Process.hpp"
@@ -103,6 +105,45 @@ void build_tools::SetupHashes(BuildCache &cache,
                               const BuildConfiguration *config) {
   cache.build_hash = proj.hash();
   cache.config_hash = config->hash();
+}
+
+hash_t build_tools::GetFileHash(const char *path) {
+  FILE *fp = fopen(path, "r");
+
+  if (fp == nullptr)
+  {
+    Logger::error("No File to hash at '%s'", path);
+    return 0;
+  }
+
+  const auto start = ftello(fp);
+  fseek(fp, 0, SEEK_END);
+  const auto end = ftell(fp);
+  rewind(fp);
+
+  const auto len = end - start;
+  char *p = new char[len]{};
+
+  const auto read_len = fread(p, 1, len, fp);
+
+  fclose(fp);
+
+  if (read_len != len)
+  {
+    Logger::warning(
+        "Hashing file '%s' might fail: len=%ld [%ld -> %ld], read_ln=%ld",
+        path,
+        len,
+        start,
+        end,
+        read_len);
+  }
+
+  auto hash = HashTools::hash(StrBlob(p, len), 0);
+
+  delete[] p;
+
+  return hash;
 }
 
 void build_tools::DeleteUnusedObjFiles(const std::set<FilePath> &object_files,
@@ -435,8 +476,6 @@ void build_tools::DumpDependencyMap(
   Logger::verbose("dumped the dependency map: size=%lld bytes",
                   stream.tellp() - start);
 }
-
-
 
 bool DoesSourceTypeDominate(SourceFileType type, SourceFileType target) {
   constexpr std::pair<SourceFileType, SourceFileType> DominationTable[] = {

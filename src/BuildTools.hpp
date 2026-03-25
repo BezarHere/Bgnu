@@ -9,6 +9,7 @@
 #include "base.hpp"
 #include "code/SourceProcessor.hpp"
 #include "code/SourceTools.hpp"
+#include "misc/hash128.hpp"
 
 namespace build_tools
 {
@@ -50,6 +51,8 @@ namespace build_tools
   extern void SetupHashes(BuildCache &cache,
                           const Project &proj,
                           const BuildConfiguration *config);
+
+  extern hash_t GetFileHash(const char *path);
 
   extern void DeleteUnusedObjFiles(const std::set<FilePath> &object_files,
                                    const std::set<FilePath> &used_files);
