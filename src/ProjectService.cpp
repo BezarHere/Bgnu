@@ -27,7 +27,9 @@ string ProjectService::s_current_config_name = "";
 const BuildConfiguration *ProjectService::s_current_config = nullptr;
 
 vector<FilePath> ProjectService::s_source_files = {};
-vector<FilePath> ProjectService::s_modified_source_files = {};
+vector<FilePath> ProjectService::s_hash_mismatched_source_files = {};
+vector<FilePath> ProjectService::s_unrecorded_source_files = {};
+vector<FilePath> ProjectService::s_hanging_source_files = {};
 vector<FilePath> ProjectService::s_compile_needed_source_files = {};
 
 vector<build_tools::BuildCommandInfo>
@@ -38,6 +40,8 @@ vector<int> ProjectService::s_source_build_result_codes = {};
 
 std::map<FilePath, FilePath> ProjectService::s_source_io_map = {};
 std::map<FilePath, hash_t> ProjectService::s_source_files_hashes_map = {};
+std::map<FilePath, hash_t> ProjectService::s_obj_files_hashes_map = {};
+std::map<FilePath, hash_t> ProjectService::s_source2obj_files_hashes_map = {};
 
 build_tools::BuildCommandInfo ProjectService::s_linking_build_cmd = {};
 int ProjectService::s_linking_result_code = 0;
@@ -66,7 +70,8 @@ void ProjectService::Clear() {
   s_current_config = nullptr;
 
   s_source_files = {};
-  s_modified_source_files = {};
+  s_hash_mismatched_source_files = {};
+  s_unrecorded_source_files = {};
   s_compile_needed_source_files = {};
 
   s_total_build_commands = {};
@@ -75,6 +80,8 @@ void ProjectService::Clear() {
 
   s_source_io_map = {};
   s_source_files_hashes_map = {};
+  s_obj_files_hashes_map = {};
+  s_source2obj_files_hashes_map = {};
 
   s_linking_build_cmd = {};
   s_linking_result_code = 0;
@@ -296,7 +303,7 @@ Error ProjectService::PopulateCompileNeededFiles() {
     return Error::Ok;
   }
   // add files that have changed from last build
-  ErrorReport err = PopulateModifiedSourceFiles();
+  ErrorReport err = PopulateSourceFilesToBuild();
 
   if (err)
   {
@@ -305,7 +312,7 @@ Error ProjectService::PopulateCompileNeededFiles() {
   }
 
   // add files with no compiled object file
-  err = PopulateUncachedSourceFiles();
+  err = PopulateSourceFilesToBuild();
 
   if (err)
   {
@@ -392,6 +399,7 @@ Error ProjectService::DispatchBuildProcesses() {
 }
 
 Error ProjectService::ReapplyUpdatedBuildCache() {
+  LoadObjectHashesToUpdatedCache();
   s_updated_cache.fix_file_records();
   s_current_cache = s_updated_cache;
   const auto data = s_current_cache.write();
@@ -530,13 +538,13 @@ Error ProjectService::DumpAvailableBuildCommands() {
 
 FilePath ProjectService::GetCompiledOutputPath(const FilePath &path,
                                                hash_t hash) {
+  (void)hash;
   string_char buf[FilePath::MaxPathLength + 1] = {};
   snprintf(buf,
            FilePath::MaxPathLength,
-           "%s/%s.%lX.o",
+           "%s/%s.o",
            s_project->get_output().cache_dir->c_str(),
-           path.name().c_str(),
-           hash);
+           path.name().c_str());
 
   return FilePath(buf);
 }
@@ -632,10 +640,10 @@ void ProjectService::UpdateHashMismatchFlag() {
     return;
   }
 
-  s_hash_mismatched = !IsBuildHashMatching() || !IsConfigHashMatching();
+  s_hash_mismatched = !IsProjectHashMatching() || !IsConfigHashMatching();
 }
 
-bool ProjectService::IsBuildHashMatching() {
+bool ProjectService::IsProjectHashMatching() {
   return s_project->hash() == s_current_cache.build_hash;
 }
 
@@ -843,13 +851,32 @@ ErrorReport ProjectService::BuildSourceProcessor(SourceProcessor &processor) {
 
 ErrorReport ProjectService::SetupSourceProperties(SourceProcessor &processor) {
   s_source_io_map.clear();
+  s_hanging_source_files.clear();
+  s_hash_mismatched_source_files.clear();
+  s_unrecorded_source_files.clear();
+
   for (const auto &inputs : processor.get_inputs())
   {
-    s_source_io_map.emplace(
-        inputs.path.resolved_copy(),
+    s_source_files.emplace_back(inputs.path.resolved_copy());
+    const auto &[emplaced_io, _] = s_source_io_map.emplace(
+        s_source_files.back(),
         GetCompiledOutputPath(inputs.path, processor.get_file_hash(inputs.path))
             .resolved_copy());
-    s_source_files.emplace_back(inputs.path);
+
+    if (!emplaced_io->second.is_file() || emplaced_io->second.is_empty())
+    {
+      s_hanging_source_files.push_back(emplaced_io->first);
+      continue;
+    }
+
+    auto obj_hash = build_tools::GetFileHash(emplaced_io->second.c_str());
+    if (obj_hash == 0)
+    {
+      continue;
+    }
+
+    s_obj_files_hashes_map.emplace(emplaced_io->second, obj_hash);
+    s_source2obj_files_hashes_map.emplace(emplaced_io->first, obj_hash);
   }
 
   for (const auto &[path, info] : processor.get_dependency_info_map())
@@ -857,40 +884,68 @@ ErrorReport ProjectService::SetupSourceProperties(SourceProcessor &processor) {
     s_source_files_hashes_map.emplace(path, info.hash);
   }
 
-  s_modified_source_files.clear();
-  for (const auto &[path, _] : processor.gen_file_change_table())
+  for (const auto &path : s_source_files)
   {
-    s_modified_source_files.push_back(path);
+    auto hash_iter = s_source_files_hashes_map.find(path);
+    auto obj_hash_iter = s_source2obj_files_hashes_map.find(path);
+    auto record_iter = s_current_cache.file_records.find(path);
+
+    const bool has_hash = (hash_iter != s_source_files_hashes_map.end());
+    const bool has_obj_hash =
+        (obj_hash_iter != s_source2obj_files_hashes_map.end());
+    const bool has_record = (record_iter != s_current_cache.file_records.end());
+
+    if (!has_obj_hash)
+    {
+      s_hanging_source_files.push_back(path);
+      Logger::verbose("source file has no valid cached object: %s",
+                      path.c_str());
+      continue;
+    }
+
+    if (!has_hash || !has_record)
+    {
+      s_unrecorded_source_files.push_back(path);
+      Logger::verbose("source file not in records: %s", path.c_str());
+      continue;
+    }
+
+    if (record_iter->second.hash != hash_iter->second)
+    {
+      s_hash_mismatched_source_files.push_back(path);
+      Logger::verbose("source file hash mismatch: %s [%X -> %X]",
+                      path.c_str(),
+                      record_iter->second.hash,
+                      hash_iter->second);
+      continue;
+    }
+
+    if (record_iter->second.obj_hash != obj_hash_iter->second)
+    {
+      s_hash_mismatched_source_files.push_back(path);
+      Logger::verbose("object file hash mismatch: %s [%X -> %X]",
+                      path.c_str(),
+                      record_iter->second.obj_hash,
+                      obj_hash_iter->second);
+      continue;
+    }
   }
 
   return { Error::Ok };
 }
 
-ErrorReport ProjectService::PopulateModifiedSourceFiles() {
-  for (const auto &path : s_modified_source_files)
+ErrorReport ProjectService::PopulateSourceFilesToBuild() {
+  for (const auto &path : s_hash_mismatched_source_files)
   {
-    Logger::debug("rebuilding \"%s\": cached object file invalidated",
-                  path.c_str());
     s_compile_needed_source_files.push_back(path);
   }
-  return {};
-}
-
-ErrorReport ProjectService::PopulateUncachedSourceFiles() {
-  for (const auto &in_out : s_source_io_map)
+  for (const auto &path : s_unrecorded_source_files)
   {
-    FilePath abs_path = in_out.second.resolved_copy();
-    if (!abs_path.is_file())
-    {
-      if (!ShouldRebuild())
-      {
-        Logger::debug("rebuilding \"%s\": compiled object at \"%s\" not found",
-                      in_out.first.c_str(),
-                      abs_path.c_str());
-      }
-
-      s_compile_needed_source_files.push_back(in_out.first);
-    }
+    s_compile_needed_source_files.push_back(path);
+  }
+  for (const auto &path : s_hanging_source_files)
+  {
+    s_compile_needed_source_files.push_back(path);
   }
   return {};
 }
@@ -900,11 +955,14 @@ ErrorReport ProjectService::SetupBuildCommand(
     build_tools::BuildCommandInfo &cmd_info) {
   const FilePath &output_path = s_source_io_map.at(source_path).resolved_copy();
   const hash_t &hash = s_source_files_hashes_map.at(source_path);
+  // fully intended to not use tha `at()` function VVVVVVVVVVVVVVVVVV
+  const hash_t &obj_hash = s_source2obj_files_hashes_map[source_path];
 
   const FileStats file_stats = { source_path };
 
   BuildCache::FileRecord record;
   record.hash = hash;
+  record.obj_hash = obj_hash;
   record.output_path = output_path;
   record.source_write_time = file_stats.last_write_time.count();
 
@@ -1098,6 +1156,17 @@ ErrorReport ProjectService::ReportSourceBuildFailures() {
   }
 
   return {};
+}
+
+void ProjectService::LoadObjectHashesToUpdatedCache() {
+  for (const auto &[in_path, out_path] : s_source_io_map)
+  {
+    if (out_path.is_file())
+    {
+      s_updated_cache.file_records.at(in_path).obj_hash =
+          build_tools::GetFileHash(out_path.c_str());
+    }
+  }
 }
 
 vector<StrBlob> ProjectService::GenerateLinkerInputs() {

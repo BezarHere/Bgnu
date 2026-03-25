@@ -94,7 +94,7 @@ public:
   static std::string GetDefaultConfigName();
 
   static void UpdateHashMismatchFlag();
-  static bool IsBuildHashMatching();
+  static bool IsProjectHashMatching();
   static bool IsConfigHashMatching();
 
 private:
@@ -108,8 +108,7 @@ private:
   static ErrorReport BuildSourceProcessor(SourceProcessor &processor);
   static ErrorReport SetupSourceProperties(SourceProcessor &processor);
 
-  static ErrorReport PopulateModifiedSourceFiles();
-  static ErrorReport PopulateUncachedSourceFiles();
+  static ErrorReport PopulateSourceFilesToBuild();
 
   static ErrorReport SetupBuildCommand(const FilePath &source_path,
                                        build_tools::BuildCommandInfo &cmd_info);
@@ -124,6 +123,8 @@ private:
 
   static ErrorReport ReportSourceBuildFailures();
 
+  static void LoadObjectHashesToUpdatedCache();
+
   static vector<StrBlob> GenerateLinkerInputs();
   static void DumpBuildCommands(const build_tools::BuildCommandInfo *cmds, size_t count);
 
@@ -136,13 +137,20 @@ private:
   static const BuildConfiguration *s_current_config;
 
   static vector<FilePath> s_source_files;
-  static vector<FilePath> s_modified_source_files;
+  // new file hash is different
+  static vector<FilePath> s_hash_mismatched_source_files;
+   // not in the build cache record
+  static vector<FilePath> s_unrecorded_source_files;
+  // no object file found
+  static vector<FilePath> s_hanging_source_files;
   static vector<FilePath> s_compile_needed_source_files;
   static vector<build_tools::BuildCommandInfo> s_total_build_commands;
   static vector<build_tools::BuildCommandInfo> s_used_build_commands;
   static vector<int> s_source_build_result_codes;
   static std::map<FilePath, FilePath> s_source_io_map;
   static std::map<FilePath, hash_t> s_source_files_hashes_map;
+  static std::map<FilePath, hash_t> s_obj_files_hashes_map;
+  static std::map<FilePath, hash_t> s_source2obj_files_hashes_map;
 
   static build_tools::BuildCommandInfo s_linking_build_cmd;
   static int s_linking_result_code;
