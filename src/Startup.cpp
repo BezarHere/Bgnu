@@ -20,13 +20,20 @@ int Startup::start(ArgumentSource reader) {
 
   if (reader.is_empty())
   {
-    Logger::warning("no command passed, please pass a command and it's arguments");
+    Logger::warning(
+        "no command passed, please pass a command and it's arguments");
     return 1;
   }
 
   _build_env(reader);
 
   reader.simplify();
+
+  if (reader.is_empty())
+  {
+    Logger::warning("did you just add flags without any command?");
+    return 1;
+  }
 
   CommandDB::_load_commands();
 
@@ -69,7 +76,9 @@ int Startup::start(ArgumentSource reader) {
 
   if (error != Error::Ok)
   {
-    Logger::error("Command '%s' failed, returned error %d", to_cstr(command->name), (int)error);
+    Logger::error("Command '%s' failed, returned error %d",
+                  to_cstr(command->name),
+                  (int)error);
   }
   else
   {
@@ -108,7 +117,8 @@ void Startup::_check_misspelled_command(const string &name) {
   }
 
   Logger::debug("Suggestion: command_name=\"%s\", confidence=%0.2f",
-                to_cstr(suggestion.command->name), suggestion.confidence);
+                to_cstr(suggestion.command->name),
+                suggestion.confidence);
 
   if (suggestion.confidence < (float)s_env.at("command_min_confidence"))
   {
@@ -121,7 +131,10 @@ void Startup::_check_misspelled_command(const string &name) {
 void StartupMessage() {
   const auto version = Settings::GetVersion();
 
-  Logger::notify("BGnu version %u.%u.%u", version.major, version.minor, version.patch);
+  Logger::notify("BGnu version %u.%u.%u",
+                 version.major,
+                 version.minor,
+                 version.patch);
 
   Logger::notify("Zahr abdullatif babker (@Bezar/@BezarHere) (C) 2024 - 2025");
 }
