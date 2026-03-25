@@ -6,6 +6,7 @@
 #include "HashTools.hpp"
 #include "base.hpp"
 #include "misc/Time.hpp"
+#include "misc/hash128.hpp"
 
 struct BuildCache
 {
@@ -16,6 +17,9 @@ struct BuildCache
   {
     FilePath output_path = {};
     hash_t hash = 0;
+    int64_t obj_size = 0;
+    hash_t obj_hash = 0;
+    
     t::microsecond_t source_write_time = 0;
   };
   typedef std::map<FilePath, FileRecord> file_record_table;
