@@ -310,8 +310,13 @@ SourceFileType build_tools::GetDominantSourceType(
   return dominate_type;
 }
 
-bool build_tools::IsAllowedArgumentForClangdFiles(const std::string &str) {
+bool build_tools::IsAllowedForClangdFlags(const std::string &str) {
   if (str == "-Wfatal-errors")
+  {
+    return false;
+  }
+
+  if (str.starts_with("-std="))
   {
     return false;
   }
@@ -335,7 +340,7 @@ void build_tools::TryCreateClangdCompileFlagsFile(
   auto file = compile_flags_file.stream_write(false);
   for (const string &s : flags)
   {
-    if (!IsAllowedArgumentForClangdFiles(s))
+    if (!IsAllowedForClangdFlags(s))
     {
       continue;
     }

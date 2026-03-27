@@ -75,7 +75,7 @@ namespace build_tools
   extern SourceFileType GetDominantSourceType(
       Blob<const SourceFileType> file_types);
 
-  extern bool IsAllowedArgumentForClangdFiles(const std::string &str);
+  extern bool IsAllowedForClangdFlags(const std::string &str);
 
   extern void TryCreateClangdCompileFlagsFile(const BuildConfiguration &config,
                                               const FilePath &build_folder);
