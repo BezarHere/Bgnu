@@ -324,6 +324,15 @@ bool build_tools::IsAllowedForClangdFlags(const std::string &str) {
   return true;
 }
 
+bool build_tools::IsAllowedForClangdCommands(const std::string &str) {
+  if (str == "-Wfatal-errors")
+  {
+    return false;
+  }
+
+  return true;
+}
+
 void build_tools::TryCreateClangdCompileFlagsFile(
     const BuildConfiguration &config,
     const FilePath &build_folder) {
