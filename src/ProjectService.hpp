@@ -57,7 +57,7 @@ public:
   static Error UpdateBuildCache();
   static Error PopulateCompileNeededFiles();
   static Error PopulateBuildCommands();
-  static Error PostBuildCommandsStep();
+  static Error PostBuildCommandsStep();  // <- clangd stuff
   static Error DispatchBuildProcesses();
   static Error ReapplyUpdatedBuildCache();
   static Error LinkBuiltFiles();
@@ -76,6 +76,10 @@ public:
   static inline bool IsRebuildRequired() { return s_forced_rebuild; }
   static inline bool ShouldRebuild() {
     return s_forced_rebuild || !s_cache_loaded || s_hash_mismatched;
+  }
+
+  static inline bool IsFullBuild() {
+    return s_final_step == BuildStep::PostLinking;
   }
 
   static inline BuildStep GetStep() { return s_current_step; }
@@ -114,22 +118,28 @@ private:
                                        build_tools::BuildCommandInfo &cmd_info);
 
   static ErrorReport DispatchBuildCommands(int *output_codes);
-  static ErrorReport ExecuteBuildCommands(const build_tools::BuildCommandInfo *cmds,
-                                          int *output_codes,
-                                          size_t count);
-  static ErrorReport DumpBuildCommandsOutoutStreams(const std::ostringstream *streams,
-                                                    const string *names,
-                                                    size_t count);
+  static ErrorReport ExecuteBuildCommands(
+      const build_tools::BuildCommandInfo *cmds,
+      int *output_codes,
+      size_t count);
+  static ErrorReport DumpBuildCommandsOutoutStreams(
+      const std::ostringstream *streams,
+      const string *names,
+      size_t count);
 
   static ErrorReport ReportSourceBuildFailures();
 
   static void LoadObjectHashesToUpdatedCache();
 
   static vector<StrBlob> GenerateLinkerInputs();
-  static void DumpBuildCommands(const build_tools::BuildCommandInfo *cmds, size_t count);
+  static void DumpBuildCommands(const build_tools::BuildCommandInfo *cmds,
+                                size_t count);
 
 private:
   static BuildStep s_current_step;
+  static BuildStep s_final_step;
+  static bool s_read_only;
+
   static ArgumentSource s_arguments;
 
   static std::unique_ptr<Project> s_project;
@@ -139,7 +149,7 @@ private:
   static vector<FilePath> s_source_files;
   // new file hash is different
   static vector<FilePath> s_hash_mismatched_source_files;
-   // not in the build cache record
+  // not in the build cache record
   static vector<FilePath> s_unrecorded_source_files;
   // no object file found
   static vector<FilePath> s_hanging_source_files;

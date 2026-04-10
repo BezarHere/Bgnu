@@ -3,13 +3,13 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
-#include <memory_resource>
 #include <utility>
 #include <vector>
 
 #include "Argument.hpp"
 #include "BuildTools.hpp"
 #include "FieldFile.hpp"
+#include "FieldVar.hpp"
 #include "Logger.hpp"
 #include "Project.hpp"
 #include "Settings.hpp"
@@ -20,6 +20,8 @@
 #include "utility/FileStats.hpp"
 
 BuildStep ProjectService::s_current_step = BuildStep::None;
+BuildStep ProjectService::s_final_step = BuildStep::None;
+bool ProjectService::s_read_only = false;
 ArgumentSource ProjectService::s_arguments = {};
 
 std::unique_ptr<Project> ProjectService::s_project = nullptr;
@@ -64,6 +66,8 @@ constexpr const char *InputFilePrefix = "-i=";
 
 void ProjectService::Clear() {
   s_current_step = BuildStep::None;
+  s_final_step = BuildStep::None;
+  s_read_only = false;
 
   s_project = nullptr;
   s_current_config_name = "";
@@ -115,6 +119,7 @@ std::pair<Error, BuildStep> ProjectService::ExecuteStepsTo(
   {
     final_step = last_step;
   }
+  s_final_step = final_step;
 
   for (int i = (int)first_step; i <= (int)final_step; i++)
   {
@@ -125,6 +130,7 @@ std::pair<Error, BuildStep> ProjectService::ExecuteStepsTo(
     }
   }
 
+  s_final_step = BuildStep::None;
   return { Error::Ok, BuildStep::None };
 }
 
@@ -240,9 +246,18 @@ Error ProjectService::LoadCaches() {
 }
 
 Error ProjectService::ProcessPrebuild() {
-  if (ShouldRebuild())
+  const bool should_clear_cache = ShouldRebuild() && !s_read_only;
+  const bool show_cache_warning =
+      ShouldRebuild() && s_read_only && IsFullBuild();
+
+  if (should_clear_cache)
   {
     build_tools::DeleteBuildCache(*s_project);
+  }
+  else if (show_cache_warning)
+  {
+    Logger::warning(
+        "Project cache is invalid but ProjectService is in readonly mode");
   }
 
   return Error::Ok;
@@ -258,8 +273,11 @@ Error ProjectService::LoadSourceInfo() {
   }
 
   processor.process();
-  build_tools::DumpDependencyMap(processor.get_dependency_info_map(),
-                                 s_project->get_output().dir.field());
+  if (!s_read_only)
+  {
+    build_tools::DumpDependencyMap(processor.get_dependency_info_map(),
+                                   s_project->get_output().dir.field());
+  }
 
   err = SetupSourceProperties(processor);
   if (err)
@@ -271,6 +289,14 @@ Error ProjectService::LoadSourceInfo() {
 }
 
 Error ProjectService::RemoveUnusedCacheFiles() {
+  if (s_read_only)
+  {
+    Logger::error(
+        "ProjectService: Can not execute step %s while in readonly mode",
+        GetStepName(s_current_step));
+    return Error::Failure;
+  }
+
   if (s_cache_loaded)
   {
     build_tools::DeleteUnusedObjFiles(
@@ -282,6 +308,14 @@ Error ProjectService::RemoveUnusedCacheFiles() {
 }
 
 Error ProjectService::UpdateBuildCache() {
+  if (s_read_only)
+  {
+    Logger::error(
+        "ProjectService: Can not execute step %s while in readonly mode",
+        GetStepName(s_current_step));
+    return Error::Failure;
+  }
+
   s_updated_cache = s_current_cache;
   s_updated_cache.build_time = t::Now_ms();
   build_tools::SetupHashes(s_updated_cache, *s_project, s_current_config);
@@ -362,10 +396,10 @@ Error ProjectService::PostBuildCommandsStep() {
     for (size_t i = 0; i < s_total_build_commands.size(); i++)
     {
 
-      cmds.emplace_back(build_tools::JoinArguments(
-          s_total_build_commands[i].args.data(),
-          s_total_build_commands[i].args.size(),
-          build_tools::IsAllowedForClangdFlags));
+      cmds.emplace_back(
+          build_tools::JoinArguments(s_total_build_commands[i].args.data(),
+                                     s_total_build_commands[i].args.size(),
+                                     build_tools::IsAllowedForClangdCommands));
       names.emplace_back(s_build_directory.relative_to(
           s_total_build_commands[i].in_path.resolved_copy()));
     }
@@ -523,6 +557,18 @@ Error ProjectService::PostLinkingStep() {
   }
 
   DumpAvailableBuildCommands();
+
+  if (Settings::Get("rewrite_project_cfg", true))
+  {
+    FieldVar output = { FieldVarType::Dict };
+
+    Logger::debug("serializing project data");
+    Project::to_data(*s_project, output);
+
+    Logger::debug("dumping project data to '%s'", s_project_file.c_str());
+    FieldFile::dump(s_project_file, output.get_dict());
+  }
+
   return Error::Ok;
 }
 
