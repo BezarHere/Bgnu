@@ -6,6 +6,7 @@
 #include "StringTools.hpp"
 #include "commands/BuildCommand.hpp"
 #include "commands/HelpCommand.hpp"
+#include "commands/MapCommand.hpp"
 #include "commands/NewCommand.hpp"
 #include "commands/RunCommand.hpp"
 
@@ -40,7 +41,8 @@ CommandDB::CommandSuggestion CommandDB::get_suggestion(const string &name) {
 
   for (size_t i = 0; i < s_data.commands_count; i++)
   {
-    float similarity = string_tools::similarity(lower_name, s_data.commands[i]->name);
+    float similarity =
+        string_tools::similarity(lower_name, s_data.commands[i]->name);
     if (similarity > suggestion.confidence)
     {
       suggestion.confidence = similarity;
@@ -65,12 +67,14 @@ void CommandDB::_load_commands() {
   _add_command(std::make_unique<commands::BuildCommand>());
   _add_command(std::make_unique<commands::NewCommand>());
   _add_command(std::make_unique<commands::RunCommand>());
+  _add_command(std::make_unique<commands::MapCommand>());
 }
 
 void CommandDB::_add_command(command_ptr &&command) {
   if (s_data.commands_count >= MaxCommandsCount)
   {
-    Logger::error("CommandDB: too many commands; can not add command at %p", command.get());
+    Logger::error("CommandDB: too many commands; can not add command at %p",
+                  command.get());
     return;
   }
 
