@@ -76,6 +76,7 @@ namespace build_tools
       Blob<const SourceFileType> file_types);
 
   extern bool IsAllowedForClangdFlags(const std::string &str);
+  extern bool IsAllowedForClangdCommands(const std::string &str);
 
   extern void TryCreateClangdCompileFlagsFile(const BuildConfiguration &config,
                                               const FilePath &build_folder);
