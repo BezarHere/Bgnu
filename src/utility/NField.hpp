@@ -9,7 +9,8 @@ struct NField_NoInit
 };
 
 // named field
-template <typename FieldType, typename _NameType = StaticString<StaticStr_LongestWordLength>>
+template <typename FieldType,
+          typename _NameType = StaticString<StaticStr_LongestWordLength>>
 class NField
 {
 public:
@@ -22,7 +23,8 @@ public:
   NField(const NameType &name, FieldType &&move_f)
       : m_name{ name }, m_field{ std::forward<FieldType>(move_f) } {}
 
-  NField(const NameType &name, const FieldType &copy_f) : m_name{ name }, m_field{ copy_f } {}
+  NField(const NameType &name, const FieldType &copy_f)
+      : m_name{ name }, m_field{ copy_f } {}
 
   inline FieldType *operator->() { return &m_field; }
 
@@ -56,7 +58,8 @@ enum class NSerializationStance : uint8_t {
   Optional,
 };
 
-template <typename FieldType, typename _NameType = StaticString<StaticStr_LongestWordLength>>
+template <typename FieldType,
+          typename _NameType = StaticString<StaticStr_LongestWordLength>>
 class NSerializable : public NField<FieldType, _NameType>
 {
 public:
@@ -67,21 +70,33 @@ public:
   static constexpr Stance Required = Stance::Required;
   static constexpr Stance Optional = Stance::Optional;
 
-  explicit NSerializable(const NameType &name, NField_NoInit, Stance required = Stance::Required)
-      : base_type{ name, NField_NoInit{} }, m_required{ required } {}
+  explicit NSerializable(const NameType &name,
+                         NField_NoInit,
+                         Stance stance = Stance::Required)
+      : base_type{ name, NField_NoInit{} }, m_stance{ stance } {}
 
-  NSerializable(const NameType &name, Stance required = Stance::Required)
-      : base_type{ name }, m_required{ required } {}
+  NSerializable(const NameType &name, Stance stance = Stance::Required)
+      : base_type{ name }, m_stance{ stance } {}
 
-  NSerializable(const NameType &name, FieldType &&move_f, Stance required = Stance::Required)
-      : base_type{ name, std::forward<FieldType>(move_f) }, m_required{ required } {}
+  NSerializable(const NameType &name,
+                FieldType &&move_f,
+                Stance stance = Stance::Required)
+      : base_type{ name, std::forward<FieldType>(move_f) },
+        m_stance{ stance } {}
 
-  NSerializable(const NameType &name, const FieldType &copy_f, Stance required = Stance::Required)
-      : base_type{ name, copy_f }, m_required{ required } {}
+  NSerializable(const NameType &name,
+                const FieldType &copy_f,
+                Stance stance = Stance::Required)
+      : base_type{ name, copy_f }, m_stance{ stance } {}
 
-  inline bool is_required() const noexcept { return m_required == Stance::Required; }
-  inline bool is_optional() const noexcept { return m_required == Stance::Optional; }
+  inline bool is_required() const noexcept {
+    return m_stance == Stance::Required;
+  }
+  inline bool is_optional() const noexcept {
+    return m_stance == Stance::Optional;
+  }
+  inline Stance stance() const noexcept { return m_stance; }
 
 private:
-  Stance m_required;
+  Stance m_stance;
 };
