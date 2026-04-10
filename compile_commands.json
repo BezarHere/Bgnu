@@ -1,0 +1,162 @@
+[
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/Settings.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/Settings.o\" "
+,		"file": "src/Settings.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/CMDTools.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/CMDTools.o\" "
+,		"file": "src/CMDTools.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/BuildConfiguration.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/BuildConfiguration.o\" "
+,		"file": "src/BuildConfiguration.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/ProjectService.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/ProjectService.o\" "
+,		"file": "src/ProjectService.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/StringTools.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/StringTools.o\" "
+,		"file": "src/StringTools.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/Glob.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/Glob.o\" "
+,		"file": "src/Glob.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/GlobalConfiguration.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/GlobalConfiguration.o\" "
+,		"file": "src/GlobalConfiguration.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/Logger.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/Logger.o\" "
+,		"file": "src/Logger.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/FieldDataReader.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/FieldDataReader.o\" "
+,		"file": "src/FieldDataReader.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/Console.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/Console.o\" "
+,		"file": "src/Console.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/BuildTools.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/BuildTools.o\" "
+,		"file": "src/BuildTools.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/Command.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/Command.o\" "
+,		"file": "src/Command.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/Argument.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/Argument.o\" "
+,		"file": "src/Argument.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/BuildCache.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/BuildCache.o\" "
+,		"file": "src/BuildCache.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/FieldFile.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/FieldFile.o\" "
+,		"file": "src/FieldFile.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/main.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/main.o\" "
+,		"file": "src/main.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/Startup.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/Startup.o\" "
+,		"file": "src/Startup.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/FilePath.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/FilePath.o\" "
+,		"file": "src/FilePath.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/Project.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/Project.o\" "
+,		"file": "src/Project.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "gcc -B/usr/bin -D_DEBUG -g3 -std=c2x -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/utility/Archiver.c\" -o \"/home/bezar/CC++/bgnu/out/cache/Archiver.o\" "
+,		"file": "src/utility/Archiver.c"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/utility/FileStats.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/FileStats.o\" "
+,		"file": "src/utility/FileStats.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/utility/PPL.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/PPL.o\" "
+,		"file": "src/utility/PPL.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/utility/Process.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/Process.o\" "
+,		"file": "src/utility/Process.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/commands/HelpCommand.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/HelpCommand.o\" "
+,		"file": "src/commands/HelpCommand.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/commands/MapCommand.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/MapCommand.o\" "
+,		"file": "src/commands/MapCommand.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/commands/RunCommand.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/RunCommand.o\" "
+,		"file": "src/commands/RunCommand.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/commands/NewCommand.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/NewCommand.o\" "
+,		"file": "src/commands/NewCommand.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/commands/BuildCommand.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/BuildCommand.o\" "
+,		"file": "src/commands/BuildCommand.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/code/CPreprocessor.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/CPreprocessor.o\" "
+,		"file": "src/code/CPreprocessor.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/code/SourceTools.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/SourceTools.o\" "
+,		"file": "src/code/SourceTools.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/code/CodeTokenizer.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/CodeTokenizer.o\" "
+,		"file": "src/code/CodeTokenizer.cpp"
+	},
+	{
+		"directory": "/home/bezar/CC++/bgnu"
+,		"command": "g++ -B/usr/bin -D_DEBUG -g3 -std=c++20 -Wall -static-libgcc -static-libstdc++ -fdiagnostics-color=always -fsanitize=address -mavx2 -I \"src\" -c \"/home/bezar/CC++/bgnu/src/code/SourceProcessor.cpp\" -o \"/home/bezar/CC++/bgnu/out/cache/SourceProcessor.o\" "
+,		"file": "src/code/SourceProcessor.cpp"
+	},
+]
