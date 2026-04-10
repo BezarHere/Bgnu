@@ -32,8 +32,8 @@ Result<Project> Project::from_data(const FieldVar::Dict &data) {
     return err;
   }
 
-  const FieldVar &build_configs =
-      reader.try_get_value<FieldVarType::Dict>(project.m_build_configurations.name());
+  const FieldVar &build_configs = reader.try_get_value<FieldVarType::Dict>(
+      project.m_build_configurations.name());
 
   if (build_configs.is_null())
   {
@@ -43,7 +43,8 @@ Result<Project> Project::from_data(const FieldVar::Dict &data) {
     return project;
   }
 
-  const FieldVar clangd = reader.try_get_value<FieldVarType::Boolean>(project.clangd.name());
+  const FieldVar clangd =
+      reader.try_get_value<FieldVarType::Boolean>(project.clangd.name());
   if (!clangd.is_null())
   {
     *project.clangd = clangd.get_bool();
@@ -55,29 +56,34 @@ Result<Project> Project::from_data(const FieldVar::Dict &data) {
     if (value.get_type() != FieldVarType::Dict)
     {
       Logger::error(
-          "%s: Invalid value for build configuration '%s': expected type %s, gotten type %s",
+          "%s: Invalid value for build configuration '%s': expected type %s, "
+          "gotten type %s",
           to_cstr(reader.get_context()),
           to_cstr(key),
           to_cstr(FieldVar::get_name_for_type(FieldVarType::Dict)),
           to_cstr(value.get_type_name()));
 
-      return { Error::InvalidType, format_join("ill-typed build configuration \"", key, "\"") };
+      return { Error::InvalidType,
+               format_join("ill-typed build configuration \"", key, "\"") };
     }
 
-    Result<BuildConfiguration> config = BuildConfiguration::from_data(
-        FieldDataReader(format_join(reader.get_context(), "::", "BuildCfg[", key, ']'),
-                        value.get_dict()));
+    Result<BuildConfiguration> config =
+        BuildConfiguration::from_data(FieldDataReader(
+            format_join(reader.get_context(), "::", "BuildCfg[", key, ']'),
+            value.get_dict()));
 
     if (config.has_error())
     {
-      Logger::debug("Failure in parsing and loading build cfg named '%s'", to_cstr(key));
+      Logger::debug("Failure in parsing and loading build cfg named '%s'",
+                    to_cstr(key));
       return project;
     }
 
     project.m_build_configurations->insert_or_assign(key, *config);
   }
 
-  const FieldVar &modifiers = reader.try_get_value<FieldVarType::Array>(project.m_modifiers.name());
+  const FieldVar &modifiers =
+      reader.try_get_value<FieldVarType::Array>(project.m_modifiers.name());
 
   if (!modifiers.is_null())
   {
@@ -87,16 +93,20 @@ Result<Project> Project::from_data(const FieldVar::Dict &data) {
       if (modifier_data.get_type() != FieldVarType::Dict)
       {
         Logger::warning(
-            "Project::Modifier[%llu]: Modifier data should be of type Dict, found type %s",
+            "Project::Modifier[%llu]: Modifier data should be of type Dict, "
+            "found type %s",
             i,
             to_cstr(modifier_data.get_type_name()));
         continue;
       }
 
-      Result<ProjectModifier> modifier = ProjectModifier::from_data(modifier_data.get_dict());
+      Result<ProjectModifier> modifier =
+          ProjectModifier::from_data(modifier_data.get_dict());
       if (!modifier)
       {
-        Logger::warning("Project::Modifier[%llu]: %s", i, to_cstr(modifier.message()));
+        Logger::warning("Project::Modifier[%llu]: %s",
+                        i,
+                        to_cstr(modifier.message()));
         continue;
       }
 
@@ -115,7 +125,8 @@ errno_t Project::to_data(const Project &project, FieldVar &output) {
 
   FieldWriter writer = {};
 
-  // writer.write_nested_transform(project.m_output.name(), project.m_output->type);
+  // writer.write_nested_transform(project.m_output.name(),
+  // project.m_output->type);
   writer.write_nested(project.m_output.name(), project.m_output->name);
   writer.write_nested(project.m_output.name(), project.m_output->dir);
   writer.write_nested(project.m_output.name(), project.m_output->cache_dir);
@@ -137,6 +148,14 @@ errno_t Project::to_data(const Project &project, FieldVar &output) {
 
   writer.write(project.clangd);
   writer.write(project.m_build_configurations.name(), config_dicts);
+  FieldVar::Array modifiers = {};
+
+  for (const auto &mod : *project.m_modifiers)
+  {
+    modifiers.emplace_back(mod.to_data().value());
+  }
+
+  writer.write(project.m_modifiers.name(), modifiers);
 
   output = FieldVar(writer.output);
 
@@ -158,7 +177,8 @@ ErrorReport Project::load_various(Project &project, FieldDataReader &reader) {
   }
 
   const FieldVar &output_cache_dir = reader.try_get_value<FieldVarType::String>(
-      FieldIO::NestedName(project.m_output.name(), project.m_output->cache_dir));
+      FieldIO::NestedName(project.m_output.name(),
+                          project.m_output->cache_dir));
   if (output_cache_dir.is_null())
   {
     Logger::verbose("no specified cache directory, using default: '%s'",
@@ -263,7 +283,8 @@ static constexpr std::array<ModifierNamedType, 6> ModifierTypeNames = {
 Result<ProjectModifier> ProjectModifier::from_data(const FieldVar::Dict &data) {
   if (!data.contains("type"))
   {
-    return { Error::NoData, "Expecting 'type' field for modifier type (Add, )" };
+    return { Error::NoData,
+             "Expecting 'type' field for modifier type (Add, )" };
   }
   if (!data.at("type").is_convertible_to(FieldVarType::String))
   {
@@ -279,7 +300,8 @@ Result<ProjectModifier> ProjectModifier::from_data(const FieldVar::Dict &data) {
 
   if (!data.contains("target"))
   {
-    return { Error::NoData, "Expecting 'target' field for modifier targets (build configs)" };
+    return { Error::NoData,
+             "Expecting 'target' field for modifier targets (build configs)" };
   }
   if (data.at("target").get_type() != FieldVarType::String)
   {
@@ -290,11 +312,13 @@ Result<ProjectModifier> ProjectModifier::from_data(const FieldVar::Dict &data) {
 
   if (!data.contains("property"))
   {
-    return { Error::NoData, "Expecting 'property' field for modifier properties" };
+    return { Error::NoData,
+             "Expecting 'property' field for modifier properties" };
   }
   if (data.at("property").get_type() != FieldVarType::String)
   {
-    return { Error::InvalidType, "Expecting 'property' field to be a string (property name)" };
+    return { Error::InvalidType,
+             "Expecting 'property' field to be a string (property name)" };
   }
   const auto property = data.at("property").get_string();
 
@@ -308,6 +332,16 @@ Result<ProjectModifier> ProjectModifier::from_data(const FieldVar::Dict &data) {
   return ProjectModifier{ type, target, property, value };
 }
 
+Result<FieldVar::Dict> ProjectModifier::to_data() const {
+  FieldVar::Dict data = {};
+  data.emplace("type", TypeToName(type));
+  data.emplace("target", target.get_source());
+  data.emplace("property", property_name);
+  data.emplace("value", value);
+
+  return data;
+}
+
 auto ProjectModifier::NameToType(const std::string &str) -> Type {
   std::string new_str = string_tools::to_lower(str);
   for (const auto &[type, name] : ModifierTypeNames)
@@ -319,4 +353,16 @@ auto ProjectModifier::NameToType(const std::string &str) -> Type {
   }
 
   return Type::None;
+}
+
+const char *ProjectModifier::TypeToName(Type type) {
+  for (const auto &[cur_type, name] : ModifierTypeNames)
+  {
+    if (cur_type == type)
+    {
+      return name.c_str();
+    }
+  }
+
+  return "";
 }

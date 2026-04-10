@@ -2,6 +2,7 @@
 #include <map>
 
 #include "BuildConfiguration.hpp"
+#include "FieldVar.hpp"
 #include "Glob.hpp"
 #include "Result.hpp"
 #include "utility/NField.hpp"
@@ -48,8 +49,10 @@ struct ProjectModifier
   };
 
   static Result<ProjectModifier> from_data(const FieldVar::Dict &data);
+  Result<FieldVar::Dict> to_data() const;
 
   static Type NameToType(const std::string &str);
+  static const char *TypeToName(Type type);
 
   Type type;
   Glob target;  // TODO: extended glob; separating to different globs ("GL*B1|GL*B2")
