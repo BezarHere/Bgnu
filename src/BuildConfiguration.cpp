@@ -1,15 +1,20 @@
 #include "BuildConfiguration.hpp"
 
 #include <algorithm>
+#include <vector>
 
 #include "FieldDataReader.hpp"
+#include "FieldVar.hpp"
+#include "FilePath.hpp"
 #include "Logger.hpp"
 #include "Result.hpp"
 #include "Settings.hpp"
 #include "StringTools.hpp"
+#include "base.hpp"
 #include "code/SourceTools.hpp"
 #include "io/FieldWriter.hpp"
 #include "misc/Error.hpp"
+#include "utility/NField.hpp"
 
 static constexpr StandardType transform_standards(StandardType original,
                                                   SourceFileType source_type);
@@ -17,11 +22,16 @@ template <BuildConfigurationDefaultType DefaultType>
 static void SetupDefaultConfig(BuildConfiguration &config);
 
 template <>
-void SetupDefaultConfig<BuildConfigurationDefaultType::Debug>(BuildConfiguration &config);
+void SetupDefaultConfig<BuildConfigurationDefaultType::Debug>(
+    BuildConfiguration &config);
 template <>
-void SetupDefaultConfig<BuildConfigurationDefaultType::Release>(BuildConfiguration &config);
+void SetupDefaultConfig<BuildConfigurationDefaultType::Release>(
+    BuildConfiguration &config);
 
-template <typename Type, typename ParseProc, typename StringifyProc, typename ValidateProc>
+template <typename Type,
+          typename ParseProc,
+          typename StringifyProc,
+          typename ValidateProc>
 struct EnumTraits
 {
   using enum_type = Type;
@@ -34,26 +44,38 @@ struct EnumTraits
   const StringifyProc stringify_proc;
   const ValidateProc validate_proc;
 
-  EnumTraits(const string_type &name, Type _default_val, ParseProc &&_parse_proc,
-             StringifyProc &&_stringify_proc, ValidateProc &&_validate_proc)
+  EnumTraits(const string_type &name,
+             Type _default_val,
+             ParseProc &&_parse_proc,
+             StringifyProc &&_stringify_proc,
+             ValidateProc &&_validate_proc)
       : _name{ name },
         default_value{ _default_val },
         parse_proc{ _parse_proc },
         stringify_proc{ _stringify_proc },
         validate_proc{ _validate_proc } {}
 
-  ALWAYS_INLINE enum_type parse(const string_type &str) const { return parse_proc(str); }
-  ALWAYS_INLINE string_type stringify(enum_type value) const { return stringify_proc(value); }
-  ALWAYS_INLINE bool validate(enum_type value) const { return validate_proc(value); }
+  ALWAYS_INLINE enum_type parse(const string_type &str) const {
+    return parse_proc(str);
+  }
+  ALWAYS_INLINE string_type stringify(enum_type value) const {
+    return stringify_proc(value);
+  }
+  ALWAYS_INLINE bool validate(enum_type value) const {
+    return validate_proc(value);
+  }
 
   ALWAYS_INLINE enum_type get_default() const { return default_value; }
-  ALWAYS_INLINE string_type get_default_named() const { return stringify(default_value); }
+  ALWAYS_INLINE string_type get_default_named() const {
+    return stringify(default_value);
+  }
   ALWAYS_INLINE const string_type &name() const { return _name; }
 };
 
 struct BuildConfigurationReader
 {
-  BuildConfigurationReader(const BuildConfiguration &_config, FieldDataReader &_reader,
+  BuildConfigurationReader(const BuildConfiguration &_config,
+                           FieldDataReader &_reader,
                            ErrorReport &_result)
       : config{ _config }, reader{ _reader }, result{ _result } {}
 
@@ -61,18 +83,22 @@ struct BuildConfigurationReader
   void read_optimization_info(NField<OptimizationInfo> &info);
   void read_warning_info(NField<WarningReportInfo> &info);
 
-  void read_strings_named(const string &name, vector<string> &out);
-  void read_paths_named(const string &name, vector<FilePath> &out);
+  void read_strings_named(NSerializable<vector<string>> &out);
+  void read_paths_named(NSerializable<vector<FilePath>> &out);
 
   template <typename _Traits>
-  inline typename _Traits::enum_type _read_enum(const string &name, const _Traits &traits) {
+  inline typename _Traits::enum_type _read_enum(const string &name,
+                                                const _Traits &traits) {
 
-    const FieldVar &enum_field_var = reader.try_get_value<FieldVarType::String>(name);
+    const FieldVar &enum_field_var =
+        reader.try_get_value<FieldVarType::String>(name);
 
     if (enum_field_var.is_null())
     {
       Logger::error("%s: Value for %s ('%s') isn't defined, defaulting to '%s'",
-                    to_cstr(reader._context), to_cstr(traits.name()), to_cstr(name),
+                    to_cstr(reader._context),
+                    to_cstr(traits.name()),
+                    to_cstr(name),
                     to_cstr(traits.get_default_named()));
       return traits.get_default();
     }
@@ -84,8 +110,10 @@ struct BuildConfigurationReader
       const auto default_named = traits.get_default_named();
 
       enum_val = traits.get_default();
-      Logger::error("%s: Invalid %s value '%s', defaulting to '%s'", to_cstr(reader._context),
-                    to_cstr(traits.name()), enum_field_var.get_string().c_str(),
+      Logger::error("%s: Invalid %s value '%s', defaulting to '%s'",
+                    to_cstr(reader._context),
+                    to_cstr(traits.name()),
+                    enum_field_var.get_string().c_str(),
                     to_cstr(default_named));
     }
 
@@ -97,9 +125,11 @@ struct BuildConfigurationReader
   ErrorReport &result;
 };
 
-void BuildConfiguration::_put_compiler(vector<string> &output, SourceFileType source_type) const {
+void BuildConfiguration::_put_compiler(vector<string> &output,
+                                       SourceFileType source_type) const {
   const std::string compiler_name =
-      BuildConfiguration::get_compiler_name(this->compiler_type.field(), source_type);
+      BuildConfiguration::get_compiler_name(this->compiler_type.field(),
+                                            source_type);
 
   output.emplace_back(compiler_name);
 
@@ -110,7 +140,8 @@ void BuildConfiguration::_put_compiler(vector<string> &output, SourceFileType so
     compiler_abs_path = compiler_abs_path.parent();
     if (!compiler_abs_path.is_absolute())
     {
-      Logger::error("Compiler '%s' didn't resolve to an absolute path: '%s'", compiler_name.c_str(),
+      Logger::error("Compiler '%s' didn't resolve to an absolute path: '%s'",
+                    compiler_name.c_str(),
                     compiler_abs_path.c_str());
     }
 
@@ -130,13 +161,15 @@ void BuildConfiguration::_put_predefines(vector<string> &output) const {
       continue;
     }
 
-    const bool valid_string =
-        value.is_convertible_to(FieldVarType::String) || value.is_type_simple(FieldVarType::String);
+    const bool valid_string = value.is_convertible_to(FieldVarType::String) ||
+                              value.is_type_simple(FieldVarType::String);
 
     if (!valid_string)
     {
-      Logger::error("Invalid predefine value named \"%s\" of type %s, skipping it...",
-                    to_cstr(name), value.get_type_name());
+      Logger::error(
+          "Invalid predefine value named \"%s\" of type %s, skipping it...",
+          to_cstr(name),
+          value.get_type_name());
 
       continue;
     }
@@ -167,18 +200,34 @@ void BuildConfiguration::_put_flags(vector<string> &output) const {
     output.emplace_back("-static-libstdc++");
   }
 
-  // if (this->sanitize_addresses.field())
-  // {
-  //   output.emplace_back("-fsanitize=address");
-  // }
-
   if (Settings::Get("color_output", true))
   {
     output.emplace_back("-fdiagnostics-color=always");
   }
+
+  if (sanitize_addresses.field())
+  {
+    output.emplace_back("-fsanitize=address");
+  }
+
+  if (sanitize_leaks.field())
+  {
+    output.emplace_back("-fsanitize=leak");
+  }
+
+  if (sanitize_undefined.field())
+  {
+    output.emplace_back("-fsanitize=undefined");
+  }
+
+  if (sanitize_thread.field())
+  {
+    output.emplace_back("-fsanitize=thread");
+  }
 }
 
-void BuildConfiguration::_put_standards(vector<string> &output, SourceFileType type) const {
+void BuildConfiguration::_put_standards(vector<string> &output,
+                                        SourceFileType type) const {
   StandardType standard_type = transform_standards(standard.field(), type);
 
   output.emplace_back("-std=");
@@ -195,7 +244,8 @@ void BuildConfiguration::_put_optimization(vector<string> &output) const {
 
   case OptimizationType::Release:
     output.emplace_back("-O");
-    output.back().append(1, '0' + static_cast<char>(optimization->degree.field()));
+    output.back().append(1,
+                         '0' + static_cast<char>(optimization->degree.field()));
     return;
 
   case OptimizationType::Debug: {
@@ -257,17 +307,18 @@ void BuildConfiguration::_put_warnings(vector<string> &output) const {
 }
 
 void BuildConfiguration::_put_misc(vector<string> &output) const {
-  if (simd_type.field() == SIMDType::None)
+  if (simd_type.field() != SIMDType::None)
   {
-    return;
+    output.emplace_back("-m");
+    output.back().append(
+        string_tools::to_lower(get_enum_name(simd_type.field())));
   }
 
-  if (Logger::is_verbose() && Settings::Get("allow_verbose_gcc", false).get_bool())
+  if (Logger::is_verbose() &&
+      Settings::Get("allow_verbose_gcc", false).get_bool())
   {
     output.emplace_back("-v");
   }
-  output.emplace_back("-m");
-  output.back().append(string_tools::to_lower(get_enum_name(simd_type.field())));
 }
 
 void BuildConfiguration::_put_includes(vector<string> &output) const {
@@ -304,8 +355,35 @@ void BuildConfiguration::_put_libraries(vector<string> &output) const {
   }
 }
 
-void BuildConfiguration::build_arguments(vector<string> &output, const StrBlob &input_file,
-                                         const StrBlob &output_file, SourceFileType type) const {
+void BuildConfiguration::_put_sub_args(vector<string> &output) const {
+  for (const auto &arg : extra_args.field())
+  {
+    output.emplace_back(arg);
+  }
+
+  for (const auto &arg : preprocessor_args.field())
+  {
+    output.emplace_back("-Xpreprocessor");
+    output.emplace_back(arg);
+  }
+
+  for (const auto &arg : assembler_args.field())
+  {
+    output.emplace_back("-Xassembler");
+    output.emplace_back(arg);
+  }
+
+  for (const auto &arg : linker_args.field())
+  {
+    output.emplace_back("-Xlinker");
+    output.emplace_back(arg);
+  }
+}
+
+void BuildConfiguration::build_arguments(vector<string> &output,
+                                         const StrBlob &input_file,
+                                         const StrBlob &output_file,
+                                         SourceFileType type) const {
   _put_compiler(output, type);
 
   _put_predefines(output);
@@ -315,6 +393,7 @@ void BuildConfiguration::build_arguments(vector<string> &output, const StrBlob &
   _put_warnings(output);
   _put_flags(output);
   _put_misc(output);
+  _put_sub_args(output);
 
   _put_includes(output);
 
@@ -346,6 +425,7 @@ void BuildConfiguration::build_link_arguments(vector<string> &output,
   _put_warnings(output);
   _put_flags(output);
   _put_misc(output);
+  _put_sub_args(output);
 
   _put_includes(output);
 
@@ -370,6 +450,7 @@ void BuildConfiguration::build_clangd_contents(vector<string> &output) const {
   _put_standards(output, SourceFileType::CPP);
   _put_warnings(output);
   _put_flags(output);
+  // should i put sub-args??
 
   _put_includes(output);
   _put_libraries(output);
@@ -389,25 +470,52 @@ hash_t BuildConfiguration::hash() const {
   digester += (hash_t)this->print_includes.field();
   digester += (hash_t)this->dynamically_linkable.field();
   digester += (hash_t)this->sanitize_addresses.field();
+  digester += (hash_t)this->sanitize_leaks.field();
+  digester += (hash_t)this->sanitize_undefined.field();
+  digester += (hash_t)this->sanitize_thread.field();
   digester += (hash_t)this->static_stdlib.field();
 
   digester += (hash_t)this->simd_type.field();
 
-  std::for_each(preprocessor_args->begin(), preprocessor_args->end(),
-                [&digester](const string &str) { digester.add(str.c_str(), str.length()); });
-  std::for_each(linker_args->begin(), linker_args->end(),
-                [&digester](const string &str) { digester.add(str.c_str(), str.length()); });
-  std::for_each(assembler_args->begin(), assembler_args->end(),
-                [&digester](const string &str) { digester.add(str.c_str(), str.length()); });
+  std::for_each(extra_args->begin(),
+                extra_args->end(),
+                [&digester](const string &str) {
+                  digester.add(str.c_str(), str.length());
+                });
 
-  std::for_each(library_names->begin(), library_names->end(),
-                [&digester](const string &str) { digester.add(str.c_str(), str.length()); });
+  std::for_each(preprocessor_args->begin(),
+                preprocessor_args->end(),
+                [&digester](const string &str) {
+                  digester.add(str.c_str(), str.length());
+                });
+  std::for_each(linker_args->begin(),
+                linker_args->end(),
+                [&digester](const string &str) {
+                  digester.add(str.c_str(), str.length());
+                });
+  std::for_each(assembler_args->begin(),
+                assembler_args->end(),
+                [&digester](const string &str) {
+                  digester.add(str.c_str(), str.length());
+                });
 
-  std::for_each(library_directories->begin(), library_directories->end(),
-                [&digester](const FilePath &file_path) { digester.add(file_path.get_text()); });
+  std::for_each(library_names->begin(),
+                library_names->end(),
+                [&digester](const string &str) {
+                  digester.add(str.c_str(), str.length());
+                });
 
-  std::for_each(include_directories->begin(), include_directories->end(),
-                [&digester](const FilePath &file_path) { digester.add(file_path.get_text()); });
+  std::for_each(library_directories->begin(),
+                library_directories->end(),
+                [&digester](const FilePath &file_path) {
+                  digester.add(file_path.get_text());
+                });
+
+  std::for_each(include_directories->begin(),
+                include_directories->end(),
+                [&digester](const FilePath &file_path) {
+                  digester.add(file_path.get_text());
+                });
 
   return digester.value;
 }
@@ -420,7 +528,8 @@ hash_t BuildConfiguration::hash() const {
     return report;              \
   }
 
-BuildConfiguration BuildConfiguration::GetDefault(BuildConfigurationDefaultType default_mode) {
+BuildConfiguration BuildConfiguration::GetDefault(
+    BuildConfigurationDefaultType default_mode) {
   BuildConfiguration config{};
 
   if (default_mode == BuildConfigurationDefaultType::Debug)
@@ -433,13 +542,15 @@ BuildConfiguration BuildConfiguration::GetDefault(BuildConfigurationDefaultType 
   }
   else
   {
-    Logger::error("unknown build configuration default: enum value=%d\n", (int)default_mode);
+    Logger::error("unknown build configuration default: enum value=%d\n",
+                  (int)default_mode);
   }
 
   return config;
 }
 
-Result<BuildConfiguration> BuildConfiguration::from_data(FieldDataReader reader) {
+Result<BuildConfiguration> BuildConfiguration::from_data(
+    FieldDataReader reader) {
   BuildConfiguration config{};
 
   ErrorReport report = {};
@@ -451,62 +562,85 @@ Result<BuildConfiguration> BuildConfiguration::from_data(FieldDataReader reader)
   CHECK_REPORT(bc_reader.read_warning_info(config.warnings));
 
   {
-    EnumTraits standard{ "standard version", config.standard.field(),
-                         [](auto val) { return BuildConfiguration::get_standard_type(val); },
-                         [](StandardType type) { return BuildConfiguration::get_enum_name(type); },
-                         [](const StandardType type) { return type != StandardType::None; } };
-    config.standard.field() = bc_reader._read_enum(config.standard.name(), standard);
+    EnumTraits standard{
+      "standard version",
+      config.standard.field(),
+      [](auto val) { return BuildConfiguration::get_standard_type(val); },
+      [](StandardType type) { return BuildConfiguration::get_enum_name(type); },
+      [](const StandardType type) { return type != StandardType::None; }
+    };
+    config.standard.field() =
+        bc_reader._read_enum(config.standard.name(), standard);
 
-    EnumTraits simd_type{ "SIMD type", config.simd_type.field(),
-                          [](auto val) { return BuildConfiguration::get_simd_type(val); },
-                          [](SIMDType type) { return BuildConfiguration::get_enum_name(type); },
-                          [](const SIMDType type) { return type != SIMDType::None; } };
+    EnumTraits simd_type{
+      "SIMD type",
+      config.simd_type.field(),
+      [](auto val) { return BuildConfiguration::get_simd_type(val); },
+      [](SIMDType type) { return BuildConfiguration::get_enum_name(type); },
+      [](const SIMDType type) { return type != SIMDType::None; }
+    };
 
-    config.simd_type.field() = bc_reader._read_enum(config.simd_type.name(), simd_type);
+    config.simd_type.field() =
+        bc_reader._read_enum(config.simd_type.name(), simd_type);
   }
 
-  const array<NField<bool> *, 6> booleans = {
-    &config.exit_on_errors,       &config.print_stats,        &config.print_includes,
-    &config.dynamically_linkable, &config.sanitize_addresses, &config.static_stdlib,
+  const array<NSerializable<bool> *, 9> booleans = {
+    &config.exit_on_errors,     &config.print_stats,
+    &config.print_includes,     &config.dynamically_linkable,
+    &config.sanitize_addresses, &config.static_stdlib,
+    &config.sanitize_leaks,     &config.sanitize_undefined,
+    &config.sanitize_thread
   };
 
   for (auto *bool_ptr : booleans)
   {
-    const FieldVar &var = reader.try_get_value<FieldVarType::Boolean>(bool_ptr->name());
+    const FieldVar &var =
+        reader.try_get_value<FieldVarType::Boolean>(bool_ptr->name());
+
     if (var.is_null())
     {
+      if (bool_ptr->is_optional())
+      {
+        continue;
+      }
+
+      Logger::error("Project: No field named '%s', defaulting to %s",
+                    bool_ptr->name().c_str(),
+                    bool_ptr->field() ? "true" : "false");
+      continue;
+    }
+
+    if (var.get_type() != FieldVarType::Boolean)
+    {
+      Logger::error("Project: field named '%s', should be of boolean type",
+                    bool_ptr->name().c_str());
       continue;
     }
 
     bool_ptr->field() = var.get_bool();
   }
 
-  CHECK_REPORT(bc_reader.read_strings_named(config.preprocessor_args.name(),
-                                            config.preprocessor_args.field()););
-  CHECK_REPORT(
-      bc_reader.read_strings_named(config.linker_args.name(), config.linker_args.field()););
-  CHECK_REPORT(
-      bc_reader.read_strings_named(config.assembler_args.name(), config.assembler_args.field()););
-
-  CHECK_REPORT(
-      bc_reader.read_strings_named(config.library_names.name(), config.library_names.field()););
-
-  CHECK_REPORT(bc_reader.read_paths_named(config.library_directories.name(),
-                                          config.library_directories.field()););
-
-  CHECK_REPORT(bc_reader.read_paths_named(config.include_directories.name(),
-                                          config.include_directories.field()););
+  CHECK_REPORT(bc_reader.read_strings_named(config.extra_args););
+  CHECK_REPORT(bc_reader.read_strings_named(config.preprocessor_args););
+  CHECK_REPORT(bc_reader.read_strings_named(config.linker_args););
+  CHECK_REPORT(bc_reader.read_strings_named(config.assembler_args););
+  CHECK_REPORT(bc_reader.read_strings_named(config.library_names););
+  CHECK_REPORT(bc_reader.read_paths_named(config.library_directories););
+  CHECK_REPORT(bc_reader.read_paths_named(config.include_directories););
 
   return config;
 }
 
-FieldVar::Dict BuildConfiguration::to_data(const BuildConfiguration &config, ErrorReport &report) {
+FieldVar::Dict BuildConfiguration::to_data(const BuildConfiguration &config,
+                                           ErrorReport &report) {
   FieldWriter writer{};
 
 #define WRITE_STR_ARR(named)                                                \
   writer.write_arr<std::remove_cvref_t<decltype(config.named.field()[0])>>( \
-      config.named.name(), { config.named->data(), config.named->size() })
+      config.named.name(),                                                  \
+      { config.named->data(), config.named->size() })
 
+  WRITE_STR_ARR(extra_args);
   WRITE_STR_ARR(preprocessor_args);
   WRITE_STR_ARR(library_names);
   WRITE_STR_ARR(assembler_args);
@@ -519,16 +653,19 @@ FieldVar::Dict BuildConfiguration::to_data(const BuildConfiguration &config, Err
 
   writer.write(config.predefines);
 
-  writer.write(FieldIO::NestedName(config.optimization.name(), config.optimization->type),
+  writer.write(FieldIO::NestedName(config.optimization.name(),
+                                   config.optimization->type),
                get_enum_name(config.optimization->type.field()));
-  writer.write(FieldIO::NestedName(config.optimization.name(), config.optimization->degree),
+  writer.write(FieldIO::NestedName(config.optimization.name(),
+                                   config.optimization->degree),
                get_enum_name(config.optimization->degree.field()));
-  writer.write(
-      FieldIO::NestedName(config.optimization.name(), config.optimization->debug_optimizing),
-      config.optimization->debug_optimizing.field());
+  writer.write(FieldIO::NestedName(config.optimization.name(),
+                                   config.optimization->debug_optimizing),
+               config.optimization->debug_optimizing.field());
 
-  writer.write(FieldIO::NestedName(config.warnings.name(), config.warnings->level),
-               get_enum_name(config.warnings->level.field()));
+  writer.write(
+      FieldIO::NestedName(config.warnings.name(), config.warnings->level),
+      get_enum_name(config.warnings->level.field()));
   writer.write_nested(config.warnings.name(), config.warnings->pedantic);
 
   writer.write(config.print_stats);
@@ -536,17 +673,23 @@ FieldVar::Dict BuildConfiguration::to_data(const BuildConfiguration &config, Err
   writer.write(config.dynamically_linkable);
   writer.write(config.exit_on_errors);
   writer.write(config.sanitize_addresses);
+  writer.write(config.sanitize_leaks);
+  writer.write(config.sanitize_undefined);
+  writer.write(config.sanitize_thread);
   writer.write(config.static_stdlib);
 
-  writer.write(config.simd_type.name(), get_enum_name(config.simd_type.field()));
+  writer.write(config.simd_type.name(),
+               get_enum_name(config.simd_type.field()));
   writer.write(config.standard.name(), get_enum_name(config.standard.field()));
-  // writer.write(get_enum_name(config.compiler_type.field()), config.compiler_type.field());
+  // writer.write(get_enum_name(config.compiler_type.field()),
+  // config.compiler_type.field());
 
   return writer.output;
 }
 
 void BuildConfigurationReader::read_predefines(FieldVar::Dict &predefines) {
-  const FieldVar &field_var = reader.try_get_value<FieldVarType::Dict>("predefines");
+  const FieldVar &field_var =
+      reader.try_get_value<FieldVarType::Dict>("predefines");
 
   if (field_var.is_null())
   {
@@ -564,8 +707,10 @@ void BuildConfigurationReader::read_predefines(FieldVar::Dict &predefines) {
     }
 
     Logger::warning(("%s: predefine named '%s' is not a string or null,"
-                     " the value will be stringified, but that may lead to undefined behavior"),
-                    to_cstr(reader._context), key.c_str());
+                     " the value will be stringified, but that may lead to "
+                     "undefined behavior"),
+                    to_cstr(reader._context),
+                    key.c_str());
 
     predefines.insert_or_assign(key, value.copy_stringified());
   }
@@ -574,25 +719,36 @@ void BuildConfigurationReader::read_predefines(FieldVar::Dict &predefines) {
 template <typename T>
 using GetEnumNameOfType = const char *(*)(T);
 
-void BuildConfigurationReader::read_optimization_info(NField<OptimizationInfo> &info) {
+void BuildConfigurationReader::read_optimization_info(
+    NField<OptimizationInfo> &info) {
 
-  EnumTraits opt_type{ "optimization type", info->type.field(),
-                       [](auto val) { return BuildConfiguration::get_optimization_type(val); },
-                       [](OptimizationType type) {
-                         return BuildConfiguration::get_enum_name(type);
-                       },
-                       [](const OptimizationType type) { return type != OptimizationType::None; } };
-
-  EnumTraits opt_level{
-    "optimization level", info->degree.field(),
-    [](auto val) { return BuildConfiguration::get_optimization_degree(val); },
-    [](OptimizationDegree degree) { return BuildConfiguration::get_enum_name(degree); },
-    [](const OptimizationDegree type) { return type != OptimizationDegree::None; }
+  EnumTraits opt_type{
+    "optimization type",
+    info->type.field(),
+    [](auto val) { return BuildConfiguration::get_optimization_type(val); },
+    [](OptimizationType type) {
+      return BuildConfiguration::get_enum_name(type);
+    },
+    [](const OptimizationType type) { return type != OptimizationType::None; }
   };
 
-  info->type.field() = _read_enum(info.name() + ":" + (std::string)info->type.name(), opt_type);
+  EnumTraits opt_level{
+    "optimization level",
+    info->degree.field(),
+    [](auto val) { return BuildConfiguration::get_optimization_degree(val); },
+    [](OptimizationDegree degree) {
+      return BuildConfiguration::get_enum_name(degree);
+    },
+    [](const OptimizationDegree type) {
+      return type != OptimizationDegree::None;
+    }
+  };
+
+  info->type.field() =
+      _read_enum(info.name() + ":" + (std::string)info->type.name(), opt_type);
   info->degree.field() =
-      _read_enum(info.name() + ":" + (std::string)info->degree.name(), opt_level);
+      _read_enum(info.name() + ":" + (std::string)info->degree.name(),
+                 opt_level);
 
   info->debug_optimizing.field() =
       reader
@@ -602,22 +758,44 @@ void BuildConfigurationReader::read_optimization_info(NField<OptimizationInfo> &
           .get_bool();
 }
 
-void BuildConfigurationReader::read_warning_info(NField<WarningReportInfo> &info) {
-  EnumTraits wrn_type{ "warning level", info->level.field(),
-                       [](auto val) { return BuildConfiguration::get_warning_level(val); },
-                       [](WarningLevel lvl) { return BuildConfiguration::get_enum_name(lvl); },
-                       [](const WarningLevel type) { return type != WarningLevel::None; } };
+void BuildConfigurationReader::read_warning_info(
+    NField<WarningReportInfo> &info) {
+  EnumTraits wrn_type{
+    "warning level",
+    info->level.field(),
+    [](auto val) { return BuildConfiguration::get_warning_level(val); },
+    [](WarningLevel lvl) { return BuildConfiguration::get_enum_name(lvl); },
+    [](const WarningLevel type) { return type != WarningLevel::None; }
+  };
 
-  info->level.field() = _read_enum(info.name() + ":" + (std::string)info->level.name(), wrn_type);
+  info->level.field() =
+      _read_enum(info.name() + ":" + (std::string)info->level.name(), wrn_type);
 }
 
-void BuildConfigurationReader::read_strings_named(const string &name, vector<string> &out) {
-  const FieldVar &var = reader.try_get_value<FieldVarType::Array>(name);
+void BuildConfigurationReader::read_strings_named(
+    NSerializable<vector<string>> &out) {
+  const FieldVar &var = reader.try_get_value<FieldVarType::Array>(out.name());
 
   if (var.is_null())
   {
+    if (out.is_optional())
+    {
+      return;
+    }
+
     result.code = Error::NoData;
-    result.message = format_join("required string array named \"", name, "\" do not exist");
+    result.message = format_join("required string array named \"",
+                                 out.name().c_str(),
+                                 "\" do not exist");
+    return;
+  }
+
+  if (!var.is_convertible_to(FieldVarType::Array))
+  {
+    result.code = Error::NoData;
+    result.message = format_join("field named \"",
+                                 out.name().c_str(),
+                                 "\" should be an array of strings");
     return;
   }
 
@@ -627,20 +805,25 @@ void BuildConfigurationReader::read_strings_named(const string &name, vector<str
   {
     if (array[i].is_convertible_to(FieldVarType::String))
     {
-      out.push_back(array[i].get_string());
+      out->push_back(array[i].get_string());
       continue;
     }
 
     if (array[i].has_simple_type())
     {
-      out.push_back(array[i].copy_stringified().get_string());
+      out->push_back(array[i].copy_stringified().get_string());
       continue;
     }
 
     result.code = Error::InvalidType;
     result.message =
-        format_join("value at \'", name, '[', i, "] should be a string, but it's of type '",
-                    FieldVar::get_name_for_type(array[i].get_type()), '\'');
+        format_join("value at \'",
+                    out.name().c_str(),
+                    '[',
+                    i,
+                    "] should be a string, but it's of type '",
+                    FieldVar::get_name_for_type(array[i].get_type()),
+                    '\'');
 
     auto err_msg = reader._context + ':' + result.message;
     Logger::error(err_msg.c_str());
@@ -648,13 +831,14 @@ void BuildConfigurationReader::read_strings_named(const string &name, vector<str
   }
 }
 
-void BuildConfigurationReader::read_paths_named(const string &name, vector<FilePath> &out) {
-  vector<string> paths_str{};
-  read_strings_named(name, paths_str);
+void BuildConfigurationReader::read_paths_named(
+    NSerializable<vector<FilePath>> &out) {
+  NSerializable<vector<string>> paths_str{ out.name(), out.stance() };
+  read_strings_named(paths_str);
 
-  for (const auto &path : paths_str)
+  for (const auto &path : *paths_str)
   {
-    out.emplace_back(path);
+    out->emplace_back(path);
   }
 }
 
@@ -707,7 +891,8 @@ struct NameList
 template <typename Enum>
 struct NamedEnum
 {
-  constexpr NamedEnum(Enum _value, const string_char *_name) : name{ _name }, value{ _value } {}
+  constexpr NamedEnum(Enum _value, const string_char *_name)
+      : name{ _name }, value{ _value } {}
 
   const string_char *name;
   Enum value;
@@ -759,8 +944,8 @@ constexpr NamedEnum<StandardType> StandardTypeNames[] = {
   NamedEnum{ StandardType::C11, "c11" },
   NamedEnum{ StandardType::C14, "c14" },
   NamedEnum{ StandardType::C17, "c17" },
-  NamedEnum{ StandardType::C2x, "c2x" },  // c2x SHOULD ALWAYS PRECEDE C23 SO IT CAN BE CHOSEN AS
-                                          // THE NAME OF C23
+  NamedEnum{ StandardType::C2x, "c2x" },  // c2x SHOULD ALWAYS PRECEDE C23 SO IT
+                                          // CAN BE CHOSEN AS THE NAME OF C23
   NamedEnum{ StandardType::C23, "c2x" },  // no -std=c23 in gcc :[
   NamedEnum{ StandardType::C23, "c23" },
 
@@ -800,7 +985,9 @@ constexpr NamedEnum<SIMDType> SIMDTypeNames[] = {
 };
 
 template <typename _T, size_t N>
-inline constexpr const string_char *_find_enum_name(const NamedEnum<_T> (&names)[N], _T value) {
+inline constexpr const string_char *_find_enum_name(
+    const NamedEnum<_T> (&names)[N],
+    _T value) {
   for (size_t i = 0; i < N; i++)
   {
     if (names[i].value == value)
@@ -813,7 +1000,8 @@ inline constexpr const string_char *_find_enum_name(const NamedEnum<_T> (&names)
 }
 
 template <typename _T, size_t N>
-inline constexpr _T _find_enum_value(const NamedEnum<_T> (&names)[N], const string_char *name,
+inline constexpr _T _find_enum_value(const NamedEnum<_T> (&names)[N],
+                                     const string_char *name,
                                      _T default_value = _T(0)) {
   for (size_t i = 1; i < N; ++i)
   {
@@ -826,11 +1014,13 @@ inline constexpr _T _find_enum_value(const NamedEnum<_T> (&names)[N], const stri
   return default_value;
 }
 
-const string_char *BuildConfiguration::get_enum_name(OptimizationType opt_type) {
+const string_char *BuildConfiguration::get_enum_name(
+    OptimizationType opt_type) {
   return _find_enum_name(OptimizationTypeNames, opt_type);
 }
 
-const string_char *BuildConfiguration::get_enum_name(OptimizationDegree opt_degree) {
+const string_char *BuildConfiguration::get_enum_name(
+    OptimizationDegree opt_degree) {
   return _find_enum_name(OptimizationDegreeNames, opt_degree);
 }
 
@@ -850,7 +1040,8 @@ OptimizationType BuildConfiguration::get_optimization_type(const string &name) {
   return _find_enum_value(OptimizationTypeNames, name.c_str());
 }
 
-OptimizationDegree BuildConfiguration::get_optimization_degree(const string &name) {
+OptimizationDegree BuildConfiguration::get_optimization_degree(
+    const string &name) {
   return _find_enum_value(OptimizationDegreeNames, name.c_str());
 }
 
@@ -866,8 +1057,9 @@ SIMDType BuildConfiguration::get_simd_type(const string &name) {
   return _find_enum_value(SIMDTypeNames, name.c_str());
 }
 
-const string_char *BuildConfiguration::get_compiler_name(CompilerType type,
-                                                         SourceFileType file_type) {
+const string_char *BuildConfiguration::get_compiler_name(
+    CompilerType type,
+    SourceFileType file_type) {
   if (type == CompilerType::GCC)
   {
     switch (file_type)
@@ -885,7 +1077,8 @@ const string_char *BuildConfiguration::get_compiler_name(CompilerType type,
 
 #pragma endregion
 
-constexpr StandardType transform_standards(StandardType original, SourceFileType source_type) {
+constexpr StandardType transform_standards(StandardType original,
+                                           SourceFileType source_type) {
   typedef StandardType E;
   typedef SourceFileType S;
 
@@ -997,15 +1190,17 @@ constexpr StandardType transform_standards(StandardType original, SourceFileType
 }
 
 template <>
-void SetupDefaultConfig<BuildConfigurationDefaultType::Debug>(BuildConfiguration &config) {
+void SetupDefaultConfig<BuildConfigurationDefaultType::Debug>(
+    BuildConfiguration &config) {
   config.predefines->try_emplace("_DEBUG", nullptr);
   config.optimization->type.field() = OptimizationType::Debug;
-  config.optimization->degree.field() = OptimizationDegree::Extreme;
+  config.optimization->degree.field() = OptimizationDegree::High;
   config.sanitize_addresses.field() = true;
 }
 
 template <>
-void SetupDefaultConfig<BuildConfigurationDefaultType::Release>(BuildConfiguration &config) {
+void SetupDefaultConfig<BuildConfigurationDefaultType::Release>(
+    BuildConfiguration &config) {
   config.predefines->try_emplace("NDEBUG", nullptr);
   config.predefines->try_emplace("_RELEASE", nullptr);
   config.optimization->type.field() = OptimizationType::Release;

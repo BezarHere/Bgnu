@@ -118,19 +118,25 @@ struct BuildConfiguration
 
   void _put_sub_args(vector<string> &output) const;
 
-  void build_arguments(vector<string> &output, const StrBlob &input_file,
-                       const StrBlob &output_file, SourceFileType type) const;
+  void build_arguments(vector<string> &output,
+                       const StrBlob &input_file,
+                       const StrBlob &output_file,
+                       SourceFileType type) const;
 
-  void build_link_arguments(vector<string> &output, const Blob<const StrBlob> &files,
-                            const StrBlob &ouput_file, SourceFileType type) const;
+  void build_link_arguments(vector<string> &output,
+                            const Blob<const StrBlob> &files,
+                            const StrBlob &ouput_file,
+                            SourceFileType type) const;
 
   void build_clangd_contents(vector<string> &output) const;
 
   hash_t hash() const;
 
-  static BuildConfiguration GetDefault(BuildConfigurationDefaultType default_mode);
+  static BuildConfiguration GetDefault(
+      BuildConfigurationDefaultType default_mode);
   static Result<BuildConfiguration> from_data(FieldDataReader reader);
-  static FieldVar::Dict to_data(const BuildConfiguration &config, ErrorReport &report);
+  static FieldVar::Dict to_data(const BuildConfiguration &config,
+                                ErrorReport &report);
 
   static const char *get_enum_name(OptimizationType opt_type);
   static const char *get_enum_name(OptimizationDegree opt_degree);
@@ -144,36 +150,69 @@ struct BuildConfiguration
   static StandardType get_standard_type(const string &name);
   static SIMDType get_simd_type(const string &name);
 
-  static const string_char *get_compiler_name(CompilerType type, SourceFileType file_type);
+  static const string_char *get_compiler_name(CompilerType type,
+                                              SourceFileType file_type);
 
-  NSerializable<BuildType> build_type = { "type", BuildType::Binary,
+  NSerializable<BuildType> build_type = { "type",
+                                          BuildType::Binary,
                                           NSerializationStance::Optional };
 
   // values should be either a string OR a null
   NSerializable<FieldVar::Dict> predefines = { "predefines" };
 
-  NSerializable<OptimizationInfo> optimization = { "optimization", OptimizationInfo{} };
-  NSerializable<WarningReportInfo> warnings = { "warnings", WarningReportInfo{} };
+  NSerializable<OptimizationInfo> optimization = { "optimization",
+                                                   OptimizationInfo{} };
+  NSerializable<WarningReportInfo> warnings = { "warnings",
+                                                WarningReportInfo{} };
 
-  NSerializable<CompilerType> compiler_type = { "compiler_type", CompilerType::GCC };
+  NSerializable<CompilerType> compiler_type = { "compiler_type",
+                                                CompilerType::GCC };
   NSerializable<StandardType> standard = { "standard", StandardType::Cpp20 };
-  NSerializable<SIMDType> simd_type = { "simd_type", SIMDType::AVX2,
+  NSerializable<SIMDType> simd_type = { "simd_type",
+                                        SIMDType::AVX2,
                                         NSerializationStance::Optional };
 
   NSerializable<bool> exit_on_errors = { "exit_on_errors", true };
   NSerializable<bool> print_stats = { "print_stats", false };
   NSerializable<bool> print_includes = { "print_includes", false };
   NSerializable<bool> dynamically_linkable = { "dynamically_linkable", true };
-  NSerializable<bool> sanitize_addresses = { "sanitize_addresses", false,
+  NSerializable<bool> sanitize_addresses = { "sanitize_addresses",
+                                             false,
                                              NSerializationStance::Optional };
-  NSerializable<bool> static_stdlib = { "static_stdlib", false, NSerializationStance::Optional };
+  NSerializable<bool> sanitize_leaks = { "sanitize_leaks",
+                                         false,
+                                         NSerializationStance::Optional };
+  NSerializable<bool> sanitize_undefined = { "sanitize_undefined",
+                                             false,
+                                             NSerializationStance::Optional };
+  NSerializable<bool> sanitize_thread = { "sanitize_thread",
+                                          false,
+                                          NSerializationStance::Optional };
+  NSerializable<bool> static_stdlib = { "static_stdlib",
+                                        false,
+                                        NSerializationStance::Optional };
 
-  NSerializable<vector<string>> preprocessor_args = { "preprocessor_args" };
-  NSerializable<vector<string>> linker_args = { "linker_args" };
-  NSerializable<vector<string>> assembler_args = { "assembler_args" };
+  NSerializable<vector<string>> extra_args = { "extra_args",
+                                               NSerializationStance::Optional };
+  NSerializable<vector<string>> preprocessor_args = {
+    "preprocessor_args",
+    NSerializationStance::Optional
+  };
+  NSerializable<vector<string>> linker_args = {
+    "linker_args",
+    NSerializationStance::Optional
+  };
+  NSerializable<vector<string>> assembler_args = {
+    "assembler_args",
+    NSerializationStance::Optional
+  };
 
   NSerializable<vector<string>> library_names = { "library_names" };
 
-  NSerializable<vector<FilePath>> library_directories = { "library_directories" };
-  NSerializable<vector<FilePath>> include_directories = { "include_directories" };
+  NSerializable<vector<FilePath>> library_directories = {
+    "library_directories"
+  };
+  NSerializable<vector<FilePath>> include_directories = {
+    "include_directories"
+  };
 };
