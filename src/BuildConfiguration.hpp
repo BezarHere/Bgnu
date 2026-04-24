@@ -167,7 +167,7 @@ struct BuildConfiguration
 
   NSerializable<CompilerType> compiler_type = { "compiler_type",
                                                 CompilerType::GCC };
-  NSerializable<StandardType> standard = { "standard", StandardType::Cpp20 };
+  NSerializable<StandardType> standard = { "standard", StandardType::Cpp23 };
   NSerializable<SIMDType> simd_type = { "simd_type",
                                         SIMDType::AVX2,
                                         NSerializationStance::Optional };
