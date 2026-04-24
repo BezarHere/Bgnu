@@ -585,7 +585,7 @@ Error ProjectService::DumpAvailableBuildCommands() {
 FilePath ProjectService::GetCompiledOutputPath(const FilePath &path,
                                                hash_t hash) {
   (void)hash;
-  string_char buf[FilePath::MaxPathLength + 1] = {};
+  string_char buf[FilePath::MaxPathLength * 2 + 1] = {};
   snprintf(buf,
            FilePath::MaxPathLength,
            "%s/%s.o",
