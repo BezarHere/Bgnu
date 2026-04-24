@@ -585,14 +585,9 @@ Error ProjectService::DumpAvailableBuildCommands() {
 FilePath ProjectService::GetCompiledOutputPath(const FilePath &path,
                                                hash_t hash) {
   (void)hash;
-  string_char buf[FilePath::MaxPathLength * 2 + 1] = {};
-  snprintf(buf,
-           FilePath::MaxPathLength,
-           "%s/%s.o",
-           s_project->get_output().cache_dir->c_str(),
-           path.name().c_str());
 
-  return FilePath(buf);
+  return FilePath(s_project->get_output().cache_dir->to_string() + "/" +
+                  path.name() + ".o");
 }
 
 size_t ProjectService::GetBuildFailureCount() {
