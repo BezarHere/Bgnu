@@ -66,6 +66,117 @@ FilePath build_tools::DefaultProjectFilePath() {
   return FilePath::get_working_directory().join_path(".bgnu");
 }
 
+StandardType build_tools::FitStandardToFileType(StandardType type,
+                                                SourceFileType file_type) {
+  typedef StandardType E;
+  typedef SourceFileType S;
+
+  const bool use_draft_c2x = Settings::Get("use_draft_c2x", false).get_bool();
+
+  if (file_type == SourceFileType::None)
+  {
+    return type;
+  }
+
+  switch (type)
+  {
+  case E::C11: {
+    if (file_type == S::CPP)
+    {
+      return E::Cpp11;
+    }
+
+    return E::C11;
+  }
+
+  case E::C14: {
+    if (file_type == S::CPP)
+    {
+      return E::Cpp14;
+    }
+
+    return E::C14;
+  }
+
+  case E::C17: {
+    if (file_type == S::CPP)
+    {
+      return E::Cpp17;
+    }
+
+    return E::C17;
+  }
+
+  case E::C2x: {
+    if (file_type == S::CPP)
+    {
+      return E::Cpp20;
+    }
+
+    return use_draft_c2x ? E::C2x : E::C23;
+  }
+
+  case E::C23: {
+    if (file_type == S::CPP)
+    {
+      return E::Cpp23;
+    }
+
+    return E::C23;
+  }
+
+    // c++
+
+  case E::Cpp11: {
+    if (file_type == S::C)
+    {
+      return E::C11;
+    }
+
+    return E::Cpp11;
+  }
+
+  case E::Cpp14: {
+    if (file_type == S::C)
+    {
+      return E::C14;
+    }
+
+    return E::Cpp14;
+  }
+
+  case E::Cpp17: {
+    if (file_type == S::C)
+    {
+      return E::C17;
+    }
+
+    return E::Cpp17;
+  }
+
+  case E::Cpp20: {
+    if (file_type == S::C)
+    {
+      return use_draft_c2x ? E::C2x : E::C23;
+    }
+
+    return E::Cpp20;
+  }
+
+  case E::Cpp23: {
+    if (file_type == S::C)
+    {
+      return E::C23;
+    }
+
+    return E::Cpp23;
+  }
+
+  default:
+    return type;
+  }
+}
+
 string build_tools::EscapeQuotes(const StrBlob &str) {
   string result = {};
   result.reserve(str.length);

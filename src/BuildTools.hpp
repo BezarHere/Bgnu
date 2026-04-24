@@ -38,6 +38,9 @@ namespace build_tools
 
   extern FilePath DefaultProjectFilePath();
 
+  extern StandardType FitStandardToFileType(StandardType type,
+                                            SourceFileType file_type);
+
   extern string EscapeQuotes(const StrBlob &str);
   static inline string EscapeQuotes(const string &str) {
     return EscapeQuotes(StrBlob(str.data(), str.size()));

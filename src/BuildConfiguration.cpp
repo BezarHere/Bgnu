@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "BuildTools.hpp"
 #include "FieldDataReader.hpp"
 #include "FieldVar.hpp"
 #include "FilePath.hpp"
@@ -16,8 +17,6 @@
 #include "misc/Error.hpp"
 #include "utility/NField.hpp"
 
-static constexpr StandardType transform_standards(StandardType original,
-                                                  SourceFileType source_type);
 template <BuildConfigurationDefaultType DefaultType>
 static void SetupDefaultConfig(BuildConfiguration &config);
 
@@ -228,7 +227,8 @@ void BuildConfiguration::_put_flags(vector<string> &output) const {
 
 void BuildConfiguration::_put_standards(vector<string> &output,
                                         SourceFileType type) const {
-  StandardType standard_type = transform_standards(standard.field(), type);
+  StandardType standard_type =
+      build_tools::FitStandardToFileType(standard.field(), type);
 
   output.emplace_back("-std=");
   output.back().append(get_enum_name(standard_type));
@@ -944,9 +944,7 @@ constexpr NamedEnum<StandardType> StandardTypeNames[] = {
   NamedEnum{ StandardType::C11, "c11" },
   NamedEnum{ StandardType::C14, "c14" },
   NamedEnum{ StandardType::C17, "c17" },
-  NamedEnum{ StandardType::C2x, "c2x" },  // c2x SHOULD ALWAYS PRECEDE C23 SO IT
-                                          // CAN BE CHOSEN AS THE NAME OF C23
-  NamedEnum{ StandardType::C23, "c2x" },  // no -std=c23 in gcc :[
+  NamedEnum{ StandardType::C2x, "c2x" },
   NamedEnum{ StandardType::C23, "c23" },
 
   NamedEnum{ StandardType::Cpp11, "c++11" },
@@ -1076,118 +1074,6 @@ const string_char *BuildConfiguration::get_compiler_name(
 }
 
 #pragma endregion
-
-constexpr StandardType transform_standards(StandardType original,
-                                           SourceFileType source_type) {
-  typedef StandardType E;
-  typedef SourceFileType S;
-
-  if (source_type == SourceFileType::None)
-  {
-    return original;
-  }
-
-  switch (original)
-  {
-    // c (c99 will go to default)
-
-  case E::C11: {
-    if (source_type == S::CPP)
-    {
-      return E::Cpp11;
-    }
-
-    return E::C11;
-  }
-
-  case E::C14: {
-    if (source_type == S::CPP)
-    {
-      return E::Cpp14;
-    }
-
-    return E::C14;
-  }
-
-  case E::C17: {
-    if (source_type == S::CPP)
-    {
-      return E::Cpp17;
-    }
-
-    return E::C17;
-  }
-
-    // case E::C20:
-    // {
-    // 	if (source_type == S::CPP)
-    // 	{
-    // 		return E::Cpp20;
-    // 	}
-
-    // 	return E::C20;
-    // }
-
-  case E::C23: {
-    if (source_type == S::CPP)
-    {
-      return E::Cpp23;
-    }
-
-    return E::C23;
-  }
-
-    // c++
-
-  case E::Cpp11: {
-    if (source_type == S::C)
-    {
-      return E::C11;
-    }
-
-    return E::Cpp11;
-  }
-
-  case E::Cpp14: {
-    if (source_type == S::C)
-    {
-      return E::C14;
-    }
-
-    return E::Cpp14;
-  }
-
-  case E::Cpp17: {
-    if (source_type == S::C)
-    {
-      return E::C17;
-    }
-
-    return E::Cpp17;
-  }
-
-  case E::Cpp20: {
-    if (source_type == S::C)
-    {
-      return E::C2x;
-    }
-
-    return E::Cpp20;
-  }
-
-  case E::Cpp23: {
-    if (source_type == S::C)
-    {
-      return E::C23;
-    }
-
-    return E::Cpp23;
-  }
-
-  default:
-    return original;
-  }
-}
 
 template <>
 void SetupDefaultConfig<BuildConfigurationDefaultType::Debug>(
