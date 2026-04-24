@@ -30,8 +30,10 @@ namespace fs
 /// @brief finds where the extension starts, if there is an extension
 /// @param filename the filename (string) to search
 /// @param length the length of `filename`
-/// @returns where the extension starts, or the end (`length`) if no extension is found
-static inline size_t find_extension(const FilePath::char_type *filename, size_t length) {
+/// @returns where the extension starts, or the end (`length`) if no extension
+/// is found
+static inline size_t find_extension(const FilePath::char_type *filename,
+                                    size_t length) {
   constexpr FilePath::char_type ExtensionChar{ '.' };
   if (length < 3)
   {
@@ -86,14 +88,15 @@ FilePath::FilePath(const string_blob &str) {
     //? do something
   }
 
-  // m_text data is modified inplace by FilePath::_preprocess, no need to copy anything
-  // just resize to fit
+  // m_text data is modified inplace by FilePath::_preprocess, no need to copy
+  // anything just resize to fit
   m_text.resize(preprocessed_size);
   // + null end
   m_text.emplace_back();
 
   // build the separators
-  FilePath::_calculate_separators(string_blob(m_text.data(), m_text.size()), m_separators);
+  FilePath::_calculate_separators(string_blob(m_text.data(), m_text.size()),
+                                  m_separators);
 }
 
 FilePath::FilePath(const string_blob &str, const string_blob &base)
@@ -131,9 +134,13 @@ bool FilePath::operator==(const FilePath &other) const {
 
 FilePath &FilePath::operator+=(const FilePath &right) {}
 
-FilePath FilePath::operator+(const FilePath &right) const { return this->join_path(right); }
+FilePath FilePath::operator+(const FilePath &right) const {
+  return this->join_path(right);
+}
 
-FilePath::operator string_type() const { return string_type(m_text.data(), m_text.size() - 1); }
+FilePath::operator string_type() const {
+  return string_type(m_text.data(), m_text.size() - 1);
+}
 
 FilePath FilePath::parent() const {
   if (!is_valid())
@@ -187,7 +194,8 @@ FilePath::string_type FilePath::extension() const {
 
   const size_t extension_start = find_extension(last_seg_text, last_seg_len);
 
-  return string_type(last_seg_text + extension_start, last_seg_len - extension_start);
+  return string_type(last_seg_text + extension_start,
+                     last_seg_len - extension_start);
 }
 
 FilePath::string_blob FilePath::get_text() const {
@@ -199,7 +207,9 @@ Blob<const FilePath::separator_index> FilePath::get_separators() const {
   return { m_separators.data(), m_separators.size() };
 }
 
-FilePath::iterator FilePath::create_iterator() const { return iterator(m_text.data()); }
+FilePath::iterator FilePath::create_iterator() const {
+  return iterator(m_text.data());
+}
 
 FilePath FilePath::join_path(const string_blob &path) const {
   if (path.length == 0)
@@ -255,13 +265,15 @@ FILE *FilePath::open(const char *mode) const { return fopen(c_str(), mode); }
 std::ifstream FilePath::stream_read(bool binary) const {
   return std::ifstream(
       m_text.data(),
-      std::ios::openmode::_S_in | std::ios::openmode(binary ? std::ios::openmode::_S_bin : 0));
+      std::ios::openmode::_S_in |
+          std::ios::openmode(binary ? std::ios::openmode::_S_bin : 0));
 }
 
 std::ofstream FilePath::stream_write(bool binary) const {
   return std::ofstream(
       m_text.data(),
-      std::ios::openmode::_S_out | std::ios::openmode(binary ? std::ios::openmode::_S_bin : 0));
+      std::ios::openmode::_S_out |
+          std::ios::openmode(binary ? std::ios::openmode::_S_bin : 0));
 }
 
 string FilePath::read_string(streamsize max_size) const {
@@ -271,7 +283,8 @@ string FilePath::read_string(streamsize max_size) const {
 
   stream.seekg(0, std::ios::end);
 
-  const streamsize size = std::min<streamsize>(stream.tellg() + std::streamoff(1), max_size);
+  const streamsize size =
+      std::min<streamsize>(stream.tellg() + std::streamoff(1), max_size);
 
   if (size <= 0)
   {
@@ -328,7 +341,13 @@ errno_t FilePath::remove_recursive() const {
 }
 
 std::filesystem::path FilePath::to_std_path() const {
-  return { string_tools::convert<std::filesystem::path::value_type>(this->c_str(), npos) };
+  return { string_tools::convert<std::filesystem::path::value_type>(
+      this->c_str(),
+      npos) };
+}
+
+auto FilePath::to_string() const -> string_type {
+  return string_type(m_text.data(), m_text.length());
 }
 
 bool FilePath::empty() const { return m_text.empty(); }
@@ -345,7 +364,9 @@ bool FilePath::is_directory() const {
   return std::filesystem::is_directory(string(m_text.data(), m_text.size()));
 }
 
-bool FilePath::is_valid() const { return !(m_separators.empty() || m_text.empty()); }
+bool FilePath::is_valid() const {
+  return !(m_separators.empty() || m_text.empty());
+}
 
 bool FilePath::is_absolute() const {
   if (m_text.empty())
@@ -416,7 +437,8 @@ FilePath FilePath::relative_to(const FilePath &other) const {
 
   for (size_t i = 0; i < track_count; i++)
   {
-    str.append(other_segments[i + common_segment].data, other_segments[i + common_segment].length);
+    str.append(other_segments[i + common_segment].data,
+               other_segments[i + common_segment].length);
     str.push_back(DirectorySeparator);
   }
 
@@ -437,7 +459,8 @@ std::vector<FilePath::string_blob> FilePath::generate_segments() const {
   {
     if (m_separators[i] > last_index)
     {
-      result.emplace_back(m_text.data() + last_index, m_text.data() + m_separators[i]);
+      result.emplace_back(m_text.data() + last_index,
+                          m_text.data() + m_separators[i]);
     }
     last_index = m_separators[i] + 1;
   }
@@ -452,7 +475,8 @@ std::vector<FilePath::string_blob> FilePath::generate_segments() const {
 
 FilePath &FilePath::resolve(const FilePath &base) {
   string_type resolved_str =
-      _resolve_path(string_blob(m_text.begin(), m_text.end() - 1), base.get_text());
+      _resolve_path(string_blob(m_text.begin(), m_text.end() - 1),
+                    base.get_text());
 
   // will haunt me later, my future self wouldn't know what hit 'em
   this->~FilePath();
@@ -478,7 +502,12 @@ const FilePath &FilePath::get_executable_path() {
 FilePath FilePath::FindExecutableInPATHEnv(std::string name) {
 #ifdef _WIN32
   char buffer[512] = { 0 };
-  if (!SearchPathA(nullptr, name.c_str(), ".exe", std::size(buffer), buffer, nullptr))
+  if (!SearchPathA(nullptr,
+                   name.c_str(),
+                   ".exe",
+                   std::size(buffer),
+                   buffer,
+                   nullptr))
   {
     return {};
   }
@@ -517,7 +546,8 @@ FilePath::string_type FilePath::_working_directory() {
   if (getcwd(buffer, std::size(buffer) - 1) == nullptr)
   {
     const errno_t error = errno;
-    Logger::error("Failed to retrieve current working directory: %s", GetErrorName(error));
+    Logger::error("Failed to retrieve current working directory: %s",
+                  GetErrorName(error));
 
     return "";
   }
@@ -544,7 +574,8 @@ FilePath::string_type FilePath::_executable_path() {
 
   if (error != 0)
   {
-    Logger::error("Failed to retrieve executable path: %s", GetErrorName(error));
+    Logger::error("Failed to retrieve executable path: %s",
+                  GetErrorName(error));
     return "";
   }
 
@@ -555,7 +586,8 @@ FilePath::string_type FilePath::_executable_path() {
   struct stat stats = {};
   if (lstat(link_name, &stats) != 0)
   {
-    Logger::error("failed to get executable path stats: %s", GetErrorName(errno));
+    Logger::error("failed to get executable path stats: %s",
+                  GetErrorName(errno));
     return "";
   }
 
@@ -596,7 +628,8 @@ StrBlob FilePath::GetExtension(const StrBlob &filename) {
   return StrBlob(filename.data + i, filename.length - i);
 }
 
-void FilePath::_calculate_separators(const string_blob &text, SeparatorArray &out) {
+void FilePath::_calculate_separators(const string_blob &text,
+                                     SeparatorArray &out) {
 
   // out.data[out.count++] = npos; // first separator
 
@@ -608,7 +641,9 @@ void FilePath::_calculate_separators(const string_blob &text, SeparatorArray &ou
       // but that will leave an undefined behavior unchecked
       if (out.full())
       {
-        Logger::error("FilePath: Too many segments for \"%.*s\"", text.length, text.data);
+        Logger::error("FilePath: Too many segments for \"%.*s\"",
+                      text.length,
+                      text.data);
         break;
       }
 
@@ -617,7 +652,8 @@ void FilePath::_calculate_separators(const string_blob &text, SeparatorArray &ou
   }
 }
 
-FilePath::string_type FilePath::_resolve_path(const string_blob &text, const string_blob &base) {
+FilePath::string_type FilePath::_resolve_path(const string_blob &text,
+                                              const string_blob &base) {
   if (text.empty())
   {
     return "";
@@ -649,7 +685,8 @@ FilePath::string_type FilePath::_resolve_path(const string_blob &text, const str
     {
       const string_blob segment_source = text.slice(last_anchor, i);
 
-      const RelationSegmentType rel_type = get_segment_relation_type(segment_source);
+      const RelationSegmentType rel_type =
+          get_segment_relation_type(segment_source);
       _add_resolve_segment(rel_type, result_str, segment_source);
 
       // no need to process next char
@@ -662,9 +699,10 @@ FilePath::string_type FilePath::_resolve_path(const string_blob &text, const str
   return result_str;
 }
 
-void FilePath::_add_resolve_segment(RelationSegmentType rel_type,
-                                    FilePath::string_type &result_str,
-                                    const FilePath::string_blob &segment_source) {
+void FilePath::_add_resolve_segment(
+    RelationSegmentType rel_type,
+    FilePath::string_type &result_str,
+    const FilePath::string_blob &segment_source) {
   switch (rel_type)
   {
   case RelationSegmentType::Normal: {
@@ -693,7 +731,8 @@ void FilePath::_add_resolve_segment(RelationSegmentType rel_type,
     break;
   }
   case RelationSegmentType::DriveLetter: {
-    string_type drive_str = string_type(segment_source.data, segment_source.size());
+    string_type drive_str =
+        string_type(segment_source.data, segment_source.size());
     result_str.assign(drive_str);
     break;
   }
@@ -768,7 +807,8 @@ bool FilePath::_preprocess(Blob<TextArray::value_type> &text) {
   return true;
 }
 
-constexpr RelationSegmentType get_segment_relation_type(const FilePath::string_blob &segment) {
+constexpr RelationSegmentType get_segment_relation_type(
+    const FilePath::string_blob &segment) {
 
   // can't be anything except normal or current
   if (segment.length == 1)

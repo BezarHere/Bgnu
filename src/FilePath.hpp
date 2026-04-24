@@ -190,6 +190,7 @@ public:
   errno_t remove_recursive() const;
 
   std::filesystem::path to_std_path() const;
+  string_type to_string() const;
 
   /// @returns is the path empty?
   bool empty() const;
