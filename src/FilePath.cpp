@@ -72,16 +72,7 @@ FilePath::FilePath(const string_blob &str) {
   // copy string
   m_text.append(str.data, string_tools::length(str.data, str.size()));
 
-  // can't write to the entire text region, need to place a null at back
-  if (m_text.full())
-  {
-    m_text.pop_back();
-  }
-
-  // + null end
-  m_text.emplace_back();
-
-  size_t preprocessed_size = m_text.size() - 1;
+  size_t preprocessed_size = m_text.size();
 
   if (FilePath::_preprocess(m_text.data(), preprocessed_size))
   {
@@ -91,11 +82,9 @@ FilePath::FilePath(const string_blob &str) {
   // m_text data is modified inplace by FilePath::_preprocess, no need to copy
   // anything just resize to fit
   m_text.resize(preprocessed_size);
-  // + null end
-  m_text.emplace_back();
 
   // build the separators
-  FilePath::_calculate_separators(string_blob(m_text.data(), m_text.size()),
+  FilePath::_calculate_separators(string_blob(m_text.data(), m_text.size() - 1),
                                   m_separators);
 }
 
@@ -139,7 +128,7 @@ FilePath FilePath::operator+(const FilePath &right) const {
 }
 
 FilePath::operator string_type() const {
-  return string_type(m_text.data(), m_text.size() - 1);
+  return string_type(m_text.data(), m_text.size());
 }
 
 FilePath FilePath::parent() const {
@@ -200,7 +189,7 @@ FilePath::string_type FilePath::extension() const {
 
 FilePath::string_blob FilePath::get_text() const {
   // excludes the null end
-  return { m_text.data(), m_text.size() - 1 };
+  return { m_text.data(), m_text.size() };
 }
 
 Blob<const FilePath::separator_index> FilePath::get_separators() const {
@@ -226,8 +215,7 @@ FilePath &FilePath::add_path(const string_blob &path) {
 
   if (!string_tools::is_directory_separator(path[0]))
   {
-    // 'back()' should be the null end (hopefully)
-    m_text.back() = DirectorySeparator;
+    m_text.append(DirectorySeparator);
   }
 
   m_text.append(path.data, path.size());
@@ -236,7 +224,6 @@ FilePath &FilePath::add_path(const string_blob &path) {
   _preprocess(m_text.data(), size);
 
   m_text.resize(size + 1);
-  m_text.back() = 0;
 
   m_separators.clear();
 
@@ -255,7 +242,6 @@ FilePath &FilePath::pop_path() {
   m_separators.pop_back();
 
   m_text.resize(last);
-  m_text.emplace_back();
 
   return *this;
 }
@@ -467,7 +453,7 @@ std::vector<FilePath::string_blob> FilePath::generate_segments() const {
 
   if (last_index < m_text.size())
   {
-    result.emplace_back(m_text.data() + last_index, m_text.end() - 1);
+    result.emplace_back(m_text.data() + last_index, m_text.end());
   }
 
   return result;
@@ -475,7 +461,7 @@ std::vector<FilePath::string_blob> FilePath::generate_segments() const {
 
 FilePath &FilePath::resolve(const FilePath &base) {
   string_type resolved_str =
-      _resolve_path(string_blob(m_text.begin(), m_text.end() - 1),
+      _resolve_path(string_blob(m_text.begin(), m_text.end()),
                     base.get_text());
 
   // will haunt me later, my future self wouldn't know what hit 'em
