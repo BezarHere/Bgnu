@@ -236,8 +236,12 @@ public:
     const size_t space_left = max_str_length - size();
     const size_t chars_to_add = std::min(count, space_left);
 
-    for (size_t i = 0; i < chars_to_add; i++)
+    for (size_t i = 0; i <= chars_to_add; i++)
     {
+      if (cstr[i] == 0)
+      {
+        break;
+      }
       m_data[m_length++] = cstr[i];
     }
 
